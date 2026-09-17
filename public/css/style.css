@@ -1,0 +1,84 @@
+/* PTN Time Attendant Mobile-First Styles */
+:root {
+  --primary: #0284c7;
+  --primary-dark: #0369a1;
+  --primary-light: #e0f2fe;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+}
+
+body {
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f1f5f9;
+  color: #1e293b;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Camera Preview */
+.camera-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  height: 280px;
+  margin: 0 auto;
+  border-radius: 9999px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.25);
+  border: 4px solid #ffffff;
+}
+
+.camera-wrapper video,
+.camera-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* mirror selfie view */
+}
+
+.camera-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 9999px;
+  border: 2px dashed rgba(255, 255, 255, 0.7);
+}
+
+/* Pulse badge */
+.pulse-green {
+  animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Safe area insets for iOS */
+.safe-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}

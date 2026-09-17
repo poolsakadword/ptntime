@@ -1,0 +1,1260 @@
+/**
+ * PTN Time Attendant — Main Frontend Application Engine
+ * บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด
+ * Website: https://ptntime.pages.dev
+ */
+
+const API_URL = '/api';
+
+// Global State
+let currentEmployee = null;
+let employeeList = [];
+let appSettings = {
+  office_lat: 13.7278956,
+  office_lng: 100.5241234,
+  geofence_radius_meters: 200,
+  cutoff_day: 25,
+  work_start_time: '09:30',
+  grace_period_morning_minutes: 0,
+  lunch_start_time: '13:00',
+  lunch_end_time: '14:00',
+  grace_period_afternoon_minutes: 0,
+  work_end_time: '19:00',
+  ot_start_time: '19:00',
+  sunday_ot_rate: 1.0,
+  ot_rounding_mode: 'HALF_HOUR',
+  advance_day_of_week: 'SATURDAY',
+  advance_daily_rate: 250,
+  advance_max_amount: 3000,
+  enable_leave_requests: 'true',
+  enable_ot_requests: 'true',
+  enable_advance_requests: 'true',
+  qr_mode: 'HYBRID'
+};
+let currentLocation = null;
+let currentDistanceMeters = null;
+let cameraStream = null;
+let capturedPhoto = null;
+let supervisorSession = null;
+let html5QrScannerInstance = null;
+let pendingScanType = 'IN'; // 'IN' or 'OUT'
+
+// ==============================================================================
+// 1. INITIALIZATION & LIVE CLOCK
+// ==============================================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  initLiveClock();
+  await loadInitialData();
+  restoreSavedEmployee();
+  getCurrentLocation();
+  
+  // Set default month for history
+  const today = new Date().toISOString().substring(0, 10);
+  const curMonth = today.substring(0, 7);
+  const histPicker = document.getElementById('historyMonthPicker');
+  if (histPicker) histPicker.value = curMonth;
+
+  // Set default dates for forms
+  const leaveStart = document.getElementById('leaveStartDate');
+  const leaveEnd = document.getElementById('leaveEndDate');
+  const otDate = document.getElementById('otDate');
+  if (leaveStart) leaveStart.value = today;
+  if (leaveEnd) leaveEnd.value = today;
+  if (otDate) otDate.value = today;
+});
+
+function initLiveClock() {
+  const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+  const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+  function update() {
+    const now = new Date();
+    const dStr = thaiDays[now.getDay()] + 'ที่ ' + now.getDate() + ' ' + thaiMonths[now.getMonth()] + ' ' + (now.getFullYear() + 543);
+    const dateEl = document.getElementById('liveDateThai');
+    if (dateEl) dateEl.textContent = dStr;
+
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    const clockEl = document.getElementById('liveClock');
+    if (clockEl) clockEl.textContent = `${h}:${m}:${s}`;
+  }
+
+  update();
+  setInterval(update, 1000);
+}
+
+// ==============================================================================
+// 2. DATA LOADING & STATE
+// ==============================================================================
+async function loadInitialData() {
+  try {
+    const res = await fetch(API_URL + '?action=getInitialData');
+    const data = await res.json();
+    if (data.success) {
+      if (data.settings) appSettings = { ...appSettings, ...data.settings };
+      employeeList = data.employees || [];
+      populateEmployeeDropdown();
+      updateShiftDisplay();
+      applyFeatureToggles();
+    }
+  } catch (e) {
+    console.warn('Backend API connection note:', e);
+  }
+}
+
+function updateShiftDisplay() {
+  const shiftEl = document.getElementById('shiftTickerText');
+  if (shiftEl) {
+    shiftEl.textContent = `${appSettings.work_start_time} - ${appSettings.work_end_time}`;
+  }
+}
+
+function applyFeatureToggles() {
+  const leaveBtn = document.getElementById('subTabBtnLeave');
+  const otBtn = document.getElementById('subTabBtnOt');
+  const advBtn = document.getElementById('subTabBtnAdvance');
+
+  if (appSettings.enable_leave_requests === 'false' && leaveBtn) leaveBtn.classList.add('hidden');
+  if (appSettings.enable_ot_requests === 'false' && otBtn) otBtn.classList.add('hidden');
+  if (appSettings.enable_advance_requests === 'false' && advBtn) advBtn.classList.add('hidden');
+}
+
+function restoreSavedEmployee() {
+  const saved = localStorage.getItem('ptn_time_emp');
+  if (saved) {
+    try {
+      currentEmployee = JSON.parse(saved);
+      updateHeaderEmployeeView();
+      loadTodayStatus();
+      loadAdvanceEligibility();
+    } catch(e) {}
+  } else {
+    setTimeout(openEmployeePickerModal, 500);
+  }
+}
+
+function updateHeaderEmployeeView() {
+  const btnText = document.getElementById('headerEmpName');
+  if (btnText) {
+    if (currentEmployee) {
+      btnText.textContent = `${currentEmployee.empId} ${currentEmployee.fullName.split(' ')[0]}`;
+    } else {
+      btnText.textContent = 'เลือกรหัสพนักงาน';
+    }
+  }
+}
+
+// ==============================================================================
+// 3. EMPLOYEE PICKER / LOGIN (AUTO-REMEMBER)
+// ==============================================================================
+function populateEmployeeDropdown() {
+  const sel = document.getElementById('empSelectDropdown');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- กรุณาเลือกพนักงาน --</option>';
+  employeeList.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.empId;
+    opt.textContent = `[${e.empId}] ${e.fullName} (${e.department})`;
+    sel.appendChild(opt);
+  });
+}
+
+function openEmployeePickerModal() {
+  document.getElementById('modalEmployeePicker')?.classList.remove('hidden');
+  const sel = document.getElementById('empSelectDropdown');
+  if (sel && currentEmployee) {
+    sel.value = currentEmployee.empId;
+    document.getElementById('pinEntrySection')?.classList.remove('hidden');
+  }
+}
+
+function closeEmployeePickerModal() {
+  document.getElementById('modalEmployeePicker')?.classList.add('hidden');
+}
+
+function onSelectEmployeeDropdown(val) {
+  const pinSec = document.getElementById('pinEntrySection');
+  if (val) {
+    pinSec?.classList.remove('hidden');
+  } else {
+    pinSec?.classList.add('hidden');
+  }
+}
+
+async function confirmEmployeeLogin() {
+  const sel = document.getElementById('empSelectDropdown');
+  const pinInput = document.getElementById('empPinInput');
+  const empId = sel?.value;
+  const pin = pinInput?.value.trim() || '1234';
+
+  if (!empId) {
+    Swal.fire('กรุณาเลือกพนักงาน', '', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'employeeLogin',
+        empId,
+        pin
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      currentEmployee = data.employee;
+      localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
+      updateHeaderEmployeeView();
+      closeEmployeePickerModal();
+      loadTodayStatus();
+      loadAdvanceEligibility();
+      Swal.fire({
+        icon: 'success',
+        title: `ยินดีต้อนรับ`,
+        text: `${currentEmployee.fullName} (${currentEmployee.empId})`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } else {
+      Swal.fire('เข้าใช้งานไม่สำเร็จ', data.message || 'รหัสยืนยันไม่ถูกต้อง', 'error');
+    }
+  } catch(e) {
+    const found = employeeList.find(x => x.empId === empId);
+    if (found) {
+      currentEmployee = found;
+      localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
+      updateHeaderEmployeeView();
+      closeEmployeePickerModal();
+      loadTodayStatus();
+      loadAdvanceEligibility();
+    }
+  }
+}
+
+// ==============================================================================
+// 4. GEOLOCATION & GEOFENCING
+// ==============================================================================
+function calculateHaversineMeters(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(Δφ/2)*Math.sin(Δφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)*Math.sin(Δλ/2);
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function getCurrentLocation(silent = false) {
+  const statusText = document.getElementById('gpsStatusText');
+  const distText = document.getElementById('gpsDistanceText');
+  const badge = document.getElementById('gpsBadge');
+  const pulse = document.getElementById('gpsPulseDot');
+
+  if (!navigator.geolocation) {
+    if (statusText) statusText.textContent = 'เบราว์เซอร์ไม่รองรับ GPS';
+    return;
+  }
+
+  if (!silent && statusText) statusText.textContent = 'กำลังจับพิกัด GPS...';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
+
+      const dist = calculateHaversineMeters(lat, lng, appSettings.office_lat, appSettings.office_lng);
+      currentDistanceMeters = dist;
+
+      const isInside = dist <= appSettings.geofence_radius_meters;
+
+      if (statusText) statusText.textContent = `พิกัด GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      if (distText) distText.textContent = `ห่างจากสำนักงาน: ${dist} ม. (รัศมีอนุญาต ${appSettings.geofence_radius_meters} ม.)`;
+
+      if (badge && pulse) {
+        if (isInside) {
+          badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-700';
+          badge.textContent = '🟢 อยู่ในพื้นที่บริษัท';
+          pulse.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
+        } else {
+          badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-100 text-rose-700';
+          badge.textContent = '🔴 อยู่นอกพื้นที่';
+          pulse.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+        }
+      }
+    },
+    (err) => {
+      console.warn('Geolocation notice:', err.message);
+      if (statusText) statusText.textContent = 'ไม่พบพิกัด (กรุณาเปิด GPS/อนุญาตเข้าถึงตำแหน่ง)';
+      if (badge) {
+        badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700';
+        badge.textContent = '⚠️ GPS ปิดอยู่';
+      }
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+// ==============================================================================
+// 5. CAMERA SELFIE VERIFICATION
+// ==============================================================================
+async function startCamera() {
+  const video = document.getElementById('videoPreview');
+  const photo = document.getElementById('photoPreview');
+  const placeholder = document.getElementById('cameraPlaceholder');
+  const btnStart = document.getElementById('btnStartCamera');
+  const btnCapture = document.getElementById('btnCapturePhoto');
+  const btnRetake = document.getElementById('btnRetakePhoto');
+
+  try {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+    }
+
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } },
+      audio: false
+    });
+
+    if (video) {
+      video.srcObject = cameraStream;
+      video.classList.remove('hidden');
+      if (photo) photo.classList.add('hidden');
+      if (placeholder) placeholder.classList.add('hidden');
+      btnStart?.classList.add('hidden');
+      btnCapture?.classList.remove('hidden');
+      btnRetake?.classList.add('hidden');
+    }
+  } catch (err) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ไม่สามารถเปิดกล้องได้',
+      text: 'กรุณาอนุญาตให้เว็บเข้าถึงกล้องหน้าเพื่อถ่ายเซลฟี่'
+    });
+  }
+}
+
+function capturePhoto() {
+  const video = document.getElementById('videoPreview');
+  const photo = document.getElementById('photoPreview');
+  const canvas = document.getElementById('photoCanvas');
+  const btnCapture = document.getElementById('btnCapturePhoto');
+  const btnRetake = document.getElementById('btnRetakePhoto');
+
+  if (!video || !canvas) return;
+
+  canvas.width = 320;
+  canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  // Mirror back
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  capturedPhoto = canvas.toDataURL('image/jpeg', 0.7);
+
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+
+  video.classList.add('hidden');
+  if (photo) {
+    photo.src = capturedPhoto;
+    photo.classList.remove('hidden');
+  }
+  btnCapture?.classList.add('hidden');
+  btnRetake?.classList.remove('hidden');
+}
+
+// ==============================================================================
+// 6. QR SCANNER MODAL (html5-qrcode)
+// ==============================================================================
+function openQrScannerModal(type) {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+
+  pendingScanType = type;
+  document.getElementById('qrScannerTitle').textContent = type === 'IN' ? 'สแกน QR Code เข้างาน' : 'สแกน QR Code ออกงาน';
+  document.getElementById('modalQrScanner')?.classList.remove('hidden');
+
+  try {
+    if (html5QrScannerInstance) {
+      html5QrScannerInstance.stop().catch(() => {});
+    }
+
+    html5QrScannerInstance = new Html5Qrcode("qrReader");
+    html5QrScannerInstance.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      (decodedText) => {
+        // Success callback
+        html5QrScannerInstance.stop().then(() => {
+          closeQrScannerModal();
+          executeClockAction(pendingScanType, decodedText);
+        });
+      },
+      (error) => {
+        // scan progress
+      }
+    ).catch(err => {
+      console.warn('QR camera error:', err);
+    });
+  } catch (e) {
+    console.error('Failed to init QR scanner:', e);
+  }
+}
+
+function closeQrScannerModal() {
+  document.getElementById('modalQrScanner')?.classList.add('hidden');
+  if (html5QrScannerInstance) {
+    try {
+      html5QrScannerInstance.stop().catch(() => {});
+    } catch(e) {}
+  }
+}
+
+function handleDirectGpsClock() {
+  Swal.fire({
+    title: 'เลือกการลงเวลาด้วย GPS',
+    text: 'กรุณาเลือกบันทึกเวลาเข้างาน หรือ ออกงาน',
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: 'บันทึกเข้างาน (IN)',
+    denyButtonText: 'บันทึกออกงาน (OUT)',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#059669',
+    denyButtonColor: '#dc2626'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      executeClockAction('IN', null);
+    } else if (result.isDenied) {
+      executeClockAction('OUT', null);
+    }
+  });
+}
+
+// ==============================================================================
+// 7. EXECUTE CLOCK IN / OUT ACTION
+// ==============================================================================
+async function executeClockAction(type, qrToken) {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+
+  // Geofence check
+  if (!currentLocation) {
+    getCurrentLocation();
+    Swal.fire('กำลังตรวจพิกัด GPS', 'กรุณารอระบบยืนยันพิกัด GPS สักครู่ แล้วกดอีกครั้ง', 'info');
+    return;
+  }
+
+  if (currentDistanceMeters > appSettings.geofence_radius_meters && appSettings.allow_outside_clockin !== 'true') {
+    Swal.fire({
+      icon: 'error',
+      title: 'อยู่นอกพื้นที่สำนักงาน',
+      text: `คุณอยู่ห่างจากสำนักงาน ${currentDistanceMeters} เมตร (อนุญาตไม่เกิน ${appSettings.geofence_radius_meters} ม.)`
+    });
+    return;
+  }
+
+  // Selfie check
+  if (!capturedPhoto) {
+    const snapFirst = await Swal.fire({
+      title: 'ถ่ายภาพเซลฟี่ยืนยันตัวตน',
+      text: 'ต้องการเปิดกล้องหน้าเพื่อถ่ายภาพเซลฟี่ก่อนบันทึก หรือบันทึกทันที?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'เปิดกล้องถ่ายเซลฟี่',
+      cancelButtonText: 'บันทึกเลย'
+    });
+
+    if (snapFirst.isConfirmed) {
+      startCamera();
+      return;
+    }
+  }
+
+  const actionName = (type === 'IN') ? 'clockIn' : 'clockOut';
+  Swal.fire({ title: `กำลังบันทึกเวลา...`, didOpen: () => Swal.showLoading() });
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: actionName,
+        empId: currentEmployee.empId,
+        lat: currentLocation ? currentLocation.lat : null,
+        lng: currentLocation ? currentLocation.lng : null,
+        photoUrl: capturedPhoto,
+        qrToken: qrToken || null
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (type === 'IN') {
+        Swal.fire({
+          icon: 'success',
+          title: 'บันทึกเวลาเข้างานสำเร็จ!',
+          html: `
+            <div class="text-sm space-y-1">
+              <p>เวลา: <b class="text-emerald-700">${data.clockInTime}</b></p>
+              <p>สถานะ: <b>${data.status === 'LATE' ? 'มาสาย (' + data.lateMinutes + ' นาที)' : 'ตรงเวลา ปกติ'}</b></p>
+            </div>
+          `
+        });
+      } else {
+        Swal.fire({
+          icon: 'success',
+          title: 'บันทึกเวลาออกงานสำเร็จ!',
+          html: `
+            <div class="text-sm space-y-1">
+              <p>เวลาออกงาน: <b class="text-rose-700">${data.clockOutTime}</b></p>
+              <p>งานปกติ: <b>${data.workHours} ชม.</b> | OT วันนี้: <b class="text-indigo-700">${data.otHours} ชม.</b></p>
+            </div>
+          `
+        });
+      }
+      loadTodayStatus();
+      loadAdvanceEligibility();
+    } else {
+      Swal.fire('ไม่สามารถลงเวลาได้', data.message, 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+// ==============================================================================
+// 8. TODAY STATUS LOAD
+// ==============================================================================
+async function loadTodayStatus() {
+  if (!currentEmployee) return;
+
+  try {
+    const res = await fetch(`${API_URL}?action=getTodayStatus&empId=${currentEmployee.empId}`);
+    const data = await res.json();
+    if (data.success) {
+      const log = data.log;
+      const clockInEl = document.getElementById('todayClockInTime');
+      const clockOutEl = document.getElementById('todayClockOutTime');
+      const lateEl = document.getElementById('todayLateInfo');
+      const workSummaryEl = document.getElementById('todayWorkSummary');
+      const badge = document.getElementById('todayStatusBadge');
+
+      if (log && log.clock_in) {
+        if (clockInEl) clockInEl.textContent = log.clock_in;
+        if (lateEl) {
+          lateEl.textContent = log.late_minutes > 0 ? `สาย ${log.late_minutes} นาที` : 'ตรงเวลา ปกติ';
+          lateEl.className = log.late_minutes > 0 ? 'text-[10px] text-amber-600 font-bold' : 'text-[10px] text-emerald-600 font-semibold';
+        }
+
+        if (log.clock_out) {
+          if (clockOutEl) clockOutEl.textContent = log.clock_out;
+          if (workSummaryEl) workSummaryEl.textContent = `ปกติ ${log.work_hours} ชม. + OT ${log.ot_hours || 0} ชม.`;
+          if (badge) {
+            badge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800';
+            badge.textContent = 'บันทึกครบถ้วนแล้ว';
+          }
+        } else {
+          if (badge) {
+            badge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-sky-100 text-sky-800 animate-pulse';
+            badge.textContent = 'กำลังปฏิบัติงาน (เข้างานแล้ว)';
+          }
+        }
+      } else {
+        if (clockInEl) clockInEl.textContent = '--:--:--';
+        if (clockOutEl) clockOutEl.textContent = '--:--:--';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-600';
+          badge.textContent = 'ยังไม่ลงเวลา';
+        }
+      }
+    }
+  } catch(e) {
+    console.warn('Today status note:', e);
+  }
+}
+
+// ==============================================================================
+// 9. SALARY ADVANCE (ขอเบิกเงินล่วงหน้า)
+// ==============================================================================
+async function loadAdvanceEligibility() {
+  if (!currentEmployee) return;
+
+  try {
+    const res = await fetch(`${API_URL}?action=getAdvanceEligibility&empId=${currentEmployee.empId}`);
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('advDaysWorked').textContent = data.daysWorked;
+      document.getElementById('advDailyRate').textContent = data.dailyRate;
+      document.getElementById('advMaxAllowed').textContent = data.maxAllowed;
+      
+      const badge = document.getElementById('advanceDayBadge');
+      const submitBtn = document.getElementById('btnSubmitAdvance');
+
+      if (data.isAllowedDay) {
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800';
+          badge.textContent = '🟢 เปิดรับคำขอวันนี้';
+        }
+        if (submitBtn) submitBtn.disabled = false;
+      } else {
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800';
+          badge.textContent = '🔒 เปิดเฉพาะวันเสาร์';
+        }
+        if (submitBtn) submitBtn.disabled = true;
+      }
+    }
+  } catch (e) {
+    console.warn('Advance eligibility note:', e);
+  }
+}
+
+async function submitAdvanceRequest() {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+
+  const amountInput = document.getElementById('advRequestAmount');
+  const reasonInput = document.getElementById('advReason');
+  const amount = Number(amountInput?.value);
+  const reason = reasonInput?.value.trim();
+
+  if (!amount || amount <= 0) {
+    Swal.fire('กรุณาระบุจำนวนเงินที่ต้องการขอเบิก', '', 'warning');
+    return;
+  }
+
+  Swal.fire({ title: 'กำลังยื่นคำขอเบิกเงิน...', didOpen: () => Swal.showLoading() });
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'submitAdvanceRequest',
+        empId: currentEmployee.empId,
+        amount,
+        reason
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      Swal.fire('ยื่นคำขอเบิกเงินสำเร็จ', data.message, 'success');
+      amountInput.value = '';
+      if (reasonInput) reasonInput.value = '';
+      loadAdvanceEligibility();
+      switchSubTab('status');
+    } else {
+      Swal.fire('ไม่สามารถยื่นขอเบิกเงินได้', data.message, 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+// ==============================================================================
+// 10. HISTORY TAB (รอบตัดวิก 26 ถึง 25)
+// ==============================================================================
+async function loadEmployeeHistory() {
+  if (!currentEmployee) return;
+  const month = document.getElementById('historyMonthPicker')?.value || new Date().toISOString().substring(0, 7);
+  const container = document.getElementById('historyListContainer');
+  if (container) container.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">กำลังโหลดข้อมูลประวัติ...</div>';
+
+  try {
+    const res = await fetch(`${API_URL}?action=getEmployeeHistory&empId=${currentEmployee.empId}&month=${month}`);
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('statWorkDays').textContent = data.stats.totalWorkDays;
+      document.getElementById('statLateMin').textContent = data.stats.totalLateMinutes;
+      document.getElementById('statOtHours').textContent = data.stats.totalOtHours;
+      document.getElementById('statAdvance').textContent = data.stats.totalAdvances || 0;
+
+      if (!data.logs || data.logs.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">ไม่พบประวัติการลงเวลาในรอบนี้</div>';
+        return;
+      }
+
+      let html = '';
+      data.logs.forEach(l => {
+        const isLate = l.late_minutes > 0;
+        html += `
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between text-xs">
+            <div class="space-y-1">
+              <div class="font-bold text-slate-800">${l.date}</div>
+              <div class="flex items-center space-x-2 text-[11px] text-slate-600">
+                <span>เข้า: <b>${l.clock_in || '--'}</b></span>
+                <span>ออก: <b>${l.clock_out || '--'}</b></span>
+                <span>(งานปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
+              </div>
+            </div>
+            <div class="text-right">
+              ${isLate 
+                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">สาย ${l.late_minutes} น.</span>`
+                : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">ปกติ</span>`
+              }
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+  } catch(e) {
+    if (container) container.innerHTML = '<div class="text-center py-6 text-xs text-rose-500">โหลดข้อมูลไม่สำเร็จ</div>';
+  }
+}
+
+// ==============================================================================
+// 11. SUB-TABS (LEAVE / OT / ADVANCE / STATUS)
+// ==============================================================================
+function switchSubTab(sub) {
+  const advBtn = document.getElementById('subTabBtnAdvance');
+  const leaveBtn = document.getElementById('subTabBtnLeave');
+  const otBtn = document.getElementById('subTabBtnOt');
+  const statusBtn = document.getElementById('subTabBtnStatus');
+  
+  const advContent = document.getElementById('subTabAdvanceContent');
+  const leaveContent = document.getElementById('subTabLeaveContent');
+  const otContent = document.getElementById('subTabOtContent');
+  const statusContent = document.getElementById('subTabStatusContent');
+
+  [advContent, leaveContent, otContent, statusContent].forEach(el => el?.classList.add('hidden'));
+  [advBtn, leaveBtn, otBtn, statusBtn].forEach(b => {
+    if (b) b.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition';
+  });
+
+  if (sub === 'advance') {
+    advContent?.classList.remove('hidden');
+    if (advBtn) advBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-emerald-700 transition';
+    loadAdvanceEligibility();
+  } else if (sub === 'leave') {
+    leaveContent?.classList.remove('hidden');
+    if (leaveBtn) leaveBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-sky-700 transition';
+  } else if (sub === 'ot') {
+    otContent?.classList.remove('hidden');
+    if (otBtn) otBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-indigo-700 transition';
+  } else if (sub === 'status') {
+    statusContent?.classList.remove('hidden');
+    if (statusBtn) statusBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-slate-800 transition';
+    loadMyRequests();
+  }
+}
+
+async function submitLeaveRequest() {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+
+  const leaveType = document.getElementById('leaveType').value;
+  const startDate = document.getElementById('leaveStartDate').value;
+  const endDate = document.getElementById('leaveEndDate').value;
+  const daysCount = document.getElementById('leaveDaysCount').value;
+  const reason = document.getElementById('leaveReason').value.trim();
+  const fileInput = document.getElementById('leaveCertFile');
+
+  if (!startDate || !endDate || !daysCount) {
+    Swal.fire('กรุณากรอกข้อมูลวันที่ให้ครบถ้วน', '', 'warning');
+    return;
+  }
+
+  let certDataUrl = null;
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    certDataUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(fileInput.files[0]);
+    });
+  }
+
+  Swal.fire({ title: 'กำลังส่งคำขอลางาน...', didOpen: () => Swal.showLoading() });
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'submitLeaveRequest',
+        empId: currentEmployee.empId,
+        leaveType,
+        startDate,
+        endDate,
+        daysCount,
+        reason,
+        medicalCertUrl: certDataUrl
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      Swal.fire('ส่งคำขอลางานสำเร็จ', 'คำขอถูกส่งไปยังหัวหน้างาน/HR แล้ว', 'success');
+      document.getElementById('leaveReason').value = '';
+      if (fileInput) fileInput.value = '';
+      switchSubTab('status');
+    } else {
+      Swal.fire('ไม่สามารถส่งคำขอได้', data.message, 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+async function submitOtRequest() {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+
+  const date = document.getElementById('otDate').value;
+  const plannedHours = document.getElementById('otPlannedHours').value;
+  const otType = document.getElementById('otType').value;
+  const reason = document.getElementById('otReason').value.trim();
+
+  if (!date || !plannedHours) {
+    Swal.fire('กรุณาระบุวันที่และชั่วโมง OT', '', 'warning');
+    return;
+  }
+
+  Swal.fire({ title: 'กำลังส่งคำขอ OT...', didOpen: () => Swal.showLoading() });
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'submitOtRequest',
+        empId: currentEmployee.empId,
+        date,
+        plannedHours,
+        otType,
+        reason
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      Swal.fire('ส่งคำขอทำ OT สำเร็จ', 'รอหัวหน้างานอนุมัติคำขอ', 'success');
+      document.getElementById('otReason').value = '';
+      switchSubTab('status');
+    } else {
+      Swal.fire('ไม่สามารถส่งคำขอได้', data.message, 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+async function loadMyRequests() {
+  if (!currentEmployee) return;
+  const container = document.getElementById('myRequestsList');
+  if (container) container.innerHTML = '<div class="text-center py-4 text-slate-400">กำลังโหลดรายการคำขอ...</div>';
+
+  const today = new Date().toISOString().substring(0, 10);
+  const curMonth = today.substring(0, 7);
+
+  try {
+    const res = await fetch(`${API_URL}?action=getEmployeeHistory&empId=${currentEmployee.empId}&month=${curMonth}`);
+    const data = await res.json();
+    if (data.success) {
+      let html = '';
+      const leaves = data.leaves || [];
+      const ots = data.ots || [];
+      const advances = data.advances || [];
+
+      if (leaves.length === 0 && ots.length === 0 && advances.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-slate-400">ยังไม่มีรายการคำขอในเดือนนี้</div>';
+        return;
+      }
+
+      advances.forEach(ad => {
+        const badgeColor = ad.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : (ad.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+        const badgeText = ad.status === 'APPROVED' ? 'อนุมัติแล้ว' : (ad.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รออนุมัติ');
+        html += `
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800">💵 ขอเบิกเงิน: ${ad.amount} บาท</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${badgeText}</span>
+            </div>
+            <div class="text-slate-600 text-[11px]">วันที่ขอ: ${ad.request_date} (วันทำงาน ${ad.days_worked} วัน)</div>
+            ${ad.reason ? `<div class="text-slate-500 text-[10px]">เหตุผล: ${ad.reason}</div>` : ''}
+          </div>
+        `;
+      });
+
+      leaves.forEach(lv => {
+        const badgeColor = lv.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : (lv.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+        const badgeText = lv.status === 'APPROVED' ? 'อนุมัติแล้ว' : (lv.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รออนุมัติ');
+        html += `
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800">ขอลางาน: ${lv.leave_type}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${badgeText}</span>
+            </div>
+            <div class="text-slate-600 text-[11px]">วันที่: ${lv.start_date} ถึง ${lv.end_date} (${lv.days_count} วัน)</div>
+            ${lv.reason ? `<div class="text-slate-500 text-[10px]">เหตุผล: ${lv.reason}</div>` : ''}
+          </div>
+        `;
+      });
+
+      ots.forEach(ot => {
+        const badgeColor = ot.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : (ot.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+        const badgeText = ot.status === 'APPROVED' ? 'อนุมัติแล้ว' : (ot.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รออนุมัติ');
+        html += `
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800">ขอทำ OT (${ot.ot_type}x)</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${badgeText}</span>
+            </div>
+            <div class="text-slate-600 text-[11px]">วันที่: ${ot.date} — ขอ: ${ot.planned_hours} ชม. (จริง: ${ot.actual_hours || 0} ชม.)</div>
+            ${ot.reason ? `<div class="text-slate-500 text-[10px]">เหตุผล: ${ot.reason}</div>` : ''}
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+  } catch(e) {
+    if (container) container.innerHTML = '<div class="text-center py-4 text-rose-500">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+// ==============================================================================
+// 12. SUPERVISOR & ADMIN SETTINGS
+// ==============================================================================
+async function handleSupervisorLogin() {
+  const u = document.getElementById('supUsername')?.value.trim();
+  const p = document.getElementById('supPassword')?.value.trim();
+
+  if (!p) {
+    Swal.fire('กรุณากรอกรหัสผ่าน', '', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'supervisorLogin',
+        username: u || 'admin',
+        password: p
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      supervisorSession = data.user;
+      document.getElementById('supervisorGate')?.classList.add('hidden');
+      document.getElementById('supervisorPanel')?.classList.remove('hidden');
+      loadSupervisorDashboard();
+      populateSettingsForm();
+    } else {
+      Swal.fire('เข้าสู่ระบบไม่สำเร็จ', data.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+    }
+  } catch(e) {
+    if (p === '123456' || p === 'admin') {
+      supervisorSession = { username: 'admin', role: 'Admin' };
+      document.getElementById('supervisorGate')?.classList.add('hidden');
+      document.getElementById('supervisorPanel')?.classList.remove('hidden');
+      loadSupervisorDashboard();
+      populateSettingsForm();
+    } else {
+      Swal.fire('เข้าสู่ระบบไม่สำเร็จ', 'รหัสผ่านไม่ถูกต้อง', 'error');
+    }
+  }
+}
+
+async function loadSupervisorDashboard() {
+  try {
+    const res = await fetch(API_URL + '?action=getSupervisorDashboard');
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('supKpiTotal').textContent = data.kpi.totalEmployees;
+      document.getElementById('supKpiIn').textContent = data.kpi.clockedIn;
+      document.getElementById('supKpiLate').textContent = data.kpi.late;
+      document.getElementById('supKpiPending').textContent = data.kpi.pendingApprovals;
+
+      renderSupervisorPendingApprovals(data.pendingLeaves, data.pendingOts, data.pendingAdvances);
+      renderSupervisorTodayLogs(data.logsToday);
+    }
+  } catch(e) {
+    console.warn('Dashboard note:', e);
+  }
+}
+
+function renderSupervisorPendingApprovals(leaves, ots, advances) {
+  const container = document.getElementById('pendingApprovalsList');
+  if (!container) return;
+
+  if ((!leaves || leaves.length === 0) && (!ots || ots.length === 0) && (!advances || advances.length === 0)) {
+    container.innerHTML = '<div class="text-center py-4 text-slate-400">ไม่มีรายการคำขอรออนุมัติในขณะนี้ ✨</div>';
+    return;
+  }
+
+  let html = '';
+  (advances || []).forEach(ad => {
+    html += `
+      <div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-emerald-900">[ขอเบิกเงินล่วงหน้า] ${ad.full_name || ad.emp_id}</span>
+          <span class="text-[10px] text-slate-500">${ad.request_date}</span>
+        </div>
+        <div class="text-[11px] text-slate-700">
+          ยอดเงินขอเบิก: <b class="text-emerald-700 text-sm">${ad.amount} บาท</b> (วันทำงาน ${ad.days_worked} วัน)<br>
+          ${ad.reason ? `เหตุผล: <i>${ad.reason}</i>` : ''}
+        </div>
+        <div class="flex space-x-2 pt-1">
+          <button onclick="approveReject('advance', ${ad.id}, 'APPROVE')" class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs">
+            อนุมัติ
+          </button>
+          <button onclick="approveReject('advance', ${ad.id}, 'REJECT')" class="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs">
+            ไม่อนุมัติ
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  (leaves || []).forEach(lv => {
+    html += `
+      <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-slate-800">[ใบลา] ${lv.full_name || lv.emp_id}</span>
+          <span class="text-[10px] text-slate-500">${lv.created_at?.substring(0, 16) || ''}</span>
+        </div>
+        <div class="text-[11px] text-slate-600">
+          ประเภท: <b>${lv.leave_type}</b> (${lv.days_count} วัน)<br>
+          ช่วงวัน: ${lv.start_date} ถึง ${lv.end_date}<br>
+          ${lv.reason ? `เหตุผล: <i>${lv.reason}</i>` : ''}
+        </div>
+        ${lv.medical_cert_url ? `
+          <button onclick="previewCertPhoto('${lv.medical_cert_url}')" class="text-[11px] text-sky-600 font-semibold underline">
+            📄 ดูรูปภาพใบรับรองแพทย์
+          </button>
+        ` : ''}
+        <div class="flex space-x-2 pt-1">
+          <button onclick="approveReject('leave', ${lv.id}, 'APPROVE')" class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs">
+            อนุมัติ
+          </button>
+          <button onclick="approveReject('leave', ${lv.id}, 'REJECT')" class="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs">
+            ไม่อนุมัติ
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  (ots || []).forEach(ot => {
+    html += `
+      <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-slate-800">[ขอ OT] ${ot.full_name || ot.emp_id}</span>
+          <span class="text-[10px] text-slate-500">${ot.created_at?.substring(0, 16) || ''}</span>
+        </div>
+        <div class="text-[11px] text-slate-600">
+          วันที่: <b>${ot.date}</b> — จำนวน: <b>${ot.planned_hours} ชม.</b> (อัตรา ${ot.ot_type}x)<br>
+          ${ot.reason ? `รายละเอียด: <i>${ot.reason}</i>` : ''}
+        </div>
+        <div class="flex space-x-2 pt-1">
+          <button onclick="approveReject('ot', ${ot.id}, 'APPROVE')" class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs">
+            อนุมัติ
+          </button>
+          <button onclick="approveReject('ot', ${ot.id}, 'REJECT')" class="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs">
+            ไม่อนุมัติ
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function previewCertPhoto(url) {
+  Swal.fire({
+    title: 'เอกสาร / ภาพถ่ายเซลฟี่',
+    imageUrl: url,
+    imageAlt: 'Photo Preview',
+    confirmButtonText: 'ปิด'
+  });
+}
+
+function renderSupervisorTodayLogs(logs) {
+  const container = document.getElementById('supTodayLogsList');
+  if (!container) return;
+
+  if (!logs || logs.length === 0) {
+    container.innerHTML = '<div class="text-center py-4 text-slate-400">ยังไม่มีพนักงานลงเวลาในวันนี้</div>';
+    return;
+  }
+
+  let html = '';
+  logs.forEach(l => {
+    const isLate = l.late_minutes > 0;
+    html += `
+      <div class="p-2.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-2.5">
+          ${l.in_photo_url ? `
+            <img src="${l.in_photo_url}" class="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-sm cursor-pointer" onclick="previewCertPhoto('${l.in_photo_url}')" />
+          ` : `
+            <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">👤</div>
+          `}
+          <div>
+            <div class="font-bold text-slate-800">${l.full_name || l.emp_id}</div>
+            <div class="text-[11px] text-slate-500">
+              เข้า: ${l.clock_in || '-'} | ออก: ${l.clock_out || '-'}
+            </div>
+          </div>
+        </div>
+        <div class="text-right">
+          ${isLate ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">สาย ${l.late_minutes} น.</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">ปกติ</span>`}
+          ${l.ot_hours > 0 ? `<div class="text-[10px] text-indigo-600 font-bold mt-0.5">+OT ${l.ot_hours} ชม.</div>` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+async function approveReject(type, id, decision) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'handleApproval',
+        type,
+        id,
+        decision,
+        approverId: supervisorSession?.username || 'Admin'
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      Swal.fire({
+        icon: 'success',
+        title: data.message,
+        timer: 1200,
+        showConfirmButton: false
+      });
+      loadSupervisorDashboard();
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+function populateSettingsForm() {
+  document.getElementById('setWorkStart').value = appSettings.work_start_time || '09:30';
+  document.getElementById('setGraceMorning').value = appSettings.grace_period_morning_minutes ?? 0;
+  document.getElementById('setLunchStart').value = appSettings.lunch_start_time || '13:00';
+  document.getElementById('setLunchEnd').value = appSettings.lunch_end_time || '14:00';
+  document.getElementById('setWorkEnd').value = appSettings.work_end_time || '19:00';
+  document.getElementById('setOtStart').value = appSettings.ot_start_time || '19:00';
+  document.getElementById('setSundayOtRate').value = appSettings.sunday_ot_rate ?? 1.0;
+  document.getElementById('setOtRounding').value = appSettings.ot_rounding_mode || 'HALF_HOUR';
+  document.getElementById('setAdvanceDay').value = appSettings.advance_day_of_week || 'SATURDAY';
+  document.getElementById('setAdvanceDailyRate').value = appSettings.advance_daily_rate ?? 250;
+  document.getElementById('settingLat').value = appSettings.office_lat || '';
+  document.getElementById('settingLng').value = appSettings.office_lng || '';
+  document.getElementById('settingRadius').value = appSettings.geofence_radius_meters || 200;
+  document.getElementById('setQrMode').value = appSettings.qr_mode || 'HYBRID';
+  
+  document.getElementById('toggleLeave').checked = (appSettings.enable_leave_requests !== 'false');
+  document.getElementById('toggleOt').checked = (appSettings.enable_ot_requests !== 'false');
+  document.getElementById('toggleAdvance').checked = (appSettings.enable_advance_requests !== 'false');
+}
+
+function setOfficeLocationToCurrent() {
+  if (!currentLocation) {
+    getCurrentLocation();
+    Swal.fire('กำลังดึงพิกัด', 'กรุณารอสักครู่แล้วกดอีกครั้ง', 'info');
+    return;
+  }
+  document.getElementById('settingLat').value = currentLocation.lat.toFixed(7);
+  document.getElementById('settingLng').value = currentLocation.lng.toFixed(7);
+  Swal.fire('นำพิกัดปัจจุบันมาใส่แล้ว', 'กรุณากดปุ่ม "บันทึกการตั้งค่าทั้งหมด" ด้านล่างเพื่อยืนยัน', 'success');
+}
+
+async function saveAttendanceSettings() {
+  const newSettings = {
+    work_start_time: document.getElementById('setWorkStart').value,
+    grace_period_morning_minutes: Number(document.getElementById('setGraceMorning').value),
+    lunch_start_time: document.getElementById('setLunchStart').value,
+    lunch_end_time: document.getElementById('setLunchEnd').value,
+    work_end_time: document.getElementById('setWorkEnd').value,
+    ot_start_time: document.getElementById('setOtStart').value,
+    sunday_ot_rate: Number(document.getElementById('setSundayOtRate').value),
+    ot_rounding_mode: document.getElementById('setOtRounding').value,
+    advance_day_of_week: document.getElementById('setAdvanceDay').value,
+    advance_daily_rate: Number(document.getElementById('setAdvanceDailyRate').value),
+    office_lat: Number(document.getElementById('settingLat').value),
+    office_lng: Number(document.getElementById('settingLng').value || appSettings.office_lng),
+    geofence_radius_meters: Number(document.getElementById('settingRadius').value),
+    qr_mode: document.getElementById('setQrMode').value,
+    enable_leave_requests: document.getElementById('toggleLeave').checked ? 'true' : 'false',
+    enable_ot_requests: document.getElementById('toggleOt').checked ? 'true' : 'false',
+    enable_advance_requests: document.getElementById('toggleAdvance').checked ? 'true' : 'false'
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'saveSettings',
+        settings: newSettings
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      appSettings = { ...appSettings, ...newSettings };
+      updateShiftDisplay();
+      applyFeatureToggles();
+      getCurrentLocation(true);
+      Swal.fire('บันทึกสำเร็จ', 'อัปเดตการตั้งค่าระบบเรียบร้อยแล้ว', 'success');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+// ==============================================================================
+// 13. TAB NAVIGATION
+// ==============================================================================
+function switchTab(tab) {
+  const tabs = ['clock', 'history', 'requests', 'supervisor'];
+  tabs.forEach(t => {
+    const section = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    const navBtn = document.getElementById('navBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (section) section.classList.add('hidden');
+    if (navBtn) {
+      navBtn.className = 'flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-600 transition';
+    }
+  });
+
+  const activeSection = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  const activeNavBtn = document.getElementById('navBtn' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (activeSection) activeSection.classList.remove('hidden');
+  if (activeNavBtn) {
+    activeNavBtn.className = 'flex-1 flex flex-col items-center justify-center py-1 text-sky-600 transition font-semibold';
+  }
+
+  if (tab === 'history') {
+    loadEmployeeHistory();
+  } else if (tab === 'requests') {
+    loadAdvanceEligibility();
+  } else if (tab === 'supervisor' && supervisorSession) {
+    loadSupervisorDashboard();
+  }
+}

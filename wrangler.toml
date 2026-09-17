@@ -1,0 +1,8 @@
+name = "ptntime"
+compatibility_date = "2024-08-01"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ptn_payroll_db"
+database_id = "5a72c7dd-fedb-4583-85f9-b29964845560"

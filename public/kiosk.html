@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PTN Kiosk Display — QR Code ลงเวลาทำงาน</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- QRCode.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top right, #0f172a, #020617);
+      color: #f8fafc;
+      overflow: hidden;
+      user-select: none;
+    }
+    .qr-card-glow {
+      box-shadow: 0 0 50px -10px rgba(14, 165, 233, 0.35);
+    }
+    /* Circular countdown animation */
+    .progress-ring__circle {
+      transition: stroke-dashoffset 0.35s;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-6 md:p-10 relative">
+
+  <!-- Background decorative blurs -->
+  <div class="absolute -top-20 -left-20 w-96 h-96 bg-sky-600/15 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-20 -right-20 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- Top Header -->
+  <header class="flex items-center justify-between z-10">
+    <div class="flex items-center space-x-4">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-3xl shadow-lg shadow-sky-500/25 font-bold">
+        ⏱️
+      </div>
+      <div>
+        <h1 class="text-xl md:text-2xl font-extrabold tracking-tight text-white flex items-center space-x-2">
+          <span>PTN Time Attendant</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-semibold border border-sky-400/30">KIOSK MODE</span>
+        </h1>
+        <p class="text-xs md:text-sm text-slate-400 font-medium">บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด</p>
+      </div>
+    </div>
+
+    <!-- Live Digital Clock -->
+    <div class="text-right">
+      <div id="kioskDate" class="text-xs md:text-sm font-semibold text-sky-400 uppercase tracking-wider">กำลังโหลด...</div>
+      <div id="kioskClock" class="text-3xl md:text-4xl font-extrabold font-mono text-white tracking-tight mt-0.5">00:00:00</div>
+    </div>
+  </header>
+
+  <!-- Main Center QR Section -->
+  <main class="flex-1 flex flex-col items-center justify-center my-6 z-10">
+    <div class="bg-slate-900/90 border border-slate-700/80 rounded-3xl p-8 md:p-10 text-center max-w-md w-full qr-card-glow relative backdrop-blur-xl">
+      
+      <div class="text-xs font-bold uppercase tracking-widest text-sky-400 mb-2 flex items-center justify-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+        <span>DYNAMIC RANDOM QR CODE</span>
+      </div>
+      <h2 class="text-lg md:text-xl font-bold text-white mb-6">สแกนเพื่อลงเวลาเข้า - ออกงาน</h2>
+
+      <!-- QR Code Canvas Container -->
+      <div class="relative w-64 h-64 mx-auto bg-white p-4 rounded-2xl shadow-inner flex items-center justify-center">
+        <div id="qrcodeBox"></div>
+      </div>
+
+      <!-- Countdown Progress & Token Display -->
+      <div class="mt-6 flex items-center justify-center space-x-4">
+        <!-- SVG Progress Ring -->
+        <div class="relative w-12 h-12 flex items-center justify-center">
+          <svg class="w-12 h-12" viewBox="0 0 36 36">
+            <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path id="progressCircle" class="text-sky-500 progress-ring__circle" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none"
+              stroke-dasharray="100, 100" stroke-dashoffset="0"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <span id="countdownNumber" class="absolute text-xs font-bold text-sky-300 font-mono">20</span>
+        </div>
+        <div class="text-left">
+          <div class="text-xs text-slate-400 font-medium">รหัสจะเปลี่ยนใหม่ในอีก <span id="countdownText" class="text-sky-400 font-bold">20</span> วินาที</div>
+          <div class="text-[11px] text-slate-500 font-mono">TOKEN: <span id="currentTokenLabel" class="text-slate-300 font-bold">PTN-XXXXXXXX</span></div>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+        <span>กะงาน: <b class="text-slate-200">09:30 - 19:00</b></span>
+        <span>ลงเวลาแล้ววันนี้: <b id="kioskClockedCount" class="text-emerald-400 font-bold text-sm">0</b> คน</span>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Bottom Footer Controls -->
+  <footer class="flex items-center justify-between text-xs text-slate-500 z-10">
+    <div>
+      <span>ระบบป้องกันการถ่ายรูปส่งต่อ 100% (Time-Based One-Time QR)</span>
+    </div>
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleFullscreen()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+        ⛶ เต็มจอ (Fullscreen)
+      </button>
+      <a href="/" class="px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 text-xs font-semibold border border-sky-500/30 transition">
+        📱 กลับหน้าแอปมือถือ
+      </a>
+    </div>
+  </footer>
+
+  <script>
+    let qrcodeInstance = null;
+    let secondsRemaining = 20;
+
+    const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+    const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+    function updateClock() {
+      const now = new Date();
+      const dStr = `${thaiDays[now.getDay()]}ที่ ${now.getDate()} ${thaiMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
+      document.getElementById('kioskDate').textContent = dStr;
+
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('kioskClock').textContent = `${h}:${m}:${s}`;
+    }
+
+    async function fetchKioskToken() {
+      try {
+        const res = await fetch('/api?action=getKioskQrToken');
+        const data = await res.json();
+        if (data.success) {
+          renderQrCode(data.token);
+          secondsRemaining = data.secondsLeft || 20;
+          document.getElementById('currentTokenLabel').textContent = data.token;
+          document.getElementById('kioskClockedCount').textContent = data.clockedTodayCount || 0;
+          updateCountdownVisual(secondsRemaining);
+        }
+      } catch (e) {
+        console.warn('Error fetching kiosk QR:', e);
+      }
+    }
+
+    function renderQrCode(token) {
+      const box = document.getElementById('qrcodeBox');
+      box.innerHTML = '';
+      qrcodeInstance = new QRCode(box, {
+        text: token,
+        width: 220,
+        height: 220,
+        colorDark: "#020617",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    function updateCountdownVisual(sec) {
+      document.getElementById('countdownNumber').textContent = sec;
+      document.getElementById('countdownText').textContent = sec;
+      const circle = document.getElementById('progressCircle');
+      const percent = (sec / 20) * 100;
+      circle.style.strokeDashoffset = 100 - percent;
+    }
+
+    function startTimerLoop() {
+      setInterval(() => {
+        secondsRemaining--;
+        if (secondsRemaining <= 0) {
+          fetchKioskToken();
+        } else {
+          updateCountdownVisual(secondsRemaining);
+        }
+      }, 1000);
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateClock();
+      setInterval(updateClock, 1000);
+      fetchKioskToken();
+      startTimerLoop();
+    });
+  </script>
+</body>
+</html>
