@@ -45,6 +45,17 @@
   <!-- QRCode.js CDN for Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
+  <!-- Google MediaPipe Tasks Vision for AI Face Detection -->
+  <script type="module">
+    try {
+      const { FilesetResolver, FaceDetector } = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+      window.MediaPipeFaceTasks = { FilesetResolver, FaceDetector };
+      window.dispatchEvent(new CustomEvent('mediapipe-loaded'));
+    } catch(e) {
+      console.warn('MediaPipe load note:', e);
+    }
+  </script>
+
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -61,12 +72,12 @@
             ⏱️
           </div>
           <div>
-            <h1 class="text-base md:text-xl font-black tracking-tight leading-tight">ระบบลงเวลาทำงาน (PTN Time)</h1>
-            <p class="text-xs md:text-sm text-sky-100 font-semibold" id="headerCompanyName">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</p>
+            <h1 class="text-base md:text-xl font-semibold tracking-tight leading-tight">ระบบลงเวลาทำงาน (PTN Time)</h1>
+            <p class="text-xs md:text-sm text-sky-100 font-normal" id="headerCompanyName">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</p>
           </div>
         </div>
         
-        <span class="text-xs md:text-sm font-black px-3.5 py-1.5 bg-white/20 text-white rounded-xl backdrop-blur border border-white/25 shadow-sm">
+        <span class="text-xs md:text-sm font-medium px-3 py-1 bg-white/20 text-white rounded-xl backdrop-blur border border-white/25 shadow-sm">
           ตัดวิก 25
         </span>
       </div>
@@ -74,20 +85,20 @@
       <!-- Employee Switcher / Profile Card (Prominent, High-contrast, Easy to Tap) -->
       <div onclick="handleHeaderEmployeeCardClick()" class="mt-3.5 bg-white/15 hover:bg-white/25 active:scale-[0.99] backdrop-blur-md rounded-2xl p-3 md:p-4 border border-white/25 flex items-center justify-between cursor-pointer transition shadow-sm">
         <div class="flex items-center space-x-3.5 min-w-0">
-          <div id="headerEmpAvatar" class="w-11 h-11 md:w-12 h-12 rounded-xl bg-sky-500 text-white font-black text-base flex-shrink-0 flex items-center justify-center shadow-md">
+          <div id="headerEmpAvatar" class="w-11 h-11 md:w-12 h-12 rounded-xl bg-sky-500 text-white font-medium text-base flex-shrink-0 flex items-center justify-center shadow-md">
             ⏱️
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-1.5">
-              <div id="headerEmpSub" class="text-xs md:text-sm text-sky-200 font-semibold truncate">แตะเพื่อระบุตัวตนเข้าใช้งาน</div>
-              <span id="headerLockBadge" class="hidden text-xs font-black px-2 py-0.5 rounded bg-amber-400 text-slate-900 shadow-sm flex items-center gap-1">🔒 ล็อกเครื่อง</span>
+              <div id="headerEmpSub" class="text-xs md:text-sm text-sky-200 font-normal truncate">แตะเพื่อระบุตัวตนเข้าใช้งาน</div>
+              <span id="headerLockBadge" class="hidden text-xs font-semibold px-2 py-0.5 rounded bg-amber-400 text-slate-900 shadow-sm flex items-center gap-1">🔒 ล็อกเครื่อง</span>
             </div>
-            <div id="headerEmpName" class="text-base md:text-xl font-extrabold text-white truncate">
+            <div id="headerEmpName" class="text-base md:text-xl font-medium text-white truncate mt-0.5">
               กรุณาแตะเพื่อเลือกรหัสพนักงาน
             </div>
           </div>
         </div>
-        <div id="headerEmpBtnTag" class="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl text-xs md:text-sm font-bold text-sky-100 flex items-center space-x-1.5 flex-shrink-0 ml-2 shadow-sm">
+        <div id="headerEmpBtnTag" class="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl text-xs md:text-sm font-normal text-sky-100 flex items-center space-x-1.5 flex-shrink-0 ml-2 shadow-sm">
           <span id="headerEmpBtnText">เปลี่ยน</span>
           <span id="headerEmpBtnIcon">
             <svg class="w-4 h-4 md:w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -97,12 +108,12 @@
     </header>
 
     <!-- Shift Time Ticker Bar (Clear, High Contrast) -->
-    <div class="bg-sky-50 border-b border-sky-200/80 px-4 md:px-6 py-2.5 flex items-center justify-between text-xs md:text-sm text-sky-950 font-bold">
+    <div class="bg-sky-50 border-b border-sky-200/80 px-4 md:px-6 py-2.5 flex items-center justify-between text-xs md:text-sm text-sky-950 font-medium">
       <div class="flex items-center space-x-2">
-        <span class="text-sky-700 font-black">☀️ เวลางาน:</span>
-        <span class="font-extrabold text-slate-900" id="shiftTickerText">09:30 - 19:00 น.</span>
+        <span class="text-sky-700 font-semibold">☀️ เวลางาน:</span>
+        <span class="font-semibold text-slate-900" id="shiftTickerText">09:30 - 19:00 น.</span>
       </div>
-      <div class="text-slate-600 font-medium">
+      <div class="text-slate-600 font-normal">
         🍱 พัก 13:00 - 14:00 น.
       </div>
     </div>
@@ -111,213 +122,159 @@
     <main class="flex-1 p-4 md:p-6 overflow-y-auto space-y-6">
 
       <!-- ========================================================================= -->
-      <!-- TAB 1: CLOCK IN / OUT (ลงเวลาทำงานพร้อมหมายเลขขั้นตอนกำกับ) -->
+      <!-- TAB 1: CLOCK IN / OUT (แนวคิด Hero One-Tap Action: ตัวหนังสือใหญ่ สบายตา) -->
       <!-- ========================================================================= -->
       <section id="tabClock" class="space-y-5">
-        
-        <!-- Live Clock & Today Summary Banner (Adaptive Grid on Tablet) -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-          <!-- Digital Clock Banner -->
-          <div class="md:col-span-7 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 rounded-3xl p-5 md:p-6 text-white shadow-lg text-center relative overflow-hidden flex flex-col justify-center">
-            <div class="absolute -right-6 -top-6 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
-            <div class="text-xs md:text-sm font-bold text-sky-300 uppercase tracking-wider" id="liveDateThai">กำลังโหลดวันที่...</div>
-            <div class="text-5xl md:text-6xl font-black tracking-tight mt-1.5 font-mono text-white drop-shadow-md" id="liveClock">00:00:00</div>
-            
-            <div class="mt-2.5 flex items-center justify-center">
-              <span class="inline-flex items-center px-3.5 py-1 rounded-xl text-xs md:text-sm font-bold bg-white/10 text-sky-200 border border-white/10">
-                ⏰ ผ่อนผันสายตามเกณฑ์ | ตัดวิกทุกวันที่ 25
-              </span>
+
+        <!-- 1. Big Digital Clock & Server Sync (ขนาดใหญ่พิเศษ ตัวเลขอ่านง่าย สบายตา) -->
+        <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-5 md:p-7 text-white shadow-xl text-center relative overflow-hidden flex flex-col justify-center">
+          <div class="absolute -right-6 -top-6 w-36 h-36 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="text-sm md:text-base font-normal text-slate-300" id="liveDateThai">กำลังโหลดวันที่...</div>
+          <div class="text-5xl md:text-6xl font-normal font-mono tracking-tight my-1 text-white drop-shadow" id="liveClock">00:00:00</div>
+          
+          <div class="mt-1 flex items-center justify-center">
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs md:text-sm font-normal bg-white/10 text-sky-200 border border-white/10">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>⏰ ผ่อนผันสายตามเกณฑ์ | ตัดวิกทุกวันที่ 25</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. Current Status Banner (สรุปสถานะปัจจุบัน) -->
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center justify-between shadow-sm" id="todayStatusCard">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl md:text-3xl" id="todayStatusIcon">🌅</span>
+            <div>
+              <div class="text-xs text-slate-500 font-normal">สถานะล่าสุดของคุณ</div>
+              <div class="text-base md:text-lg font-medium text-slate-800" id="todayStatusText">ยังไม่ได้ลงเวลาวันนี้</div>
             </div>
           </div>
+          <span id="todayStatusBadge" class="px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-slate-100 text-slate-700 border border-slate-200">
+            ยังไม่ลงเวลา
+          </span>
+        </div>
 
-          <!-- Today Summary Quick Card -->
-          <div class="md:col-span-5 bg-white rounded-3xl p-4 md:p-5 border-2 border-slate-200 shadow-sm flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm md:text-base font-extrabold text-slate-800 flex items-center gap-1.5">
-                <span>📊</span> สรุปบันทึกวันนี้
-              </span>
-              <span id="todayStatusBadge" class="px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">ยังไม่ลงเวลา</span>
+        <!-- 3. HERO ACTION BUTTON (ปุ่มยักษ์ปุ่มเดียวตามสถานะปัจจุบัน แตะง่าย ชัดเจน ไม่หนาเกินไป) -->
+        <div class="space-y-3 pt-1">
+          <div class="text-center">
+            <span class="text-xs md:text-sm font-medium text-slate-400 uppercase tracking-wider">
+              แตะปุ่มด้านล่างนี้เพื่อทำรายการ
+            </span>
+          </div>
+
+          <!-- Hero Button Element -->
+          <button id="heroActionButton" type="button" class="w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse">
+            <!-- Icon Box -->
+            <div id="heroActionIconBox" class="w-18 h-18 md:w-20 md:h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl md:text-4xl shadow-inner border border-white/25">
+              <span id="heroActionIcon">☀️</span>
             </div>
             
-            <div class="grid grid-cols-2 gap-2 text-center">
-              <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5">
-                <div class="text-xs md:text-sm text-emerald-800 font-bold">เข้างาน (In)</div>
-                <div id="todayClockInTime" class="text-xl md:text-2xl font-black text-emerald-950 font-mono mt-0.5">--:--:--</div>
-                <div id="todayLateInfo" class="text-[11px] md:text-xs text-emerald-700 font-medium">เกณฑ์ 09:30 น.</div>
+            <!-- Big Clean Text (ขนาด 26px - 30px ชัดมาก ไม่หนาเกินไป) -->
+            <div class="text-center">
+              <div id="heroActionTitle" class="text-2xl md:text-3xl font-semibold tracking-normal text-white">
+                แตะเพื่อลงเวลาเข้างาน
               </div>
-              <div class="bg-rose-50 border border-rose-200 rounded-2xl p-2.5">
-                <div class="text-xs md:text-sm text-rose-800 font-bold">ออกงาน (Out)</div>
-                <div id="todayClockOutTime" class="text-xl md:text-2xl font-black text-rose-950 font-mono mt-0.5">--:--:--</div>
-                <div id="todayWorkSummary" class="text-[11px] md:text-xs text-rose-700 font-medium">ปกติ 0 ชม.</div>
+              <div id="heroActionSubtitle" class="text-sm md:text-base font-normal text-emerald-100 mt-1">
+                สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
               </div>
             </div>
+          </button>
 
-            <!-- Break Info Row for 4-punch mode (Hidden by default, shown in BREAK_PUNCH mode) -->
-            <div id="todayBreakSummaryRow" class="hidden mt-2 pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-center">
-              <div class="bg-amber-50 border border-amber-200 rounded-2xl p-2">
-                <div class="text-[11px] md:text-xs text-amber-800 font-bold">☕ ออกพัก (Break OUT)</div>
-                <div id="todayBreakOutTime" class="text-base md:text-lg font-black text-amber-950 font-mono mt-0.5">--:--:--</div>
-              </div>
-              <div class="bg-teal-50 border border-teal-200 rounded-2xl p-2">
-                <div class="text-[11px] md:text-xs text-teal-800 font-bold">💼 เข้าหลังพัก (Break IN)</div>
-                <div id="todayBreakInTime" class="text-base md:text-lg font-black text-teal-950 font-mono mt-0.5">--:--:--</div>
-                <div id="todayBreakDurationInfo" class="text-[10px] md:text-[11px] text-teal-700 font-medium">รอพัก</div>
-              </div>
+          <!-- Secondary Actions & Direct GPS Options -->
+          <div id="heroSecondaryContainer" class="space-y-2 pt-1">
+            <!-- Alternative button (e.g. In 2-punch mode, or alternative action) -->
+            <div id="heroSecondaryActionBox" class="text-center hidden">
+              <button type="button" id="btnHeroSecondaryAction" class="text-xs md:text-sm text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl transition shadow-sm font-medium">
+                หรือแตะเพื่อลงเวลาออกงาน (OUT)
+              </button>
+            </div>
+
+            <!-- Direct GPS Button (shown when allow_direct_gps === 'true') -->
+            <div id="containerHeroDirectGps" class="text-center hidden pt-1">
+              <button type="button" id="btnHeroDirectGps" class="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-700 font-medium text-xs md:text-sm rounded-2xl border border-slate-200 flex items-center justify-center space-x-2 transition shadow-sm">
+                <span class="text-base">📸</span>
+                <span id="txtHeroDirectGps">ถ่ายรูปด้วย GPS โดยตรง (ไม่ต้องใช้ QR)</span>
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- WORKFLOW STEPS CONTAINER -->
-        <div class="space-y-4">
-          
-          <!-- STEP 1: ตรวจสอบหรือระบุตัวตนพนักงาน -->
-          <div class="bg-white rounded-3xl p-4 md:p-5 border-2 border-sky-100 shadow-sm hover:border-sky-300 transition">
-            <div class="flex items-center justify-between mb-2.5">
-              <div class="flex items-center space-x-3">
-                <span class="w-8 h-8 md:w-9 md:h-9 rounded-2xl bg-sky-600 text-white font-black text-sm md:text-base flex items-center justify-center shadow-md flex-shrink-0">1</span>
-                <div>
-                  <h3 class="text-base md:text-lg font-black text-slate-900 leading-tight">ขั้นตอนที่ 1 : ตรวจสอบชื่อพนักงาน</h3>
-                  <p class="text-xs md:text-sm text-slate-500 font-medium">ยืนยันรหัสและชื่อของคุณก่อนทำการลงเวลา</p>
-                </div>
-              </div>
-              <button type="button" onclick="handleHeaderEmployeeCardClick()" class="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1 transition flex-shrink-0">
-                <span>เลือกชื่อ</span>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-              </button>
+        <!-- 4. Location & GPS Status Card (ชัดเจน ตัวหนังสือขนาดพอดี อ่านง่าย) -->
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs md:text-sm shadow-sm">
+          <div class="flex items-center gap-3 text-slate-700">
+            <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg flex-shrink-0">
+              📍
             </div>
-
-            <!-- Employee Box View -->
-            <div onclick="handleHeaderEmployeeCardClick()" class="p-3 md:p-4 rounded-2xl bg-gradient-to-r from-sky-50 via-slate-50 to-blue-50 border border-sky-200/80 flex items-center justify-between cursor-pointer hover:border-sky-300 transition">
-              <div class="flex items-center space-x-3.5 min-w-0">
-                <div id="step1EmpAvatar" class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-sky-600 text-white font-black text-lg md:text-xl flex items-center justify-center shadow flex-shrink-0">
-                  👤
-                </div>
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span id="step1EmpId" class="text-xs md:text-sm font-mono font-bold text-sky-800 bg-white px-2 py-0.5 rounded-lg border border-sky-200">ยังไม่ระบุ</span>
-                    <span id="step1LockBadge" class="hidden text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-400 text-slate-900 shadow-sm">🔒 ล็อกเครื่อง</span>
-                  </div>
-                  <div id="step1EmpName" class="text-base md:text-xl font-extrabold text-slate-900 truncate mt-0.5">
-                    กรุณาแตะเลือกชื่อพนักงาน
-                  </div>
-                </div>
-              </div>
-              <div id="step1StatusIcon" class="text-xl md:text-2xl font-bold text-sky-500 pl-2">
-                👉
-              </div>
+            <div>
+              <div class="font-medium text-slate-900" id="gpsStatusText">กำลังค้นหาตำแหน่ง GPS...</div>
+              <div class="text-xs text-slate-500 font-normal" id="gpsDistanceText">ระยะห่าง: รอคำนวณ</div>
             </div>
           </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span id="gpsBadge" class="px-2.5 py-1 rounded-xl text-xs font-medium bg-slate-200 text-slate-700">
+              รอตรวจพิกัด
+            </span>
+            <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-normal transition flex items-center gap-1 shadow-sm" title="แตะเพื่อจับพิกัด GPS ใหม่">
+              <svg id="iconRefreshGps" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              <span>รีเฟรช</span>
+            </button>
+          </div>
+        </div>
 
-          <!-- STEP 2: ตรวจสอบพิกัด GPS สำนักงาน -->
-          <div class="bg-white rounded-3xl p-4 md:p-5 border-2 border-slate-100 shadow-sm hover:border-slate-200 transition">
-            <div class="flex items-center justify-between mb-2.5">
-              <div class="flex items-center space-x-3">
-                <span class="w-8 h-8 md:w-9 md:h-9 rounded-2xl bg-sky-600 text-white font-black text-sm md:text-base flex items-center justify-center shadow-md flex-shrink-0">2</span>
-                <div>
-                  <h3 class="text-base md:text-lg font-black text-slate-900 leading-tight">ขั้นตอนที่ 2 : ตรวจสอบสัญญาณ GPS สำนักงาน</h3>
-                  <p class="text-xs md:text-sm text-slate-500 font-medium">ยืนยันว่าอยู่ในพื้นที่บริษัท (รัศมี 200 เมตร)</p>
-                </div>
-              </div>
-              <button type="button" onclick="getCurrentLocation(true)" class="px-3 py-1.5 text-xs md:text-sm text-sky-700 font-bold bg-sky-50 hover:bg-sky-100 rounded-xl border border-sky-200 flex items-center space-x-1 transition flex-shrink-0">
-                <span>รีเฟรช GPS</span>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-              </button>
-            </div>
-
-            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-              <div class="space-y-0.5">
-                <div class="flex items-center space-x-2">
-                  <span id="gpsPulseDot" class="w-3.5 h-3.5 rounded-full bg-amber-400 animate-pulse shadow-sm"></span>
-                  <div id="gpsStatusText" class="text-sm md:text-base font-extrabold text-slate-800">กำลังค้นหาตำแหน่ง GPS...</div>
-                </div>
-                <div id="gpsDistanceText" class="text-xs md:text-sm text-slate-500 font-medium">ระยะห่าง: รอคำนวณ</div>
-              </div>
-              <div id="gpsBadge" class="px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-black bg-slate-200 text-slate-700 border border-slate-300">
-                รอตรวจพิกัด
-              </div>
-            </div>
+        <!-- 5. Today's Timeline Summary (สรุปเวลาของวันนี้) -->
+        <div class="bg-white rounded-3xl p-4 md:p-5 border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <span class="text-sm md:text-base font-medium text-slate-800 flex items-center gap-1.5">
+              <span>📋</span> สรุปเวลาทำงานวันนี้
+            </span>
+            <span class="text-xs text-slate-500 font-normal" id="todayLateInfo">เกณฑ์ 09:30 น.</span>
           </div>
 
-          <!-- STEP 3: บันทึกเวลาเข้า-ออกงาน (รองรับทั้ง 2 โหมด: 2 ครั้ง และ 4 ครั้ง) -->
-          <div class="bg-gradient-to-br from-white via-sky-50/40 to-emerald-50/40 rounded-3xl p-4 md:p-6 border-2 border-emerald-300 shadow-md">
-            <div class="flex items-center space-x-3 mb-3.5">
-              <span class="w-8 h-8 md:w-9 md:h-9 rounded-2xl bg-emerald-600 text-white font-black text-sm md:text-base flex items-center justify-center shadow-md flex-shrink-0">3</span>
-              <div>
-                <h3 class="text-base md:text-xl font-black text-slate-900 leading-tight">ขั้นตอนที่ 3 : บันทึกเวลาเข้างาน หรือ ออกงาน</h3>
-                <p class="text-xs md:text-sm text-emerald-800 font-semibold" id="step3Subtitle">สแกน QR ประจำสาขา หรือกดถ่ายรูปด้วย GPS โดยตรง</p>
-              </div>
+          <!-- 2-box or 4-box timeline grid -->
+          <div class="grid grid-cols-2 gap-2 text-xs md:text-sm" id="timelineBoxesContainer">
+            <!-- Box 1: เข้าเช้า -->
+            <div id="timeBoxMorning" class="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex flex-col justify-between">
+              <span class="text-xs text-emerald-800 font-medium">☀️ เข้างานเช้า (IN)</span>
+              <div id="todayClockInTime" class="text-lg md:text-xl font-semibold text-emerald-950 font-mono mt-1">--:--:--</div>
             </div>
 
-            <!-- MODE 1: Standard 2-Punch Container (AUTO_DEDUCT) -->
-            <div id="containerStandardPunch">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                <!-- Button IN -->
-                <button id="btnClockInQr" onclick="openQrScannerModal('IN')" class="w-full py-5 md:py-6 px-5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-4 transition group disabled:opacity-50">
-                  <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition">
-                    <svg class="w-7 h-7 md:w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                  </div>
-                  <div class="text-left">
-                    <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR เข้างาน</div>
-                    <div class="text-xs md:text-sm font-semibold text-emerald-100 mt-0.5">บันทึกเวลาเริ่มงาน (IN)</div>
-                  </div>
-                </button>
-
-                <!-- Button OUT -->
-                <button id="btnClockOutQr" onclick="openQrScannerModal('OUT')" class="w-full py-5 md:py-6 px-5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-4 transition group disabled:opacity-50">
-                  <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition">
-                    <svg class="w-7 h-7 md:w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                  </div>
-                  <div class="text-left">
-                    <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกงาน</div>
-                    <div class="text-xs md:text-sm font-semibold text-rose-100 mt-0.5">เลิกงาน / จบ OT (OUT)</div>
-                  </div>
-                </button>
-              </div>
-
-              <!-- Alternative Direct GPS Buttons -->
-              <div id="containerDirectGps" class="mt-4 pt-4 border-t border-emerald-200/70 text-center space-y-2">
-                <div class="text-xs md:text-sm text-slate-600 font-bold flex items-center justify-center gap-1">
-                  <span>📍 ไม่ได้ใช้ QR Code?</span>
-                  <span class="text-emerald-700">กดถ่ายรูปเพื่อลงเวลาด้วย GPS ได้ทันที:</span>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  <button type="button" onclick="startDirectGpsClock('IN')" class="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-900 font-bold rounded-2xl border border-emerald-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                    <span class="text-lg">📸</span>
-                    <span class="text-sm md:text-base font-black">ถ่ายรูปเข้างาน (GPS)</span>
-                  </button>
-                  <button type="button" onclick="startDirectGpsClock('OUT')" class="py-3 px-4 bg-rose-50 hover:bg-rose-100 active:scale-[0.98] text-rose-900 font-bold rounded-2xl border border-rose-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                    <span class="text-lg">📸</span>
-                    <span class="text-sm md:text-base font-black">ถ่ายรูปออกงาน (GPS)</span>
-                  </button>
-                </div>
-              </div>
+            <!-- Box 2: พักเที่ยง (Hidden in 2-punch mode) -->
+            <div id="timeBoxBreakOut" class="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col justify-between hidden">
+              <span class="text-xs text-amber-800 font-medium">☕ ออกไปพัก (Break OUT)</span>
+              <div id="todayBreakOutTime" class="text-lg md:text-xl font-semibold text-amber-950 font-mono mt-1">--:--:--</div>
             </div>
 
-            <!-- MODE 2: 4-Punch Dynamic Container (BREAK_PUNCH) -->
-            <div id="containerBreakPunch" class="hidden space-y-3.5">
-              <!-- Break Punch State Banner -->
-              <div id="breakPunchStateBanner" class="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 flex items-center justify-between text-sm font-bold">
-                <span id="breakPunchStateText">กำลังตรวจสอบสถานะการลงเวลา...</span>
-                <span id="breakPunchStateBadge" class="px-2.5 py-1 rounded-lg text-xs font-black bg-sky-200 text-sky-900">4 ครั้ง</span>
-              </div>
+            <!-- Box 3: เข้าบ่าย (Hidden in 2-punch mode) -->
+            <div id="timeBoxBreakIn" class="p-3 rounded-2xl bg-teal-50/70 border border-teal-200 flex flex-col justify-between hidden">
+              <span class="text-xs text-teal-800 font-medium">💼 กลับเข้างาน (Break IN)</span>
+              <div id="todayBreakInTime" class="text-lg md:text-xl font-semibold text-teal-950 font-mono mt-1">--:--:--</div>
+            </div>
 
-              <!-- Dynamic Action Buttons for Break Mode -->
-              <div id="breakActionButtonsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                <!-- Buttons injected dynamically by app.js -->
-              </div>
-
-              <!-- Direct GPS for Break Mode -->
-              <div id="containerBreakDirectGps" class="mt-3 pt-3 border-t border-emerald-200/70 text-center space-y-2">
-                <div class="text-xs md:text-sm text-slate-600 font-bold flex items-center justify-center gap-1">
-                  <span>📍 ถ่ายรูปด้วย GPS โดยตรง:</span>
-                </div>
-                <div id="breakDirectGpsButtonsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  <!-- Direct GPS buttons injected dynamically -->
-                </div>
-              </div>
+            <!-- Box 4: เลิกงาน -->
+            <div id="timeBoxEvening" class="p-3 rounded-2xl bg-rose-50/70 border border-rose-200 flex flex-col justify-between">
+              <span class="text-xs text-rose-800 font-medium">🚪 ออกงาน (OUT)</span>
+              <div id="todayClockOutTime" class="text-lg md:text-xl font-semibold text-rose-950 font-mono mt-1">--:--:--</div>
             </div>
           </div>
+          <div id="todayWorkSummary" class="text-center text-xs text-slate-500 font-normal pt-1">
+            ปกติ 0 ชม.
+          </div>
+        </div>
 
+        <!-- 6. Quick Access Shortcuts (บริการตนเอง: ประวัติ / เบิกเงิน / ลางาน) -->
+        <div class="grid grid-cols-3 gap-2.5 pt-1">
+          <button type="button" onclick="switchTab('history')" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-2xl">📅</div>
+            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">ประวัติเวลา</div>
+          </button>
+          <button type="button" onclick="switchTab('requests'); switchSubTab('advance');" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-2xl">💵</div>
+            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">ขอเบิกเงิน</div>
+          </button>
+          <button type="button" onclick="switchTab('requests'); switchSubTab('leave');" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-2xl">🏖️</div>
+            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">แจ้งลางาน</div>
+          </button>
         </div>
 
       </section>
@@ -385,9 +342,9 @@
           <div class="flex items-center justify-between border-b pb-3">
             <div>
               <h3 class="text-sm font-extrabold text-slate-800 flex items-center space-x-1.5">
-                <span>💵 ขอเบิกเงินล่วงหน้า (ทุกวันเสาร์)</span>
+                <span id="advanceHeaderTitle">💵 ขอเบิกเงินล่วงหน้า</span>
               </h3>
-              <p class="text-xs text-slate-500 mt-0.5 font-medium">สิทธิ์ 250 บาท/วัน × วันทำงานจริง จันทร์-เสาร์</p>
+              <p id="advanceWindowInfo" class="text-xs text-slate-500 mt-0.5 font-medium">สิทธิ์ตามวันทำงานจริง • เปิดรับตามช่วงเวลาที่กำหนด</p>
             </div>
             <span id="advanceDayBadge" class="px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900">กำลังตรวจสิทธิ์</span>
           </div>
@@ -410,7 +367,7 @@
 
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1.5">ระบุจำนวนเงินที่ต้องการขอเบิก (บาท)</label>
-            <input type="number" id="advRequestAmount" placeholder="เช่น 500, 1000, 1250" class="w-full text-base font-bold p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+            <input type="number" id="advRequestAmount" placeholder="เช่น 500, 1000" class="w-full text-base font-bold p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none">
           </div>
 
           <div>
@@ -430,11 +387,8 @@
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1.5">ประเภทการลา</label>
             <select id="leaveType" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
-              <option value="SICK_WITH_CERT">ลาป่วย (มีใบรับรองแพทย์) — โควตาฟรี 10 วัน/ปี</option>
-              <option value="SICK_NO_CERT">ลาป่วย (ไม่มีใบรับรองแพทย์) — หักเงิน 1.0 เท่า</option>
-              <option value="BUSINESS">ลากิจส่วนตัว</option>
-              <option value="ANNUAL">ลาพักร้อน</option>
-              <option value="WITHOUT_PAY">ลาไม่รับค่าจ้าง (Leave without pay)</option>
+              <option value="SICK_WITH_CERT">ลาป่วยมีใบรับรองแพทย์</option>
+              <option value="SICK_NO_CERT">ลาป่วยไม่มีใบรับรองแพทย์</option>
             </select>
           </div>
 
@@ -595,13 +549,13 @@
       <div class="relative flex-1 flex items-center justify-center overflow-hidden bg-black">
         <video id="fsVideoPreview" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover cam-video-mirrored"></video>
         
-        <!-- Subtle Oval Face Guide -->
-        <div class="pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-2 border-dashed border-white/80 face-guide-oval flex flex-col items-center justify-between py-6">
-          <span class="text-white/80 text-[11px] font-bold drop-shadow bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">
-            👤 ศีรษะ
+        <!-- Subtle Oval Face Guide with AI Detection Cues -->
+        <div id="camFaceOval" class="pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-2 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300">
+          <span id="camGuideTopHint" class="text-white text-xs font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-3.5 py-1.5 rounded-full backdrop-blur-md transition-all duration-200">
+            🔍 กำลังตรวจจับใบหน้า...
           </span>
-          <span class="text-white/80 text-[11px] font-bold drop-shadow bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">
-            คาง
+          <span id="camGuideBottomHint" class="text-white/80 text-[11px] font-bold drop-shadow bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm">
+            วางใบหน้าให้เต็มกรอบวงรี
           </span>
         </div>
 
@@ -612,14 +566,16 @@
       <!-- Bottom Bar with Shutter Button -->
       <div class="relative z-20 pb-8 pt-4 px-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center justify-center space-y-2">
         <div class="flex items-center justify-center w-full">
-          <!-- Shutter Button -->
-          <button type="button" id="btnShutterTrigger" onclick="triggerShutterCapture()" class="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white bg-transparent flex items-center justify-center active:scale-90 transition p-1 group shadow-2xl shutter-btn-outer">
-            <span class="w-full h-full rounded-full bg-white group-active:bg-slate-200 shadow-inner flex items-center justify-center text-slate-800 text-3xl font-bold">
+          <!-- Shutter Button (Locked until face detected) -->
+          <button type="button" id="btnShutterTrigger" onclick="triggerShutterCapture()" disabled class="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white bg-transparent flex items-center justify-center active:scale-90 transition p-1 group shadow-2xl shutter-btn-outer disabled:opacity-40 disabled:cursor-not-allowed">
+            <span id="btnShutterInner" class="w-full h-full rounded-full bg-white group-active:bg-slate-200 shadow-inner flex items-center justify-center text-slate-800 text-3xl font-bold transition-all">
               📸
             </span>
           </button>
         </div>
-        <span class="text-xs text-slate-200 font-bold tracking-wider drop-shadow">แตะปุ่มเพื่อถ่ายภาพและบันทึกเวลาทันที</span>
+        <span id="camShutterHintText" class="text-xs text-amber-200 font-bold tracking-wider drop-shadow transition-colors">
+          ⚠️ ส่องใบหน้าให้อยู่ในกรอบเพื่อปลดล็อกชัตเตอร์
+        </span>
       </div>
 
       <!-- Hidden canvas for capturing and compression -->
@@ -642,11 +598,11 @@
         <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 space-y-1">
           <p class="font-bold flex items-center gap-1">📱 เครื่องนี้ผูกอยู่กับ:</p>
           <p id="unlockCurrentEmpName" class="font-extrabold text-amber-950 text-sm">-</p>
-          <p class="text-[11px] text-amber-700 leading-tight">ป้องกันการลงเวลาแทนกัน หากเปลี่ยนเครื่องหรือสลับผู้ใช้ ต้องเลือก 1 ใน 3 วิธีด้านล่าง:</p>
+          <p class="text-[11px] text-amber-700 leading-tight">ป้องกันการลงเวลาแทนกัน หากเปลี่ยนเครื่องหรือสลับผู้ใช้ กรุณาเลือกวิธีปลดล็อกด้านล่าง:</p>
         </div>
 
         <!-- Method 1: Supervisor Password -->
-        <div class="border border-slate-200 rounded-2xl p-3 hover:border-sky-400 transition bg-slate-50/70 space-y-2">
+        <div id="unlockMethodPasswordContainer" class="border border-slate-200 rounded-2xl p-3 hover:border-sky-400 transition bg-slate-50/70 space-y-2">
           <div class="font-bold text-xs text-slate-800 flex items-center justify-between">
             <span class="flex items-center gap-1">🔑 <b>วิธีที่ 1:</b> รหัสผ่านหัวหน้างาน</span>
             <span class="text-[10px] bg-sky-100 text-sky-700 font-bold px-1.5 py-0.5 rounded">บนเครื่องนี้</span>
@@ -659,7 +615,7 @@
         </div>
 
         <!-- Method 2: Scan Master QR -->
-        <div class="border border-slate-200 rounded-2xl p-3 hover:border-emerald-400 transition bg-slate-50/70 space-y-1.5">
+        <div id="unlockMethodQrContainer" class="border border-slate-200 rounded-2xl p-3 hover:border-emerald-400 transition bg-slate-50/70 space-y-1.5">
           <div class="font-bold text-xs text-slate-800 flex items-center justify-between">
             <span class="flex items-center gap-1">📷 <b>วิธีที่ 2:</b> สแกน QR ของหัวหน้า</span>
             <span class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded">สแกนจากจอหัวหน้า</span>
@@ -672,9 +628,14 @@
         </div>
 
         <!-- Method 3: Remote Reset Info -->
-        <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-2.5 text-center">
+        <div id="unlockMethodRemoteContainer" class="bg-indigo-50 border border-indigo-100 rounded-2xl p-2.5 text-center">
           <p class="text-[11px] font-bold text-indigo-900">🌐 วิธีที่ 3: ปลดล็อกระยะไกลผ่านระบบ Payroll</p>
           <p class="text-[10px] text-indigo-700 mt-0.5 leading-tight">ฝ่ายบุคคลสามารถกดปุ่ม "ปลดล็อกเครื่อง" ที่หน้ารายชื่อพนักงานในระบบ PTN Payroll ได้ทันที</p>
+        </div>
+
+        <!-- Notice when all unlock methods are disabled -->
+        <div id="unlockNoMethodNotice" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-3 text-center text-xs text-rose-800 font-bold">
+          ⛔ ระบบปิดการปลดล็อกอัตโนมัติ กรุณาติดต่อฝ่ายบุคคล (HR) เพื่อปลดล็อก
         </div>
 
         <button onclick="closeDeviceUnlockModal()" class="w-full py-2.5 text-xs font-bold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600">

@@ -24,6 +24,8 @@ let appSettings = {
   sunday_ot_rate: 1.0,
   ot_rounding_mode: 'HALF_HOUR',
   advance_day_of_week: 'SATURDAY',
+  advance_start_time: '09:00',
+  advance_end_time: '18:00',
   advance_daily_rate: 250,
   advance_max_amount: 3000,
   enable_leave_requests: 'true',
@@ -32,7 +34,16 @@ let appSettings = {
   allow_direct_gps: 'true',
   qr_mode: 'HYBRID',
   break_tracking_mode: 'AUTO_DEDUCT',
-  break_duration_minutes: 60
+  break_duration_minutes: 60,
+  enable_face_detection: 'true',
+  unlock_method_password: 'true',
+  unlock_method_qr: 'true',
+  unlock_method_remote: 'true',
+  leave_type_sick_with_cert: 'true',
+  leave_type_sick_no_cert: 'true',
+  leave_type_business: 'false',
+  leave_type_annual: 'false',
+  leave_type_without_pay: 'false'
 };
 let currentLocation = null;
 let currentDistanceMeters = null;
@@ -44,6 +55,64 @@ let pendingScanType = 'IN'; // 'IN', 'OUT', or 'UNLOCK'
 let pendingClockData = null; // { type, qrToken } for two-step clock-in/out
 let isDeviceLocked = false;
 let masterQrInterval = null;
+
+const LEAVE_TYPES_MASTER = [
+  { key: 'leave_type_sick_with_cert', value: 'SICK_WITH_CERT', label: 'ลาป่วยมีใบรับรองแพทย์' },
+  { key: 'leave_type_sick_no_cert', value: 'SICK_NO_CERT', label: 'ลาป่วยไม่มีใบรับรองแพทย์' },
+  { key: 'leave_type_business', value: 'BUSINESS', label: 'ลากิจส่วนตัว' },
+  { key: 'leave_type_annual', value: 'ANNUAL', label: 'ลาพักร้อน' },
+  { key: 'leave_type_without_pay', value: 'WITHOUT_PAY', label: 'ลาไม่รับค่าจ้าง' }
+];
+
+const LEAVE_TYPE_LABELS = {
+  'SICK_WITH_CERT': 'ลาป่วยมีใบรับรองแพทย์',
+  'SICK_NO_CERT': 'ลาป่วยไม่มีใบรับรองแพทย์',
+  'BUSINESS': 'ลากิจส่วนตัว',
+  'ANNUAL': 'ลาพักร้อน',
+  'WITHOUT_PAY': 'ลาไม่รับค่าจ้าง'
+};
+
+function renderLeaveTypeOptions() {
+  const sel = document.getElementById('leaveType');
+  if (!sel) return;
+
+  const currentVal = sel.value;
+  sel.innerHTML = '';
+
+  const activeTypes = LEAVE_TYPES_MASTER.filter(item => {
+    if (item.key === 'leave_type_sick_with_cert' || item.key === 'leave_type_sick_no_cert') {
+      return appSettings[item.key] !== 'false';
+    }
+    return appSettings[item.key] === 'true';
+  });
+
+  if (activeTypes.length === 0) {
+    activeTypes.push(LEAVE_TYPES_MASTER[0], LEAVE_TYPES_MASTER[1]);
+  }
+
+  activeTypes.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.value;
+    opt.textContent = t.label;
+    sel.appendChild(opt);
+  });
+
+  if (currentVal && activeTypes.some(t => t.value === currentVal)) {
+    sel.value = currentVal;
+  }
+}
+
+// Synchronously hydrate cached settings & employee immediately to prevent initial UI flash
+try {
+  const cachedSettings = localStorage.getItem('ptn_app_settings');
+  if (cachedSettings) {
+    appSettings = { ...appSettings, ...JSON.parse(cachedSettings) };
+  }
+  const cachedEmp = localStorage.getItem('ptn_time_emp');
+  if (cachedEmp) {
+    currentEmployee = JSON.parse(cachedEmp);
+  }
+} catch(e) {}
 
 function getOrCreateDeviceId() {
   let id = localStorage.getItem('ptn_device_id');
@@ -58,11 +127,28 @@ function getOrCreateDeviceId() {
 // 1. INITIALIZATION & LIVE CLOCK
 // ==============================================================================
 window.addEventListener('DOMContentLoaded', async () => {
+  // 1. Instant paint cached state (0ms - prevents initial UI flash!)
+  updateHeaderEmployeeView();
+  updateShiftDisplay();
+  applyFeatureToggles();
+  renderLeaveTypeOptions();
+  if (appSettings.break_tracking_mode === 'BREAK_PUNCH') {
+    document.getElementById('containerStandardPunch')?.classList.add('hidden');
+    document.getElementById('containerBreakPunch')?.classList.remove('hidden');
+    document.getElementById('todayBreakSummaryRow')?.classList.remove('hidden');
+  }
+
   initLiveClock();
   await loadInitialData();
   restoreSavedEmployee();
   getCurrentLocation();
   
+  // Preload face detection engine in background
+  initFaceDetectionEngine().catch(() => {});
+  window.addEventListener('mediapipe-loaded', () => {
+    initFaceDetectionEngine().catch(() => {});
+  });
+
   // Set default month for history
   const today = new Date().toISOString().substring(0, 10);
   const curMonth = today.substring(0, 7);
@@ -107,7 +193,12 @@ async function loadInitialData() {
     const res = await fetch(API_URL + '?action=getInitialData');
     const data = await res.json();
     if (data.success) {
-      if (data.settings) appSettings = { ...appSettings, ...data.settings };
+      if (data.settings) {
+        appSettings = { ...appSettings, ...data.settings };
+        try {
+          localStorage.setItem('ptn_app_settings', JSON.stringify(appSettings));
+        } catch(e) {}
+      }
       employeeList = data.employees || [];
       populateEmployeeDropdown();
       updateShiftDisplay();
@@ -151,6 +242,39 @@ function applyFeatureToggles() {
       directGpsContainer.classList.remove('hidden');
     }
   }
+
+  const breakDirectGpsContainer = document.getElementById('containerBreakDirectGps');
+  if (breakDirectGpsContainer) {
+    if (appSettings.allow_direct_gps === 'false') {
+      breakDirectGpsContainer.classList.add('hidden');
+    } else {
+      breakDirectGpsContainer.classList.remove('hidden');
+    }
+  }
+
+  const heroDirectGps = document.getElementById('containerHeroDirectGps');
+  if (heroDirectGps) {
+    if (appSettings.allow_direct_gps === 'false') {
+      heroDirectGps.classList.add('hidden');
+    }
+  }
+
+  // Device unlock methods toggles
+  const pwContainer = document.getElementById('unlockMethodPasswordContainer');
+  const qrContainer = document.getElementById('unlockMethodQrContainer');
+  const remoteContainer = document.getElementById('unlockMethodRemoteContainer');
+  const noMethodNotice = document.getElementById('unlockNoMethodNotice');
+
+  const pwEnabled = appSettings.unlock_method_password !== 'false';
+  const qrEnabled = appSettings.unlock_method_qr !== 'false';
+  const remoteEnabled = appSettings.unlock_method_remote !== 'false';
+
+  if (pwContainer) pwContainer.classList.toggle('hidden', !pwEnabled);
+  if (qrContainer) qrContainer.classList.toggle('hidden', !qrEnabled);
+  if (remoteContainer) remoteContainer.classList.toggle('hidden', !remoteEnabled);
+  if (noMethodNotice) noMethodNotice.classList.toggle('hidden', pwEnabled || qrEnabled || remoteEnabled);
+
+  renderLeaveTypeOptions();
 }
 
 async function restoreSavedEmployee() {
@@ -219,8 +343,12 @@ function updateHeaderEmployeeView() {
       const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
       btnText.textContent = `${currentEmployee.empId} ${currentEmployee.fullName}${nick}`;
       if (avatarEl) {
-        const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
-        avatarEl.textContent = numPart ? numPart.slice(-2) : 'PTN';
+        if (currentEmployee.photoUrl) {
+          avatarEl.innerHTML = `<img src="${currentEmployee.photoUrl}" alt="Avatar" class="w-full h-full object-cover rounded-xl">`;
+        } else {
+          const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
+          avatarEl.textContent = numPart ? numPart.slice(-2) : 'PTN';
+        }
       }
       if (subEl) {
         subEl.textContent = currentEmployee.department || 'พนักงาน';
@@ -252,8 +380,12 @@ function updateHeaderEmployeeView() {
       stepEmpName.textContent = `${currentEmployee.fullName}${nick}`;
       if (stepEmpId) stepEmpId.textContent = `${currentEmployee.empId} • ${currentEmployee.department || 'พนักงาน'}`;
       if (stepEmpAvatar) {
-        const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
-        stepEmpAvatar.textContent = numPart ? numPart.slice(-2) : '👤';
+        if (currentEmployee.photoUrl) {
+          stepEmpAvatar.innerHTML = `<img src="${currentEmployee.photoUrl}" alt="Avatar" class="w-full h-full object-cover rounded-xl">`;
+        } else {
+          const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
+          stepEmpAvatar.textContent = numPart ? numPart.slice(-2) : '👤';
+        }
       }
       if (isDeviceLocked) {
         stepLockBadge?.classList.remove('hidden');
@@ -419,21 +551,42 @@ function calculateHaversineMeters(lat1, lon1, lat2, lon2) {
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
 
-function getCurrentLocation(silent = false) {
+function refreshGpsLocation() {
+  const icon = document.getElementById('iconRefreshGps');
+  if (icon) icon.classList.add('animate-spin');
+  getCurrentLocation(false, true);
+}
+
+function getCurrentLocation(silent = false, isManual = false) {
   const statusText = document.getElementById('gpsStatusText');
   const distText = document.getElementById('gpsDistanceText');
   const badge = document.getElementById('gpsBadge');
   const pulse = document.getElementById('gpsPulseDot');
+  const icon = document.getElementById('iconRefreshGps');
 
   if (!navigator.geolocation) {
+    if (icon) icon.classList.remove('animate-spin');
     if (statusText) statusText.textContent = 'เบราว์เซอร์ไม่รองรับ GPS';
+    if (isManual) {
+      Swal.fire({
+        icon: 'error',
+        title: 'ไม่รองรับ GPS',
+        text: 'เบราว์เซอร์หรืออุปกรณ์นี้ไม่รองรับระบบพิกัด Geolocation'
+      });
+    }
     return;
   }
 
-  if (!silent && statusText) statusText.textContent = 'กำลังจับพิกัด GPS...';
+  if (statusText) statusText.textContent = 'กำลังค้นหาพิกัด GPS...';
+  if (distText && isManual) distText.textContent = 'กำลังคำนวณระยะห่างล่าสุด...';
+  if (badge && isManual) {
+    badge.className = 'px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-black bg-slate-200 text-slate-700 border border-slate-300';
+    badge.textContent = 'กำลังตรวจพิกัด...';
+  }
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
+      if (icon) icon.classList.remove('animate-spin');
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
@@ -457,13 +610,35 @@ function getCurrentLocation(silent = false) {
           pulse.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
         }
       }
+
+      if (isManual) {
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: false
+        });
+        Toast.fire({
+          icon: isInside ? 'success' : 'warning',
+          title: isInside ? 'อัปเดตพิกัด GPS สำเร็จ' : `อยู่นอกพื้นที่สำนักงาน (${dist} ม.)`
+        });
+      }
     },
     (err) => {
+      if (icon) icon.classList.remove('animate-spin');
       console.warn('Geolocation notice:', err.message);
       if (statusText) statusText.textContent = 'ไม่พบพิกัด (กรุณาเปิด GPS/อนุญาตเข้าถึงตำแหน่ง)';
       if (badge) {
         badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700';
         badge.textContent = '⚠️ GPS ปิดอยู่';
+      }
+      if (isManual) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ไม่สามารถอ่านพิกัด GPS ได้',
+          text: 'กรุณาเปิด Location Service (GPS) บนมือถือ หรือกดอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง แล้วลองใหม่อีกครั้ง'
+        });
       }
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -471,11 +646,216 @@ function getCurrentLocation(silent = false) {
 }
 
 // ==============================================================================
-// 5. FULLSCREEN SELFIE CAMERA SYSTEM (MODERN FULL-VIEWPORT MODAL)
+// 5. FULLSCREEN SELFIE CAMERA & AI FACE DETECTION SYSTEM
 // ==============================================================================
 let fsCameraStream = null;
 let currentCameraFacing = 'user'; // 'user' (front) or 'environment' (back)
 let activePendingClock = null; // { type: 'IN' | 'OUT', qrToken: string | null }
+
+// Face Detection Engine State
+let faceDetectorEngine = null; // Native FaceDetector or MediaPipe FaceDetector
+let isInitializingFaceEngine = false;
+let faceDetectionTimer = null;
+let faceDetectionFallbackTimer = null;
+let isFaceDetected = false;
+let isFaceDetectionFallbackActive = false;
+
+async function initFaceDetectionEngine() {
+  if (faceDetectorEngine) return faceDetectorEngine;
+  if (isInitializingFaceEngine) return null;
+  isInitializingFaceEngine = true;
+
+  try {
+    // 1. Try Native Hardware FaceDetector API (Chrome / Android / Chromium)
+    if ('FaceDetector' in window) {
+      try {
+        const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 2 });
+        faceDetectorEngine = { type: 'native', detector };
+        console.log('PTN Time: Hardware Native FaceDetector initialized');
+        isInitializingFaceEngine = false;
+        return faceDetectorEngine;
+      } catch (nativeErr) {
+        console.warn('Native FaceDetector init error, trying MediaPipe fallback:', nativeErr);
+      }
+    }
+
+    // 2. Try Google MediaPipe Tasks Vision (iOS Safari / Cross-browser)
+    if (window.MediaPipeFaceTasks) {
+      const { FilesetResolver, FaceDetector } = window.MediaPipeFaceTasks;
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+      );
+      const detector = await FaceDetector.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
+          delegate: "GPU"
+        },
+        runningMode: "IMAGE"
+      });
+      faceDetectorEngine = { type: 'mediapipe', detector };
+      console.log('PTN Time: Google MediaPipe FaceDetector initialized');
+      isInitializingFaceEngine = false;
+      return faceDetectorEngine;
+    }
+  } catch (err) {
+    console.warn('Face detection model init note:', err);
+  }
+
+  isInitializingFaceEngine = false;
+  return null;
+}
+
+function setFaceDetectionUIState(found, isFallback = false) {
+  isFaceDetected = found;
+  const oval = document.getElementById('camFaceOval');
+  const topHint = document.getElementById('camGuideTopHint');
+  const shutterBtn = document.getElementById('btnShutterTrigger');
+  const shutterHint = document.getElementById('camShutterHintText');
+
+  if (found) {
+    if (shutterBtn) {
+      shutterBtn.disabled = false;
+      shutterBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+      shutterBtn.classList.add('cursor-pointer');
+    }
+
+    if (isFallback) {
+      if (oval) {
+        oval.className = 'pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-2 border-dashed border-sky-400 flex flex-col items-center justify-between py-6 transition-all duration-300';
+      }
+      if (topHint) {
+        topHint.className = 'text-white text-xs font-bold drop-shadow bg-sky-600/90 border border-sky-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md';
+        topHint.innerHTML = '📸 ปลดล็อกชัตเตอร์ (โหมดสำรอง)';
+      }
+      if (shutterHint) {
+        shutterHint.className = 'text-xs text-sky-200 font-bold tracking-wider drop-shadow transition-colors';
+        shutterHint.innerHTML = 'พร้อมบันทึกภาพ — แตะปุ่มชัตเตอร์ได้';
+      }
+    } else {
+      if (oval) {
+        oval.className = 'pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-4 border-solid border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.85)] flex flex-col items-center justify-between py-6 transition-all duration-300 animate-pulse';
+      }
+      if (topHint) {
+        topHint.className = 'text-white text-xs font-bold drop-shadow bg-emerald-600/90 border border-emerald-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-lg';
+        topHint.innerHTML = '✅ ตรวจพบใบหน้าเรียบร้อย';
+      }
+      if (shutterHint) {
+        shutterHint.className = 'text-xs text-emerald-300 font-bold tracking-wider drop-shadow transition-colors';
+        shutterHint.innerHTML = '✨ พร้อมบันทึกภาพ — แตะปุ่มชัตเตอร์ได้เลย';
+      }
+    }
+  } else {
+    if (oval) {
+      oval.className = 'pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-2 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300';
+    }
+    if (topHint) {
+      topHint.className = 'text-white text-xs font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-3.5 py-1.5 rounded-full backdrop-blur-md transition-all duration-200';
+      topHint.innerHTML = '🔍 ส่องใบหน้าให้อยู่ในกรอบ...';
+    }
+    if (shutterBtn) {
+      shutterBtn.disabled = true;
+      shutterBtn.classList.add('opacity-40', 'cursor-not-allowed');
+      shutterBtn.classList.remove('cursor-pointer');
+    }
+    if (shutterHint) {
+      shutterHint.className = 'text-xs text-amber-200 font-bold tracking-wider drop-shadow transition-colors';
+      shutterHint.innerHTML = '⚠️ ส่องใบหน้าให้อยู่ในกรอบเพื่อปลดล็อกชัตเตอร์';
+    }
+  }
+}
+
+function enableFaceDetectionFallback() {
+  if (isFaceDetected) return;
+  isFaceDetectionFallbackActive = true;
+  setFaceDetectionUIState(true, true);
+}
+
+function startFaceDetectionLoop() {
+  stopFaceDetectionLoop();
+
+  const video = document.getElementById('fsVideoPreview');
+  if (!video) return;
+
+  const runDetection = async () => {
+    if (!fsCameraStream || video.paused || video.ended) {
+      faceDetectionTimer = setTimeout(runDetection, 250);
+      return;
+    }
+
+    if (video.readyState < 2) {
+      faceDetectionTimer = setTimeout(runDetection, 150);
+      return;
+    }
+
+    // If disabled via Admin settings, skip detection and unlock shutter immediately
+    if (appSettings.enable_face_detection === 'false') {
+      setFaceDetectionUIState(true, false);
+      return;
+    }
+
+    try {
+      if (!faceDetectorEngine) {
+        await initFaceDetectionEngine();
+      }
+
+      let detected = false;
+      const vw = video.videoWidth || 640;
+      const vh = video.videoHeight || 480;
+      const minDimension = Math.min(vw, vh);
+
+      if (faceDetectorEngine) {
+        if (faceDetectorEngine.type === 'native') {
+          const faces = await faceDetectorEngine.detector.detect(video);
+          if (faces && faces.length > 0) {
+            for (const f of faces) {
+              const box = f.boundingBox;
+              if (box && box.width > (minDimension * 0.18) && box.height > (minDimension * 0.18)) {
+                detected = true;
+                break;
+              }
+            }
+          }
+        } else if (faceDetectorEngine.type === 'mediapipe') {
+          const result = faceDetectorEngine.detector.detect(video);
+          if (result && result.detections && result.detections.length > 0) {
+            for (const d of result.detections) {
+              const box = d.boundingBox;
+              if (box && box.width > (minDimension * 0.18) && box.height > (minDimension * 0.18)) {
+                detected = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (detected) {
+        setFaceDetectionUIState(true, false);
+      } else {
+        if (!isFaceDetectionFallbackActive) {
+          setFaceDetectionUIState(false, false);
+        }
+      }
+    } catch (e) {
+      console.warn('Face detection cycle note:', e);
+    }
+
+    faceDetectionTimer = setTimeout(runDetection, 200);
+  };
+
+  runDetection();
+}
+
+function stopFaceDetectionLoop() {
+  if (faceDetectionTimer) {
+    clearTimeout(faceDetectionTimer);
+    faceDetectionTimer = null;
+  }
+  if (faceDetectionFallbackTimer) {
+    clearTimeout(faceDetectionFallbackTimer);
+    faceDetectionFallbackTimer = null;
+  }
+}
 
 async function openFullscreenCamera(type, qrToken) {
   if (!currentEmployee) {
@@ -524,8 +904,26 @@ async function openFullscreenCamera(type, qrToken) {
     subEl.textContent = qrToken ? 'สแกน QR สำเร็จ! จัดใบหน้าในกรอบ แล้วกดปุ่มถ่ายรูป' : 'จัดใบหน้าในกรอบ แล้วกดปุ่มถ่ายรูปเพื่อลงเวลา';
   }
 
+  // Reset face state
+  isFaceDetected = false;
+  isFaceDetectionFallbackActive = false;
+
   modal?.classList.remove('hidden');
   await initFullscreenCameraStream();
+
+  // Setup Detection or Direct Unlock based on settings
+  if (appSettings.enable_face_detection === 'false') {
+    setFaceDetectionUIState(true, false);
+  } else {
+    setFaceDetectionUIState(false, false);
+    // Graceful 5-second fallback timer if engine/network is slow
+    faceDetectionFallbackTimer = setTimeout(() => {
+      if (!isFaceDetected) {
+        enableFaceDetectionFallback();
+      }
+    }, 5000);
+    startFaceDetectionLoop();
+  }
 }
 
 async function initFullscreenCameraStream() {
@@ -534,9 +932,13 @@ async function initFullscreenCameraStream() {
 
   try {
     if (fsCameraStream) {
-      fsCameraStream.getTracks().forEach(t => t.stop());
+      fsCameraStream.getTracks().forEach(t => {
+        try { t.stop(); } catch(e) {}
+      });
       fsCameraStream = null;
     }
+    try { video.pause(); } catch(e) {}
+    video.srcObject = null;
 
     const constraints = {
       video: {
@@ -549,6 +951,11 @@ async function initFullscreenCameraStream() {
 
     fsCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = fsCameraStream;
+    try {
+      await video.play();
+    } catch(playErr) {
+      console.warn('Video play note:', playErr);
+    }
 
     if (currentCameraFacing === 'user') {
       video.classList.add('cam-video-mirrored');
@@ -574,17 +981,41 @@ function toggleCameraFacing() {
 }
 
 function closeFullscreenCamera() {
+  stopFaceDetectionLoop();
+
   const modal = document.getElementById('modalCameraFullscreen');
   modal?.classList.add('hidden');
 
+  const video = document.getElementById('fsVideoPreview');
+  if (video) {
+    try { video.pause(); } catch(e) {}
+    video.srcObject = null;
+  }
+
   if (fsCameraStream) {
-    fsCameraStream.getTracks().forEach(t => t.stop());
+    fsCameraStream.getTracks().forEach(t => {
+      try { t.stop(); } catch(e) {}
+    });
     fsCameraStream = null;
   }
   activePendingClock = null;
+  isFaceDetected = false;
+  isFaceDetectionFallbackActive = false;
 }
 
 function triggerShutterCapture() {
+  // Prevent capture if face detection is enabled and no face is detected
+  if (appSettings.enable_face_detection !== 'false' && !isFaceDetected) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ยังไม่พบใบหน้าในกรอบ',
+      text: 'กรุณาขยับใบหน้าให้อยู่กึ่งกลางกรอบวงรีให้ชัดเจนก่อนกดถ่ายรูป',
+      timer: 1800,
+      showConfirmButton: false
+    });
+    return;
+  }
+
   const video = document.getElementById('fsVideoPreview');
   const canvas = document.getElementById('fsPhotoCanvas');
   const flash = document.getElementById('camFlashOverlay');
@@ -873,6 +1304,9 @@ async function loadTodayStatus() {
     if (data.success) {
       if (data.settings) {
         appSettings = { ...appSettings, ...data.settings };
+        try {
+          localStorage.setItem('ptn_app_settings', JSON.stringify(appSettings));
+        } catch(e) {}
       }
 
       const log = data.log;
@@ -894,6 +1328,21 @@ async function loadTodayStatus() {
       // Update Basic Times
       if (clockInEl) clockInEl.textContent = (log && log.clock_in) ? log.clock_in : '--:--:--';
       if (clockOutEl) clockOutEl.textContent = (log && log.clock_out) ? log.clock_out : '--:--:--';
+      if (breakOutEl) breakOutEl.textContent = (log && log.break_out) ? log.break_out : '--:--:--';
+      if (breakInEl) breakInEl.textContent = (log && log.break_in) ? log.break_in : '--:--:--';
+
+      // Toggle Break Boxes in Timeline
+      const boxBreakOut = document.getElementById('timeBoxBreakOut');
+      const boxBreakIn = document.getElementById('timeBoxBreakIn');
+      if (boxBreakOut && boxBreakIn) {
+        if (isBreakMode) {
+          boxBreakOut.classList.remove('hidden');
+          boxBreakIn.classList.remove('hidden');
+        } else {
+          boxBreakOut.classList.add('hidden');
+          boxBreakIn.classList.add('hidden');
+        }
+      }
 
       if (log && log.clock_in) {
         if (lateEl) {
@@ -913,244 +1362,230 @@ async function loadTodayStatus() {
         if (workSummaryEl) workSummaryEl.textContent = 'ปกติ 0 ชม.';
       }
 
-      // Handle Break Summary Display
+      // =========================================================================
+      // CONCEPT 3: HERO ONE-TAP ACTION LOGIC
+      // =========================================================================
+      const heroBtn = document.getElementById('heroActionButton');
+      const heroIcon = document.getElementById('heroActionIcon');
+      const heroTitle = document.getElementById('heroActionTitle');
+      const heroSub = document.getElementById('heroActionSubtitle');
+      const statusText = document.getElementById('todayStatusText');
+      const statusIcon = document.getElementById('todayStatusIcon');
+      const secBox = document.getElementById('heroSecondaryActionBox');
+      const secBtn = document.getElementById('btnHeroSecondaryAction');
+      const directGpsContainer = document.getElementById('containerHeroDirectGps');
+      const directGpsBtn = document.getElementById('btnHeroDirectGps');
+      const directGpsText = document.getElementById('txtHeroDirectGps');
+
+      let currentAction = 'IN';
+      let secAction = null;
+      let secText = '';
+
       if (isBreakMode) {
-        if (breakSummaryRow) breakSummaryRow.classList.remove('hidden');
-        if (breakOutEl) breakOutEl.textContent = (log && log.break_out) ? log.break_out : '--:--:--';
-        if (breakInEl) breakInEl.textContent = (log && log.break_in) ? log.break_in : '--:--:--';
-        if (breakDurationEl) {
-          if (log && log.break_minutes > 0) {
-            breakDurationEl.textContent = `พัก ${log.break_minutes} นาที` + (log.overbreak_minutes > 0 ? ` (เกิน ${log.overbreak_minutes} น.)` : '');
-            breakDurationEl.className = log.overbreak_minutes > 0 ? 'text-[10px] md:text-[11px] text-rose-700 font-bold' : 'text-[10px] md:text-[11px] text-teal-700 font-semibold';
-          } else if (log && log.break_out) {
-            breakDurationEl.textContent = 'กำลังพักอยู่';
-            breakDurationEl.className = 'text-[10px] md:text-[11px] text-amber-700 font-bold animate-pulse';
-          } else {
-            breakDurationEl.textContent = 'รอพัก';
-            breakDurationEl.className = 'text-[10px] md:text-[11px] text-slate-500 font-medium';
-          }
-        }
-      } else {
-        if (breakSummaryRow) breakSummaryRow.classList.add('hidden');
-      }
-
-      // Render Workflow Step 3 Based on Mode
-      if (isBreakMode) {
-        if (stdPunchBox) stdPunchBox.classList.add('hidden');
-        if (breakPunchBox) breakPunchBox.classList.remove('hidden');
-
-        const stateText = document.getElementById('breakPunchStateText');
-        const stateBadge = document.getElementById('breakPunchStateBadge');
-        const actionsGrid = document.getElementById('breakActionButtonsGrid');
-        const gpsGrid = document.getElementById('breakDirectGpsButtonsGrid');
-
+        // Mode 2: 4-Punch (BREAK_PUNCH)
         if (!log || !log.clock_in) {
           // State 1: Not clocked in
-          if (stateText) stateText.textContent = '☀️ ขั้นตอนที่ 1/4 : ยังไม่ได้บันทึกเวลาเข้างานเช้า';
-          if (stateBadge) {
-            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-slate-200 text-slate-700';
-            stateBadge.textContent = '1/4 เข้าเช้า';
-          }
+          currentAction = 'IN';
+          if (statusText) statusText.textContent = 'ยังไม่ได้ลงเวลาวันนี้';
+          if (statusIcon) statusIcon.textContent = '🌅';
           if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200';
-            badge.textContent = 'ยังไม่ลงเวลา';
+            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
+            badge.textContent = 'พร้อมลงเวลา';
           }
-
-          if (actionsGrid) {
-            actionsGrid.innerHTML = `
-              <button onclick="openQrScannerModal('IN')" class="w-full md:col-span-2 py-5 md:py-6 px-5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-4 transition group">
-                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
-                  ☀️
-                </div>
-                <div class="text-left">
-                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR เข้างานเช้า (IN)</div>
-                  <div class="text-xs md:text-sm font-semibold text-emerald-100 mt-0.5">บันทึกเวลาเริ่มงานเช้า (ครั้งที่ 1/4)</div>
-                </div>
-              </button>
-            `;
+          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเข้างาน';
+          if (heroSub) heroSub.textContent = 'สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่';
+          if (heroIcon) heroIcon.textContent = '☀️';
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => openQrScannerModal('IN');
           }
-
-          if (gpsGrid) {
-            gpsGrid.innerHTML = `
-              <button type="button" onclick="startDirectGpsClock('IN')" class="md:col-span-2 py-3 px-4 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-900 font-bold rounded-2xl border border-emerald-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                <span class="text-lg">📸</span>
-                <span class="text-sm md:text-base font-black">ถ่ายรูปเข้างานเช้าด้วย GPS (IN)</span>
-              </button>
-            `;
-          }
+          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานด้วย GPS โดยตรง (IN)';
+          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
 
         } else if (log.clock_in && !log.break_out && !log.clock_out) {
-          // State 2: Clocked in, ready to Break Out (or Clock Out)
-          if (stateText) stateText.textContent = `☀️ เข้างานเช้าแล้ว (${log.clock_in}) กำลังปฏิบัติงาน`;
-          if (stateBadge) {
-            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-sky-100 text-sky-800 border border-sky-300 animate-pulse';
-            stateBadge.textContent = '2/4 รอพัก';
-          }
+          // State 2: Working morning shift -> ready to Break Out
+          currentAction = 'BREAK_OUT';
+          secAction = 'OUT';
+          secText = 'หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)';
+
+          if (statusText) statusText.textContent = `กำลังทำงาน (เข้างานเมื่อ ${log.clock_in})`;
+          if (statusIcon) statusIcon.textContent = '💼';
           if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200 animate-pulse';
-            badge.textContent = 'เข้างานเช้าแล้ว';
+            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
+            badge.textContent = 'กำลังปฏิบัติงาน';
           }
-
-          if (actionsGrid) {
-            actionsGrid.innerHTML = `
-              <button onclick="openQrScannerModal('BREAK_OUT')" class="w-full py-5 md:py-6 px-5 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-amber-500/30 flex items-center justify-center space-x-4 transition group">
-                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
-                  ☕
-                </div>
-                <div class="text-left">
-                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกไปพัก</div>
-                  <div class="text-xs md:text-sm font-semibold text-amber-100 mt-0.5">พักกลางวัน (Break OUT - 2/4)</div>
-                </div>
-              </button>
-
-              <button onclick="openQrScannerModal('OUT')" class="w-full py-5 md:py-6 px-5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-4 transition group">
-                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
-                  🚪
-                </div>
-                <div class="text-left">
-                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกงาน</div>
-                  <div class="text-xs md:text-sm font-semibold text-rose-100 mt-0.5">เลิกงานกลับบ้าน (Clock OUT)</div>
-                </div>
-              </button>
-            `;
+          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเริ่มพัก';
+          if (heroSub) heroSub.textContent = 'บันทึกเวลาพักกลางวัน (Break OUT - 2/4)';
+          if (heroIcon) heroIcon.textContent = '☕';
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-amber-600 hover:bg-amber-700 shadow-amber-600/30 hero-pulse-amber';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => openQrScannerModal('BREAK_OUT');
           }
-
-          if (gpsGrid) {
-            gpsGrid.innerHTML = `
-              <button type="button" onclick="startDirectGpsClock('BREAK_OUT')" class="py-3 px-4 bg-amber-50 hover:bg-amber-100 active:scale-[0.98] text-amber-900 font-bold rounded-2xl border border-amber-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                <span class="text-lg">📸</span>
-                <span class="text-sm md:text-base font-black">ถ่ายรูปออกไปพัก (GPS)</span>
-              </button>
-              <button type="button" onclick="startDirectGpsClock('OUT')" class="py-3 px-4 bg-rose-50 hover:bg-rose-100 active:scale-[0.98] text-rose-900 font-bold rounded-2xl border border-rose-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                <span class="text-lg">📸</span>
-                <span class="text-sm md:text-base font-black">ถ่ายรูปออกงาน (GPS)</span>
-              </button>
-            `;
-          }
+          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปออกไปพักด้วย GPS โดยตรง (Break OUT)';
+          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('BREAK_OUT');
 
         } else if (log.break_out && !log.break_in && !log.clock_out) {
-          // State 3: Currently on Break, waiting Break IN
-          if (stateText) stateText.textContent = `☕ กำลังอยู่ในช่วงพัก (เริ่มพัก ${log.break_out})`;
-          if (stateBadge) {
-            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-amber-200 text-amber-900 border border-amber-400 animate-pulse';
-            stateBadge.textContent = '3/4 กำลังพักผ่อน';
-          }
+          // State 3: On Break -> ready to Break In
+          currentAction = 'BREAK_IN';
+          if (statusText) statusText.textContent = `กำลังอยู่ในช่วงพักผ่อน (เริ่มพัก ${log.break_out})`;
+          if (statusIcon) statusIcon.textContent = '☕';
           if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse';
-            badge.textContent = 'กำลังอยู่ในช่วงพักผ่อน';
+            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
+            badge.textContent = 'กำลังพักผ่อน';
           }
-
-          if (actionsGrid) {
-            actionsGrid.innerHTML = `
-              <button onclick="openQrScannerModal('BREAK_IN')" class="w-full md:col-span-2 py-5 md:py-6 px-5 bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-teal-600/30 flex items-center justify-center space-x-4 transition group">
-                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
-                  💼
-                </div>
-                <div class="text-left">
-                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR กลับเข้าทำงาน</div>
-                  <div class="text-xs md:text-sm font-semibold text-teal-100 mt-0.5">หมดเวลาพัก / เข้างานบ่าย (Break IN - 3/4)</div>
-                </div>
-              </button>
-            `;
+          if (heroTitle) heroTitle.textContent = 'แตะเพื่อกลับเข้าทำงานบ่าย';
+          if (heroSub) heroSub.textContent = 'สิ้นสุดเวลาพัก พร้อมปฏิบัติงานช่วงบ่าย (Break IN - 3/4)';
+          if (heroIcon) heroIcon.textContent = '💼';
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-sky-600 hover:bg-sky-700 shadow-sky-600/30 hero-pulse-sky';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => openQrScannerModal('BREAK_IN');
           }
-
-          if (gpsGrid) {
-            gpsGrid.innerHTML = `
-              <button type="button" onclick="startDirectGpsClock('BREAK_IN')" class="md:col-span-2 py-3 px-4 bg-teal-50 hover:bg-teal-100 active:scale-[0.98] text-teal-900 font-bold rounded-2xl border border-teal-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                <span class="text-lg">📸</span>
-                <span class="text-sm md:text-base font-black">ถ่ายรูปกลับเข้าทำงานด้วย GPS (Break IN)</span>
-              </button>
-            `;
-          }
+          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปกลับเข้าทำงานด้วย GPS โดยตรง (Break IN)';
+          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('BREAK_IN');
 
         } else if (log.break_in && !log.clock_out) {
-          // State 4: Back from break, working afternoon shift
-          if (stateText) stateText.textContent = `💼 ปฏิบัติงานช่วงบ่าย (พักไป ${log.break_minutes || 0} นาที) รอลงเวลาเลิกงาน`;
-          if (stateBadge) {
-            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
-            stateBadge.textContent = '4/4 รอเลิกงาน';
-          }
+          // State 4: Afternoon shift -> ready to Clock Out
+          currentAction = 'OUT';
+          if (statusText) statusText.textContent = `ปฏิบัติงานช่วงบ่าย (พักไป ${log.break_minutes || 0} นาที)`;
+          if (statusIcon) statusIcon.textContent = '🏢';
           if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200 animate-pulse';
+            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
             badge.textContent = 'ปฏิบัติงานช่วงบ่าย';
           }
-
-          if (actionsGrid) {
-            actionsGrid.innerHTML = `
-              <button onclick="openQrScannerModal('OUT')" class="w-full md:col-span-2 py-5 md:py-6 px-5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-4 transition group">
-                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
-                  🚪
-                </div>
-                <div class="text-left">
-                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกงาน (Clock OUT)</div>
-                  <div class="text-xs md:text-sm font-semibold text-rose-100 mt-0.5">เลิกงานประจำวัน / จบ OT (ครั้งที่ 4/4)</div>
-                </div>
-              </button>
-            `;
+          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเลิกงาน';
+          if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สรุปเวลางาน (Clock OUT - 4/4)';
+          if (heroIcon) heroIcon.textContent = '🚪';
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => openQrScannerModal('OUT');
           }
-
-          if (gpsGrid) {
-            gpsGrid.innerHTML = `
-              <button type="button" onclick="startDirectGpsClock('OUT')" class="md:col-span-2 py-3 px-4 bg-rose-50 hover:bg-rose-100 active:scale-[0.98] text-rose-900 font-bold rounded-2xl border border-rose-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                <span class="text-lg">📸</span>
-                <span class="text-sm md:text-base font-black">ถ่ายรูปออกงานด้วย GPS (OUT)</span>
-              </button>
-            `;
-          }
+          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปออกงานด้วย GPS โดยตรง (Clock OUT)';
+          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('OUT');
 
         } else if (log.clock_out) {
           // State 5: Completed
-          if (stateText) stateText.textContent = `✅ บันทึกเวลาครบ 4 ครั้งเรียบร้อยแล้ว (ออกงานเวลา ${log.clock_out})`;
-          if (stateBadge) {
-            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-200 text-emerald-900';
-            stateBadge.textContent = 'ครบ 4 ครั้ง';
-          }
+          currentAction = 'DONE';
+          if (statusText) statusText.textContent = `เลิกงานเรียบร้อยแล้ว (ออกเวลา ${log.clock_out})`;
+          if (statusIcon) statusIcon.textContent = '🎉';
           if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
-            badge.textContent = 'บันทึกครบถ้วนแล้ว';
+            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-emerald-100 text-emerald-800 border border-emerald-200';
+            badge.textContent = 'เสร็จสมบูรณ์';
           }
-
-          if (actionsGrid) {
-            actionsGrid.innerHTML = `
-              <div class="md:col-span-2 p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl text-center">
-                <div class="text-3xl mb-1">🎉</div>
-                <div class="text-lg font-black text-emerald-950">บันทึกเวลาทำงานของวันนี้ครบถ้วนแล้ว</div>
-                <div class="text-xs md:text-sm text-emerald-800 font-semibold mt-1">
-                  เข้า: ${log.clock_in} | พัก: ${log.break_out || '-'} ถึง ${log.break_in || '-'} | ออก: ${log.clock_out}
-                </div>
-              </div>
-            `;
-          }
-
-          if (gpsGrid) {
-            gpsGrid.innerHTML = '';
+          if (heroTitle) heroTitle.textContent = 'ลงเวลาครบทุกขั้นตอนแล้ว';
+          if (heroSub) heroSub.textContent = 'บันทึกเวลาทำงานของวันนี้เรียบร้อยแล้ว พักผ่อนได้เลยครับ';
+          if (heroIcon) heroIcon.textContent = '✅';
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-lg flex flex-col items-center justify-center space-y-2.5 bg-slate-700 hover:bg-slate-800 cursor-default';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => {
+              Swal.fire({
+                icon: 'success',
+                title: 'บันทึกเวลาวันนี้ครบถ้วนแล้ว',
+                html: `<div class="text-sm text-slate-600">เข้า: ${log.clock_in} | ออก: ${log.clock_out}</div>`,
+                timer: 2000,
+                showConfirmButton: false
+              });
+            };
           }
         }
 
       } else {
-        // Mode 1: Standard 2-Punch Mode (AUTO_DEDUCT)
-        if (stdPunchBox) stdPunchBox.classList.remove('hidden');
-        if (breakPunchBox) breakPunchBox.classList.add('hidden');
+        // Mode 1: Standard 2-Punch (AUTO_DEDUCT)
+        if (!log || !log.clock_in) {
+          currentAction = 'IN';
+          secAction = 'OUT';
+          secText = 'หรือแตะเพื่อลงเวลาออกงาน (OUT)';
 
-        if (log && log.clock_in) {
-          if (log.clock_out) {
-            if (badge) {
-              badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
-              badge.textContent = 'บันทึกครบถ้วนแล้ว';
-            }
-          } else {
-            if (badge) {
-              badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200 animate-pulse';
-              badge.textContent = 'กำลังปฏิบัติงาน (เข้างานแล้ว)';
-            }
-          }
-        } else {
+          if (statusText) statusText.textContent = 'ยังไม่ได้ลงเวลาวันนี้';
+          if (statusIcon) statusIcon.textContent = '🌅';
           if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200';
-            badge.textContent = 'ยังไม่ลงเวลา';
+            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
+            badge.textContent = 'พร้อมลงเวลา';
+          }
+          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเข้างาน';
+          if (heroSub) heroSub.textContent = 'สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่';
+          if (heroIcon) heroIcon.textContent = '☀️';
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => openQrScannerModal('IN');
+          }
+          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานด้วย GPS โดยตรง (IN)';
+          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
+
+        } else if (log.clock_in && !log.clock_out) {
+          currentAction = 'OUT';
+          secAction = 'IN';
+          secText = 'หรือแตะเพื่อลงเวลาเข้างานอีกครั้ง (IN)';
+
+          if (statusText) statusText.textContent = `กำลังทำงาน (เข้างานเมื่อ ${log.clock_in})`;
+          if (statusIcon) statusIcon.textContent = '💼';
+          if (badge) {
+            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
+            badge.textContent = 'กำลังปฏิบัติงาน';
+          }
+          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาออกงาน';
+          if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สิ้นสุดการทำงาน (Clock OUT)';
+          if (heroIcon) heroIcon.textContent = '🚪';
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => openQrScannerModal('OUT');
+          }
+          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปออกงานด้วย GPS โดยตรง (OUT)';
+          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('OUT');
+
+        } else if (log.clock_out) {
+          currentAction = 'DONE';
+          if (statusText) statusText.textContent = `เลิกงานเรียบร้อยแล้ว (ออกเวลา ${log.clock_out})`;
+          if (statusIcon) statusIcon.textContent = '🎉';
+          if (badge) {
+            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-emerald-100 text-emerald-800 border border-emerald-200';
+            badge.textContent = 'บันทึกครบถ้วนแล้ว';
+          }
+          if (heroTitle) heroTitle.textContent = 'ลงเวลาครบถ้วนแล้ว';
+          if (heroSub) heroSub.textContent = `บันทึกเวลาของวันนี้เรียบร้อยแล้ว (ออกงานเวลา ${log.clock_out})`;
+          if (heroIcon) heroIcon.textContent = '✅';
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-lg flex flex-col items-center justify-center space-y-2.5 bg-slate-700 hover:bg-slate-800 cursor-default';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => {
+              Swal.fire({
+                icon: 'success',
+                title: 'บันทึกเวลาทำงานของวันนี้ครบถ้วนแล้ว',
+                html: `<div class="text-sm text-slate-600">เข้า: ${log.clock_in} | ออก: ${log.clock_out}</div>`,
+                timer: 2000,
+                showConfirmButton: false
+              });
+            };
           }
         }
       }
+
+      // Secondary Action Button Toggle
+      if (secBox && secBtn) {
+        if (secAction && currentAction !== 'DONE') {
+          secBox.classList.remove('hidden');
+          secBtn.textContent = secText;
+          secBtn.onclick = () => openQrScannerModal(secAction);
+        } else {
+          secBox.classList.add('hidden');
+        }
+      }
+
+      // Direct GPS Container Toggle
+      if (directGpsContainer) {
+        if (appSettings.allow_direct_gps === 'false' || currentAction === 'DONE') {
+          directGpsContainer.classList.add('hidden');
+        } else {
+          directGpsContainer.classList.remove('hidden');
+        }
+      }
+      applyFeatureToggles();
     }
   } catch(e) {
     console.warn('Today status note:', e);
@@ -1173,19 +1608,63 @@ async function loadAdvanceEligibility() {
       
       const badge = document.getElementById('advanceDayBadge');
       const submitBtn = document.getElementById('btnSubmitAdvance');
+      const windowInfo = document.getElementById('advanceWindowInfo');
+      const headerTitle = document.getElementById('advanceHeaderTitle');
 
-      if (data.isAllowedDay) {
+      const startTime = data.advanceStartTime || '09:00';
+      const endTime = data.advanceEndTime || '18:00';
+
+      let dayText = 'ทุกวันเสาร์';
+      if (data.advanceDayOfWeek === 'ANY') dayText = 'ทุกวัน';
+      else if (data.advanceDayOfWeek === 'FRIDAY') dayText = 'ทุกวันศุกร์';
+      else if (data.advanceDayOfWeek === 'FRIDAY_SATURDAY') dayText = 'ทุกวันศุกร์และเสาร์';
+
+      if (headerTitle) {
+        headerTitle.textContent = `💵 ขอเบิกเงินล่วงหน้า (${dayText})`;
+      }
+
+      if (windowInfo) {
+        windowInfo.textContent = `เปิดรับคำขอ: ${dayText} เวลา ${startTime} - ${endTime} น.`;
+      }
+
+      if (data.enabled === false) {
         if (badge) {
-          badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
-          badge.textContent = '🟢 เปิดรับคำขอวันนี้';
+          badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200';
+          badge.textContent = '🔒 ปิดรับคำขอชั่วคราว';
         }
-        if (submitBtn) submitBtn.disabled = false;
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          submitBtn.textContent = 'ระบบปิดรับคำขอชั่วคราว';
+        }
+      } else if (data.isOpen) {
+        if (badge) {
+          badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 animate-pulse';
+          badge.textContent = `🟢 เปิดรับคำขอ (${startTime} - ${endTime} น.)`;
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          submitBtn.textContent = 'ยื่นขอเบิกเงินล่วงหน้า';
+        }
       } else {
         if (badge) {
           badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200';
-          badge.textContent = '🔒 เปิดเฉพาะวันเสาร์';
+          if (!data.isAllowedDay) {
+            badge.textContent = `🔒 เปิดเฉพาะ${dayText}`;
+          } else {
+            badge.textContent = `⏰ ปิดรับ (เปิด ${startTime} - ${endTime} น.)`;
+          }
         }
-        if (submitBtn) submitBtn.disabled = true;
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          if (!data.isAllowedDay) {
+            submitBtn.textContent = `เปิดรับเฉพาะ${dayText}`;
+          } else {
+            submitBtn.textContent = `อยู่นอกเวลาเปิดรับ (${startTime} - ${endTime} น.)`;
+          }
+        }
       }
     }
   } catch (e) {
@@ -1496,7 +1975,7 @@ async function loadMyRequests() {
         html += `
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
-              <span class="font-extrabold text-slate-800 text-sm">🏖️ ขอลางาน: ${lv.leave_type}</span>
+              <span class="font-extrabold text-slate-800 text-sm">🏖️ ขอลางาน: ${LEAVE_TYPE_LABELS[lv.leave_type] || lv.leave_type}</span>
               <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
             </div>
             <div class="text-slate-600 text-xs font-medium">วันที่: ${lv.start_date} ถึง ${lv.end_date} (${lv.days_count} วัน)</div>
@@ -1882,6 +2361,7 @@ function openDeviceUnlockModal() {
     openEmployeePickerModal();
     return;
   }
+  applyFeatureToggles();
   const nameEl = document.getElementById('unlockCurrentEmpName');
   if (nameEl) {
     const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';

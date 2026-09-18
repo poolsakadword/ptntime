@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PTN Time — ตัวอย่าง UX/UI แบบที่ 3 (Hero One-Tap Action: ตัวหนังสือใหญ่ สบายตา)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            prompt: ['Prompt', 'sans-serif'],
+            sarabun: ['Sarabun', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Prompt', 'Sarabun', sans-serif;
+    }
+    .font-light-custom { font-weight: 300; }
+    .font-normal-custom { font-weight: 400; }
+    .font-medium-custom { font-weight: 500; }
+    .font-semibold-custom { font-weight: 600; }
+    .hero-pulse {
+      animation: pulse-border 2.5s infinite;
+    }
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      50% { box-shadow: 0 0 0 16px rgba(16, 185, 129, 0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased p-3 md:p-8 min-h-screen">
+
+  <div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- TOP CONTROL PANEL: ทดลองสลับสถานะและสไตล์ตัวอักษร -->
+    <header class="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-slate-200 space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-2">
+            <span>✨</span> แบบที่ 3: Hero One-Tap Action (ปรับปรุงตามคำขอ)
+          </div>
+          <h1 class="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+            ตัวอย่างหน้าจอ: ตัวหนังสือใหญ่ขึ้น โปร่งสบายตา ไม่หนาเกินไป
+          </h1>
+          <p class="text-sm md:text-base text-slate-600 font-normal mt-1">
+            เน้นความชัดเจนในการอ่านเวลากดบนมือถือ หรือติดตั้งเป็นเครื่องกลางประจำสาขา แตะปุ่มเดียวจบ
+          </p>
+        </div>
+
+        <!-- Mode selector: 2-Punch vs 4-Punch -->
+        <div class="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 flex-shrink-0">
+          <button id="btnPunch2" onclick="setMode('2')" class="px-3.5 py-2 text-xs md:text-sm font-medium rounded-xl transition bg-white shadow-sm text-slate-900">
+            โหมด 2 ครั้ง (เข้า-ออก)
+          </button>
+          <button id="btnPunch4" onclick="setMode('4')" class="px-3.5 py-2 text-xs md:text-sm font-medium rounded-xl transition text-slate-600 hover:text-slate-900">
+            โหมด 4 ครั้ง (มีพัก)
+          </button>
+        </div>
+      </div>
+
+      <!-- SIMULATION CONTROLS: ทดลองกดสลับสถานะของวัน -->
+      <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+          <span class="text-xs md:text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            <span>🕹️</span> <b>คลิกเพื่อทดลองดูแต่ละช่วงเวลาของวัน:</b>
+          </span>
+          <span class="text-xs text-slate-500 font-normal">
+            (ปุ่มใหญ่จะเปลี่ยนสีและข้อความให้ตรงกับช่วงเวลานั้นอัตโนมัติ)
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="phaseControlsContainer">
+          <button onclick="setPhase('morning')" id="phaseBtnMorning" class="phase-btn p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-900 text-left transition">
+            <div class="text-xs text-emerald-700 font-medium">1. ช่วงเช้า (08:30 น.)</div>
+            <div class="text-sm md:text-base font-semibold">เข้างานเช้า</div>
+          </button>
+          <button onclick="setPhase('lunch_out')" id="phaseBtnLunchOut" class="phase-btn p-3 rounded-xl border-2 border-transparent bg-white hover:bg-slate-100 text-slate-700 text-left transition">
+            <div class="text-xs text-slate-500 font-medium">2. ช่วงเที่ยง (12:05 น.)</div>
+            <div class="text-sm md:text-base font-semibold">ออกไปพัก</div>
+          </button>
+          <button onclick="setPhase('lunch_in')" id="phaseBtnLunchIn" class="phase-btn p-3 rounded-xl border-2 border-transparent bg-white hover:bg-slate-100 text-slate-700 text-left transition">
+            <div class="text-xs text-slate-500 font-medium">3. ช่วงบ่าย (12:55 น.)</div>
+            <div class="text-sm md:text-base font-semibold">กลับเข้างาน</div>
+          </button>
+          <button onclick="setPhase('evening')" id="phaseBtnEvening" class="phase-btn p-3 rounded-xl border-2 border-transparent bg-white hover:bg-slate-100 text-slate-700 text-left transition">
+            <div class="text-xs text-slate-500 font-medium">4. ช่วงเย็น (18:30 น.)</div>
+            <div class="text-sm md:text-base font-semibold">ลงเวลาออกงาน</div>
+          </button>
+        </div>
+      </div>
+    </header>
+
+
+    <!-- ========================================================================= -->
+    <!-- MAIN INTERACTIVE PREVIEW SCREEN (จำลองขนาดหน้าจอมือถือ/แท็บเล็ต) -->
+    <!-- ========================================================================= -->
+    <div class="max-w-md mx-auto bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden relative">
+      
+      <!-- Top App Bar (Header Bar) -->
+      <header class="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl shadow-inner border border-white/20">
+              ⏱️
+            </div>
+            <div>
+              <h2 class="text-lg md:text-xl font-semibold leading-tight">ระบบลงเวลาทำงาน</h2>
+              <p class="text-xs md:text-sm text-sky-100 font-normal">สาขาสำนักงานใหญ่ (ตัดวิก 25)</p>
+            </div>
+          </div>
+          <span class="text-xs font-medium px-3 py-1 bg-white/20 rounded-full border border-white/30">
+            เครื่องผูกแล้ว 🔒
+          </span>
+        </div>
+
+        <!-- Employee Info Card (ตัวหนังสือขนาด 18px / 15px สบายตา ไม่หนาเกินไป) -->
+        <div class="bg-white/15 backdrop-blur-md rounded-2xl p-3.5 border border-white/25 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-sky-500 text-white font-medium text-lg flex items-center justify-center shadow">
+              สม
+            </div>
+            <div>
+              <div class="text-xs text-sky-200 font-normal">รหัส 001 • เภสัชกรประจำ</div>
+              <div class="text-lg font-medium text-white tracking-wide">นายสมชาย ขยันดี</div>
+            </div>
+          </div>
+          <button class="text-xs text-sky-100 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl font-normal transition">
+            สลับคน
+          </button>
+        </div>
+      </header>
+
+      <!-- Shift Info Bar (ชัดเจน ตัวหนังสือขนาดอ่านสบาย) -->
+      <div class="bg-sky-50/80 border-b border-sky-100 px-5 py-2.5 flex items-center justify-between text-xs md:text-sm text-slate-700">
+        <div class="flex items-center gap-1.5">
+          <span class="text-sky-700 font-medium">☀️ เวลางาน:</span>
+          <span class="font-semibold text-slate-800">09:00 - 18:00 น.</span>
+        </div>
+        <div class="text-slate-500 font-normal">
+          พัก 12:00 - 13:00 น.
+        </div>
+      </div>
+
+      <!-- Main Body Area -->
+      <div class="p-5 md:p-6 space-y-6">
+
+        <!-- Big Digital Clock (ขนาดใหญ่ 48-52px ตัวเลขอ่านง่าย เส้นสายคมชัด สบายตา) -->
+        <div class="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-5 text-center text-white shadow-md relative overflow-hidden">
+          <div class="text-xs md:text-sm font-normal text-slate-300" id="liveDateThai">
+            วันศุกร์ที่ 18 กันยายน 2569
+          </div>
+          <div class="text-5xl md:text-6xl font-normal font-mono tracking-tight my-1 text-white" id="displayClock">
+            08:29:45
+          </div>
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-normal bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>เวลาตรงกับเซิร์ฟเวอร์ส่วนกลาง</span>
+          </div>
+        </div>
+
+        <!-- CURRENT STATUS BANNER -->
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center justify-between" id="statusBanner">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl" id="statusIcon">🌅</span>
+            <div>
+              <div class="text-xs font-normal text-slate-500">สถานะล่าสุดของคุณ</div>
+              <div class="text-base md:text-lg font-medium text-slate-800" id="statusText">ยังไม่ได้ลงเวลาวันนี้</div>
+            </div>
+          </div>
+          <span class="text-xs font-medium px-3 py-1 rounded-xl bg-amber-100 text-amber-800" id="statusTag">
+            พร้อมลงเวลา
+          </span>
+        </div>
+
+
+        <!-- ========================================================================= -->
+        <!-- THE HERO ACTION CONTAINER (ปุ่มยักษ์ปุ่มเดียว แตะง่ายมาก) -->
+        <!-- ========================================================================= -->
+        <div class="space-y-3">
+          <div class="text-center">
+            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">
+              แตะปุ่มด้านล่างนี้เพื่อทำรายการ
+            </span>
+          </div>
+
+          <!-- Hero Button Element -->
+          <button id="heroButton" onclick="simulatePunch()" class="w-full py-8 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-98 flex flex-col items-center justify-center space-y-2.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse">
+            <!-- Icon -->
+            <div id="heroIconBox" class="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-4xl shadow-inner border border-white/25">
+              📷
+            </div>
+            
+            <!-- Big Clean Text (ขนาด 26px - 30px ชัดมาก ไม่หนาเกินไป) -->
+            <div class="text-center">
+              <div id="heroTitle" class="text-2xl md:text-3xl font-semibold tracking-normal text-white">
+                แตะเพื่อลงเวลาเข้างาน
+              </div>
+              <div id="heroSubtitle" class="text-sm md:text-base font-normal text-emerald-100 mt-1">
+                เปิดกล้องถ่ายรูปเซลฟี่ ยืนยันพิกัด
+              </div>
+            </div>
+          </button>
+        </div>
+
+
+        <!-- LOCATION & GPS CARD (ชัดเจน ตัวหนังสือขนาดพอดี อ่านง่าย) -->
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs md:text-sm">
+          <div class="flex items-center gap-2.5 text-slate-700">
+            <div class="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-base">
+              📍
+            </div>
+            <div>
+              <div class="font-medium text-slate-800">พิกัดสาขาสำนักงานใหญ่</div>
+              <div class="text-xs text-emerald-600 font-normal">ระยะห่าง 14 เมตร (อยู่ในเกณฑ์)</div>
+            </div>
+          </div>
+          <button class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-normal transition flex items-center gap-1 shadow-sm">
+            <span>🔄</span> รีเฟรช
+          </button>
+        </div>
+
+
+        <!-- TODAY'S TIMELINE SUMMARY (สรุปเวลาของวันนี้) -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+            <span class="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+              <span>📋</span> บันทึกเวลาวันนี้
+            </span>
+            <span class="text-xs text-slate-500 font-normal" id="timelineSub">18 ก.ย. 2569</span>
+          </div>
+
+          <!-- 4-step or 2-step timeline summary -->
+          <div class="grid grid-cols-2 gap-2 text-xs md:text-sm" id="timelineBoxes">
+            <!-- Box 1: เข้าเช้า -->
+            <div id="timeBoxMorning" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col">
+              <span class="text-xs text-slate-500 font-normal">เข้างานเช้า</span>
+              <span class="text-sm md:text-base font-semibold text-slate-400 mt-0.5" id="valMorning">—</span>
+            </div>
+            <!-- Box 2: พักเที่ยง -->
+            <div id="timeBoxLunchOut" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col">
+              <span class="text-xs text-slate-500 font-normal">ออกไปพัก</span>
+              <span class="text-sm md:text-base font-semibold text-slate-400 mt-0.5" id="valLunchOut">—</span>
+            </div>
+            <!-- Box 3: เข้าบ่าย -->
+            <div id="timeBoxLunchIn" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col">
+              <span class="text-xs text-slate-500 font-normal">กลับเข้างาน</span>
+              <span class="text-sm md:text-base font-semibold text-slate-400 mt-0.5" id="valLunchIn">—</span>
+            </div>
+            <!-- Box 4: เลิกงาน -->
+            <div id="timeBoxEvening" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col">
+              <span class="text-xs text-slate-500 font-normal">ออกงานเย็น</span>
+              <span class="text-sm md:text-base font-semibold text-slate-400 mt-0.5" id="valEvening">—</span>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- QUICK ACCESS BUTTONS (บริการตนเอง: เบิกเงิน / ลางาน / ประวัติ) -->
+        <div class="grid grid-cols-3 gap-2.5 pt-1">
+          <button class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center transition">
+            <div class="text-2xl">📅</div>
+            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">ประวัติเวลา</div>
+          </button>
+          <button class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center transition">
+            <div class="text-2xl">💵</div>
+            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">ขอเบิกเงิน</div>
+          </button>
+          <button class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center transition">
+            <div class="text-2xl">🏖️</div>
+            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">แจ้งลางาน</div>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- EXPLANATORY CARD: ทำไมตัวหนังสือขนาดใหญ่น้ำหนัก Medium ถึงตอบโจทย์ที่สุด -->
+    <section class="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-slate-200 space-y-4">
+      <h3 class="text-base md:text-lg font-semibold text-slate-900 flex items-center gap-2">
+        <span>💡</span> สรุปจุดปรับปรุงตามความต้องการของคุณ
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs md:text-sm font-normal text-slate-600">
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+          <div class="text-sm font-medium text-slate-900">1. ขนาดใหญ่ขึ้น (Font Size)</div>
+          <p>
+            หัวข้อปุ่มกดขยายเป็น <b>28-30px</b> นาฬิกา <b>56px</b> และชื่อพนักงาน <b>18px</b> มองเห็นได้ชัดเจนจากระยะห่าง 50-80 ซม. สบายตา ไม่ต้องเพ่ง
+          </p>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+          <div class="text-sm font-medium text-slate-900">2. ไม่หนาจนเกินไป (Font Weight)</div>
+          <p>
+            ใช้น้ำหนัก <b>Medium (500)</b> และ <b>SemiBold (600)</b> ทำให้ฟอนต์ภาษาไทยมีความโปร่ง ช่องไฟสวยงาม สะอาดตา น่าเชื่อถือ ไม่อึดอัด
+          </p>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+          <div class="text-sm font-medium text-slate-900">3. ปุ่มฉลาดลดข้อผิดพลาด (Hero Button)</div>
+          <p>
+            พนักงานหน้างานไม่ต้องกังวลว่าจะกดผิดปุ่ม ระบบจะดึงสถานะล่าสุดขึ้นมาเสนอให้กดปุ่มเดียวตรงกลางทันที
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    let currentMode = '4'; // '2' or '4'
+    let currentPhase = 'morning'; // 'morning', 'lunch_out', 'lunch_in', 'evening', 'completed'
+
+    const phaseConfig = {
+      morning: {
+        time: '08:29:45',
+        title: 'แตะเพื่อลงเวลาเข้างาน',
+        subtitle: 'เปิดกล้องถ่ายรูปเซลฟี่ ยืนยันพิกัดสาขา',
+        icon: '📷',
+        statusText: 'ยังไม่ได้ลงเวลาวันนี้',
+        statusTag: 'พร้อมลงเวลา',
+        statusTagClass: 'bg-amber-100 text-amber-800',
+        statusIcon: '🌅',
+        heroClass: 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse',
+        subClass: 'text-emerald-100',
+        records: { morning: '—', lunchOut: '—', lunchIn: '—', evening: '—' }
+      },
+      lunch_out: {
+        time: '12:05:12',
+        title: 'แตะเพื่อลงเวลาเริ่มพัก',
+        subtitle: 'บันทึกเวลาพักเที่ยง (12:00 - 13:00 น.)',
+        icon: '☕',
+        statusText: 'กำลังทำงาน (เข้างานเมื่อ 08:32 น.)',
+        statusTag: 'ถึงเวลาพัก',
+        statusTagClass: 'bg-amber-100 text-amber-800',
+        statusIcon: '💼',
+        heroClass: 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30 hero-pulse',
+        subClass: 'text-amber-100',
+        records: { morning: '08:32 น.', lunchOut: '—', lunchIn: '—', evening: '—' }
+      },
+      lunch_in: {
+        time: '12:56:40',
+        title: 'แตะเพื่อกลับเข้าทำงานบ่าย',
+        subtitle: 'สิ้นสุดเวลาพัก พร้อมปฏิบัติงานช่วงบ่าย',
+        icon: '💼',
+        statusText: 'กำลังอยู่ระหว่างพักเที่ยง',
+        statusTag: 'เตรียมเข้างาน',
+        statusTagClass: 'bg-sky-100 text-sky-800',
+        statusIcon: '☕',
+        heroClass: 'bg-sky-600 hover:bg-sky-700 shadow-sky-600/30 hero-pulse',
+        subClass: 'text-sky-100',
+        records: { morning: '08:32 น.', lunchOut: '12:05 น.', lunchIn: '—', evening: '—' }
+      },
+      evening: {
+        time: '18:35:10',
+        title: 'แตะเพื่อลงเวลาเลิกงาน',
+        subtitle: 'บันทึกเวลาออกงาน สรุปชั่วโมงการทำงานวันนี้',
+        icon: '🚪',
+        statusText: 'ปฏิบัติงานช่วงบ่ายอยู่',
+        statusTag: 'ครบกะงานแล้ว',
+        statusTagClass: 'bg-rose-100 text-rose-800',
+        statusIcon: '🏢',
+        heroClass: 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse',
+        subClass: 'text-rose-100',
+        records: { morning: '08:32 น.', lunchOut: '12:05 น.', lunchIn: '12:57 น.', evening: '—' }
+      },
+      completed: {
+        time: '18:36:25',
+        title: 'ลงเวลาครบทุกขั้นตอนแล้ว',
+        subtitle: 'บันทึกเวลาวันนี้เรียบร้อยแล้ว พักผ่อนได้เลยครับ',
+        icon: '✅',
+        statusText: 'เลิกงานเรียบร้อย (ออกงาน 18:35 น.)',
+        statusTag: 'เสร็จสมบูรณ์',
+        statusTagClass: 'bg-emerald-100 text-emerald-800',
+        statusIcon: '🎉',
+        heroClass: 'bg-slate-700 hover:bg-slate-800 shadow-slate-600/20',
+        subClass: 'text-slate-300',
+        records: { morning: '08:32 น.', lunchOut: '12:05 น.', lunchIn: '12:57 น.', evening: '18:35 น.' }
+      }
+    };
+
+    function setPhase(phase) {
+      currentPhase = phase;
+      
+      // Update phase buttons active state
+      document.querySelectorAll('.phase-btn').forEach(btn => {
+        btn.classList.remove('border-emerald-600', 'bg-emerald-50', 'text-emerald-900');
+        btn.classList.add('border-transparent', 'bg-white', 'text-slate-700');
+      });
+      const activeBtn = document.getElementById(
+        phase === 'morning' ? 'phaseBtnMorning' :
+        phase === 'lunch_out' ? 'phaseBtnLunchOut' :
+        phase === 'lunch_in' ? 'phaseBtnLunchIn' : 'phaseBtnEvening'
+      );
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'bg-white', 'text-slate-700');
+        activeBtn.classList.add('border-emerald-600', 'bg-emerald-50', 'text-emerald-900');
+      }
+
+      // Render
+      renderUI();
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const btn2 = document.getElementById('btnPunch2');
+      const btn4 = document.getElementById('btnPunch4');
+      const lunchOutBtn = document.getElementById('phaseBtnLunchOut');
+      const lunchInBtn = document.getElementById('phaseBtnLunchIn');
+
+      if (mode === '2') {
+        btn2.classList.add('bg-white', 'shadow-sm', 'text-slate-900');
+        btn2.classList.remove('text-slate-600');
+        btn4.classList.remove('bg-white', 'shadow-sm', 'text-slate-900');
+        btn4.classList.add('text-slate-600');
+
+        lunchOutBtn.classList.add('hidden');
+        lunchInBtn.classList.add('hidden');
+
+        document.getElementById('timeBoxLunchOut').classList.add('hidden');
+        document.getElementById('timeBoxLunchIn').classList.add('hidden');
+        if (currentPhase === 'lunch_out' || currentPhase === 'lunch_in') {
+          setPhase('evening');
+        }
+      } else {
+        btn4.classList.add('bg-white', 'shadow-sm', 'text-slate-900');
+        btn4.classList.remove('text-slate-600');
+        btn2.classList.remove('bg-white', 'shadow-sm', 'text-slate-900');
+        btn2.classList.add('text-slate-600');
+
+        lunchOutBtn.classList.remove('hidden');
+        lunchInBtn.classList.remove('hidden');
+
+        document.getElementById('timeBoxLunchOut').classList.remove('hidden');
+        document.getElementById('timeBoxLunchIn').classList.remove('hidden');
+      }
+
+      renderUI();
+    }
+
+    function renderUI() {
+      const cfg = phaseConfig[currentPhase];
+      document.getElementById('displayClock').textContent = cfg.time;
+      document.getElementById('heroTitle').textContent = cfg.title;
+      document.getElementById('heroSubtitle').textContent = cfg.subtitle;
+      document.getElementById('heroIconBox').textContent = cfg.icon;
+
+      document.getElementById('statusText').textContent = cfg.statusText;
+      document.getElementById('statusIcon').textContent = cfg.statusIcon;
+      
+      const tag = document.getElementById('statusTag');
+      tag.textContent = cfg.statusTag;
+      tag.className = 'text-xs font-medium px-3 py-1 rounded-xl ' + cfg.statusTagClass;
+
+      const heroBtn = document.getElementById('heroButton');
+      heroBtn.className = 'w-full py-8 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-98 flex flex-col items-center justify-center space-y-2.5 ' + cfg.heroClass;
+
+      // Update timeline boxes
+      document.getElementById('valMorning').textContent = cfg.records.morning;
+      document.getElementById('valMorning').className = 'text-sm md:text-base font-semibold mt-0.5 ' + (cfg.records.morning !== '—' ? 'text-emerald-700' : 'text-slate-400');
+      
+      document.getElementById('valLunchOut').textContent = cfg.records.lunchOut;
+      document.getElementById('valLunchOut').className = 'text-sm md:text-base font-semibold mt-0.5 ' + (cfg.records.lunchOut !== '—' ? 'text-amber-700' : 'text-slate-400');
+
+      document.getElementById('valLunchIn').textContent = cfg.records.lunchIn;
+      document.getElementById('valLunchIn').className = 'text-sm md:text-base font-semibold mt-0.5 ' + (cfg.records.lunchIn !== '—' ? 'text-sky-700' : 'text-slate-400');
+
+      document.getElementById('valEvening').textContent = cfg.records.evening;
+      document.getElementById('valEvening').className = 'text-sm md:text-base font-semibold mt-0.5 ' + (cfg.records.evening !== '—' ? 'text-rose-700' : 'text-slate-400');
+    }
+
+    function simulatePunch() {
+      if (currentPhase === 'morning') {
+        setPhase(currentMode === '4' ? 'lunch_out' : 'evening');
+      } else if (currentPhase === 'lunch_out') {
+        setPhase('lunch_in');
+      } else if (currentPhase === 'lunch_in') {
+        setPhase('evening');
+      } else if (currentPhase === 'evening') {
+        setPhase('completed');
+      } else {
+        setPhase('morning');
+      }
+    }
+
+    // Initialize
+    setPhase('morning');
+  </script>
+</body>
+</html>

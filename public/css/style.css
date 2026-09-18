@@ -97,3 +97,36 @@ input, select, textarea {
   background: #cbd5e1;
   border-radius: 9999px;
 }
+
+/* Hero Button Pulse Glow Animations */
+.hero-pulse {
+  animation: hero-pulse-glow 2.5s infinite;
+}
+@keyframes hero-pulse-glow {
+  0%, 100% { box-shadow: 0 10px 25px -4px rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 10px 30px 6px rgba(16, 185, 129, 0.15); }
+}
+
+.hero-pulse-amber {
+  animation: hero-pulse-amber-glow 2.5s infinite;
+}
+@keyframes hero-pulse-amber-glow {
+  0%, 100% { box-shadow: 0 10px 25px -4px rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 10px 30px 6px rgba(245, 158, 11, 0.15); }
+}
+
+.hero-pulse-sky {
+  animation: hero-pulse-sky-glow 2.5s infinite;
+}
+@keyframes hero-pulse-sky-glow {
+  0%, 100% { box-shadow: 0 10px 25px -4px rgba(14, 165, 233, 0.4); }
+  50% { box-shadow: 0 10px 30px 6px rgba(14, 165, 233, 0.15); }
+}
+
+.hero-pulse-rose {
+  animation: hero-pulse-rose-glow 2.5s infinite;
+}
+@keyframes hero-pulse-rose-glow {
+  0%, 100% { box-shadow: 0 10px 25px -4px rgba(244, 63, 94, 0.4); }
+  50% { box-shadow: 0 10px 30px 6px rgba(244, 63, 94, 0.15); }
+}

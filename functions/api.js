@@ -195,7 +195,9 @@ async function getSettings(db) {
     ot_start_time: '19:00',
     sunday_ot_rate: 1.0,
     ot_rounding_mode: 'HALF_HOUR', // 'HALF_HOUR' or 'EXACT_MINUTES'
-    advance_day_of_week: 'SATURDAY', // 'SATURDAY' or 'ANY'
+    advance_day_of_week: 'SATURDAY', // 'SATURDAY', 'FRIDAY', 'FRIDAY_SATURDAY', or 'ANY'
+    advance_start_time: '09:00',
+    advance_end_time: '18:00',
     advance_daily_rate: 250,
     advance_max_amount: 3000,
     enable_leave_requests: 'true',
@@ -207,7 +209,16 @@ async function getSettings(db) {
     enable_device_lock: 'true',
     allow_direct_gps: 'true',
     break_tracking_mode: 'AUTO_DEDUCT', // 'AUTO_DEDUCT' (2 punches) or 'BREAK_PUNCH' (4 punches)
-    break_duration_minutes: 60
+    break_duration_minutes: 60,
+    enable_face_detection: 'true',
+    unlock_method_password: 'true',
+    unlock_method_qr: 'true',
+    unlock_method_remote: 'true',
+    leave_type_sick_with_cert: 'true',
+    leave_type_sick_no_cert: 'true',
+    leave_type_business: 'false',
+    leave_type_annual: 'false',
+    leave_type_without_pay: 'false'
   };
 
   const map = { ...defaults };
@@ -289,7 +300,7 @@ async function handleAction(db, action, params) {
 
   switch (action) {
     case 'getInitialData': {
-      const empRows = await db.prepare('SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status FROM employees ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
+      const empRows = await db.prepare('SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url FROM employees ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
       const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at, updated_at FROM employee_devices').all().catch(() => ({ results: [] }));
       const deviceMap = {};
       for (const d of deviceRows.results || []) {
@@ -305,6 +316,7 @@ async function handleAction(db, action, params) {
         empId: e.emp_id,
         fullName: e.full_name || '',
         nickname: e.nickname || '',
+        photoUrl: e.photo_url || '',
         department: e.department || '-',
         position: e.position || '-',
         phone: e.phone || '',
@@ -382,6 +394,8 @@ async function handleAction(db, action, params) {
         employee: {
           empId: emp.emp_id,
           fullName: emp.full_name,
+          nickname: emp.nickname || '',
+          photoUrl: emp.photo_url || '',
           department: emp.department,
           position: emp.position,
           phone: emp.phone
@@ -1016,7 +1030,19 @@ async function handleAction(db, action, params) {
       const maxAllowed = Math.min(daysWorked * dailyRate, Number(settings.advance_max_amount || 3000));
 
       const isSaturday = (dayOfWeekNumber === 6);
-      const isAllowedDay = (settings.advance_day_of_week === 'ANY' || isSaturday);
+      const isFriday = (dayOfWeekNumber === 5);
+      let isAllowedDay = false;
+      if (settings.advance_day_of_week === 'ANY') isAllowedDay = true;
+      else if (settings.advance_day_of_week === 'FRIDAY') isAllowedDay = isFriday;
+      else if (settings.advance_day_of_week === 'FRIDAY_SATURDAY') isAllowedDay = (isFriday || isSaturday);
+      else isAllowedDay = isSaturday;
+
+      // Check Time Window
+      const startTime = settings.advance_start_time || '09:00';
+      const endTime = settings.advance_end_time || '18:00';
+      const curTime = curTimeStr.substring(0, 5); // "HH:MM"
+      const isAllowedTime = (curTime >= startTime && curTime <= endTime);
+      const isOpen = (settings.enable_advance_requests === 'true') && isAllowedDay && isAllowedTime;
 
       // Check existing advance request in this week
       const existingReq = await db.prepare(`
@@ -1031,6 +1057,12 @@ async function handleAction(db, action, params) {
         maxAllowed,
         isSaturday,
         isAllowedDay,
+        isAllowedTime,
+        isOpen,
+        advanceStartTime: startTime,
+        advanceEndTime: endTime,
+        advanceDayOfWeek: settings.advance_day_of_week || 'SATURDAY',
+        currentTime: curTime,
         weekRange: `${mondayStr} ถึง ${saturdayStr}`,
         existingRequest: existingReq || null,
         enabled: (settings.enable_advance_requests === 'true')
@@ -1044,8 +1076,28 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'ระบบขอเบิกเงินล่วงหน้าปิดให้บริการชั่วคราว' };
       }
 
-      if (settings.advance_day_of_week === 'SATURDAY' && dayOfWeekNumber !== 6) {
-        return { success: false, message: 'ระบบเปิดให้ยื่นขอเบิกเงินล่วงหน้าเฉพาะ "วันเสาร์" เท่านั้น' };
+      // Check Allowed Day
+      const isSaturday = (dayOfWeekNumber === 6);
+      const isFriday = (dayOfWeekNumber === 5);
+      let isAllowedDay = false;
+      if (settings.advance_day_of_week === 'ANY') isAllowedDay = true;
+      else if (settings.advance_day_of_week === 'FRIDAY') isAllowedDay = isFriday;
+      else if (settings.advance_day_of_week === 'FRIDAY_SATURDAY') isAllowedDay = (isFriday || isSaturday);
+      else isAllowedDay = isSaturday;
+
+      if (!isAllowedDay) {
+        let dayMsg = 'วันเสาร์';
+        if (settings.advance_day_of_week === 'FRIDAY') dayMsg = 'วันศุกร์';
+        else if (settings.advance_day_of_week === 'FRIDAY_SATURDAY') dayMsg = 'วันศุกร์และวันเสาร์';
+        return { success: false, message: `ระบบเปิดให้ยื่นขอเบิกเงินล่วงหน้าเฉพาะ "${dayMsg}" เท่านั้น` };
+      }
+
+      // Check Time Window
+      const startTime = settings.advance_start_time || '09:00';
+      const endTime = settings.advance_end_time || '18:00';
+      const curTime = curTimeStr.substring(0, 5);
+      if (curTime < startTime || curTime > endTime) {
+        return { success: false, message: `ขณะนี้อยู่นอกช่วงเวลาเปิดรับคำขอเบิกเงิน (ระบบเปิดรับเวลา ${startTime} - ${endTime} น.)` };
       }
 
       const numAmount = Number(amount);
