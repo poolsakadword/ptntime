@@ -267,11 +267,11 @@
             <div class="text-2xl">📅</div>
             <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">ประวัติเวลา</div>
           </button>
-          <button type="button" onclick="switchTab('requests'); switchSubTab('advance');" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
             <div class="text-2xl">💵</div>
             <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">ขอเบิกเงิน</div>
           </button>
-          <button type="button" onclick="switchTab('requests'); switchSubTab('leave');" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
             <div class="text-2xl">🏖️</div>
             <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">แจ้งลางาน</div>
           </button>
@@ -329,7 +329,7 @@
           <button id="subTabBtnLeave" onclick="switchSubTab('leave')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
             🏖️ ขอลางาน
           </button>
-          <button id="subTabBtnOt" onclick="switchSubTab('ot')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
+          <button id="subTabBtnOt" onclick="switchSubTab('ot')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition hidden">
             ⏱️ ขอ OT
           </button>
           <button id="subTabBtnStatus" onclick="switchSubTab('status')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">

@@ -221,17 +221,44 @@ function applyFeatureToggles() {
   const otBtn = document.getElementById('subTabBtnOt');
   const advBtn = document.getElementById('subTabBtnAdvance');
 
+  const leaveContent = document.getElementById('subTabLeaveContent');
+  const otContent = document.getElementById('subTabOtContent');
+  const advContent = document.getElementById('subTabAdvanceContent');
+
   if (leaveBtn) {
-    if (appSettings.enable_leave_requests === 'false') leaveBtn.classList.add('hidden');
-    else leaveBtn.classList.remove('hidden');
+    if (appSettings.enable_leave_requests === 'false') {
+      leaveBtn.classList.add('hidden');
+      leaveContent?.classList.add('hidden');
+    } else {
+      leaveBtn.classList.remove('hidden');
+    }
   }
   if (otBtn) {
-    if (appSettings.enable_ot_requests === 'false') otBtn.classList.add('hidden');
-    else otBtn.classList.remove('hidden');
+    if (appSettings.enable_ot_requests === 'false') {
+      otBtn.classList.add('hidden');
+      otContent?.classList.add('hidden');
+    } else {
+      otBtn.classList.remove('hidden');
+    }
   }
   if (advBtn) {
-    if (appSettings.enable_advance_requests === 'false') advBtn.classList.add('hidden');
-    else advBtn.classList.remove('hidden');
+    if (appSettings.enable_advance_requests === 'false') {
+      advBtn.classList.add('hidden');
+      advContent?.classList.add('hidden');
+    } else {
+      advBtn.classList.remove('hidden');
+    }
+  }
+
+  const quickAdv = document.getElementById('quickBtnAdvance');
+  if (quickAdv) {
+    if (appSettings.enable_advance_requests === 'false') quickAdv.classList.add('hidden');
+    else quickAdv.classList.remove('hidden');
+  }
+  const quickLeave = document.getElementById('quickBtnLeave');
+  if (quickLeave) {
+    if (appSettings.enable_leave_requests === 'false') quickLeave.classList.add('hidden');
+    else quickLeave.classList.remove('hidden');
   }
 
   const directGpsContainer = document.getElementById('containerDirectGps');
@@ -1956,6 +1983,9 @@ function switchSubTab(sub) {
     if (statusBtn) statusBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-slate-800 transition';
     loadMyRequests();
   }
+
+  // Re-apply feature toggles so disabled tab buttons (e.g. OT when disabled) stay hidden!
+  applyFeatureToggles();
 }
 
 async function submitLeaveRequest() {
