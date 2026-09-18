@@ -819,15 +819,28 @@ async function loadEmployeeHistory() {
         const isLate = l.late_minutes > 0;
         html += `
           <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-xs">
-            <div class="space-y-1">
-              <div class="font-bold text-slate-900 text-sm">${l.date}</div>
-              <div class="flex items-center space-x-2 text-xs text-slate-600">
-                <span>เข้า: <b class="text-emerald-700">${l.clock_in || '--'}</b></span>
-                <span>ออก: <b class="text-rose-700">${l.clock_out || '--'}</b></span>
-                <span>(ปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
+            <div class="flex items-center space-x-3">
+              <div class="flex items-center -space-x-2 flex-shrink-0">
+                ${l.in_photo_url ? `
+                  <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-10 h-10 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${l.date} (${l.clock_in})')" />
+                ` : ''}
+                ${l.out_photo_url ? `
+                  <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-10 h-10 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${l.date} (${l.clock_out})')" />
+                ` : ''}
+                ${!l.in_photo_url && !l.out_photo_url ? `
+                  <div class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-xs">📅</div>
+                ` : ''}
+              </div>
+              <div class="space-y-0.5">
+                <div class="font-bold text-slate-900 text-sm">${l.date}</div>
+                <div class="flex items-center space-x-2 text-xs text-slate-600">
+                  <span>เข้า: <b class="text-emerald-700">${l.clock_in || '--'}</b></span>
+                  <span>ออก: <b class="text-rose-700">${l.clock_out || '--'}</b></span>
+                  <span>(ปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
+                </div>
               </div>
             </div>
-            <div class="text-right">
+            <div class="text-right flex-shrink-0">
               ${isLate 
                 ? `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">สาย ${l.late_minutes} น.</span>`
                 : `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">ปกติ</span>`
@@ -1207,12 +1220,14 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
   container.innerHTML = html;
 }
 
-function previewCertPhoto(url) {
+function previewCertPhoto(url, title = 'เอกสาร / ภาพถ่ายเซลฟี่') {
+  if (!url) return;
   Swal.fire({
-    title: 'เอกสาร / ภาพถ่ายเซลฟี่',
+    title: title,
     imageUrl: url,
     imageAlt: 'Photo Preview',
-    confirmButtonText: 'ปิด'
+    confirmButtonText: 'ปิดหน้าต่าง',
+    confirmButtonColor: '#0284c7'
   });
 }
 
@@ -1231,11 +1246,17 @@ function renderSupervisorTodayLogs(logs) {
     html += `
       <div class="p-3 rounded-2xl border border-slate-200 bg-white flex items-center justify-between text-xs shadow-sm">
         <div class="flex items-center space-x-3">
-          ${l.in_photo_url ? `
-            <img src="${l.in_photo_url}" class="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm cursor-pointer" onclick="previewCertPhoto('${l.in_photo_url}')" />
-          ` : `
-            <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">👤</div>
-          `}
+          <div class="flex items-center -space-x-2 flex-shrink-0">
+            ${l.in_photo_url ? `
+              <img src="${l.in_photo_url}" title="ภาพเซลฟี่เข้างาน (${l.clock_in})" class="w-10 h-10 rounded-full object-cover border-2 border-emerald-500 shadow-md cursor-pointer hover:scale-110 hover:z-10 transition" onclick="previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน [${l.emp_id}] เวลา ${l.clock_in}')" />
+            ` : ''}
+            ${l.out_photo_url ? `
+              <img src="${l.out_photo_url}" title="ภาพเซลฟี่ออกงาน (${l.clock_out})" class="w-10 h-10 rounded-full object-cover border-2 border-rose-500 shadow-md cursor-pointer hover:scale-110 hover:z-10 transition" onclick="previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน [${l.emp_id}] เวลา ${l.clock_out}')" />
+            ` : ''}
+            ${!l.in_photo_url && !l.out_photo_url ? `
+              <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-sm">👤</div>
+            ` : ''}
+          </div>
           <div>
             <div class="font-bold text-slate-900 text-sm">${l.full_name || l.emp_id}</div>
             <div class="text-xs text-slate-500 mt-0.5">
