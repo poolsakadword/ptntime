@@ -29,6 +29,7 @@ let appSettings = {
   enable_leave_requests: 'true',
   enable_ot_requests: 'true',
   enable_advance_requests: 'true',
+  allow_direct_gps: 'true',
   qr_mode: 'HYBRID'
 };
 let currentLocation = null;
@@ -138,6 +139,15 @@ function applyFeatureToggles() {
   if (advBtn) {
     if (appSettings.enable_advance_requests === 'false') advBtn.classList.add('hidden');
     else advBtn.classList.remove('hidden');
+  }
+
+  const directGpsContainer = document.getElementById('containerDirectGps');
+  if (directGpsContainer) {
+    if (appSettings.allow_direct_gps === 'false') {
+      directGpsContainer.classList.add('hidden');
+    } else {
+      directGpsContainer.classList.remove('hidden');
+    }
   }
 }
 
@@ -594,6 +604,15 @@ function closeQrScannerModal() {
 }
 
 function handleDirectGpsClock() {
+  if (appSettings && appSettings.allow_direct_gps === 'false') {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง',
+      text: 'ระบบเปิดให้ลงเวลาผ่านการสแกน QR Code ประจำสาขาเท่านั้น กรุณาสแกน QR Code เพื่อบันทึกเวลา'
+    });
+    return;
+  }
+
   Swal.fire({
     title: 'เลือกการลงเวลาด้วย GPS',
     text: 'กรุณาเลือกบันทึกเวลาเข้างาน หรือ ออกงาน',
@@ -619,6 +638,16 @@ function handleDirectGpsClock() {
 async function executeClockAction(type, qrToken) {
   if (!currentEmployee) {
     openEmployeePickerModal();
+    return;
+  }
+
+  // Check allow direct GPS
+  if (!qrToken && appSettings && appSettings.allow_direct_gps === 'false') {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง',
+      text: 'ระบบตั้งค่าให้พนักงานต้องสแกน QR Code ประจำสาขาหรือหน้าจอเคาน์เตอร์เท่านั้น'
+    });
     return;
   }
 

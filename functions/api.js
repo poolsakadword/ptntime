@@ -192,7 +192,8 @@ async function getSettings(db) {
     qr_mode: 'HYBRID', // 'HYBRID', 'DYNAMIC_ONLY', 'STATIC_ONLY'
     static_qr_key: STATIC_QR_CODE_KEY,
     allow_outside_clockin: 'false',
-    enable_device_lock: 'true'
+    enable_device_lock: 'true',
+    allow_direct_gps: 'true'
   };
 
   const map = { ...defaults };
@@ -600,6 +601,13 @@ async function handleAction(db, action, params) {
       }
 
       // Verify QR Code if provided or required
+      if (!qrToken && settings.allow_direct_gps === 'false') {
+        return {
+          success: false,
+          message: 'ระบบไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง ต้องสแกน QR Code ประจำสาขาเท่านั้น'
+        };
+      }
+
       if (qrToken) {
         const curDynToken = await getDynamicQrToken(0);
         const prevDynToken = await getDynamicQrToken(-1);
@@ -681,6 +689,13 @@ async function handleAction(db, action, params) {
       }
 
       // Verify QR Code if provided or required
+      if (!qrToken && settings.allow_direct_gps === 'false') {
+        return {
+          success: false,
+          message: 'ระบบไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง ต้องสแกน QR Code ประจำสาขาเท่านั้น'
+        };
+      }
+
       if (qrToken) {
         const curDynToken = await getDynamicQrToken(0);
         const prevDynToken = await getDynamicQrToken(-1);
