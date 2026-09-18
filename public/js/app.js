@@ -1073,9 +1073,75 @@ function triggerShutterCapture() {
   submitClockWithPhoto(pendingData.type, pendingData.qrToken, photoBase64);
 }
 
+// Time Window Lock Helper
+function isActionWithinTimeWindow(actionType) {
+  if (!appSettings || appSettings.enable_time_window_restrictions !== 'true') {
+    return { allowed: true };
+  }
+
+  const now = new Date();
+  const curTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+  let start = '00:00';
+  let end = '23:59';
+  let label = '';
+
+  switch (actionType) {
+    case 'IN':
+      start = appSettings.window_in_start || '06:00';
+      end = appSettings.window_in_end || '12:00';
+      label = 'เข้างาน (IN)';
+      break;
+    case 'BREAK_OUT':
+      start = appSettings.window_break_out_start || '11:30';
+      end = appSettings.window_break_out_end || '14:30';
+      label = 'เริ่มพัก (Break OUT)';
+      break;
+    case 'BREAK_IN':
+      start = appSettings.window_break_in_start || '12:00';
+      end = appSettings.window_break_in_end || '15:30';
+      label = 'กลับเข้าทำงาน (Break IN)';
+      break;
+    case 'OUT':
+      start = appSettings.window_out_start || '17:00';
+      end = appSettings.window_out_end || '23:59';
+      label = 'เลิกงาน (Clock OUT)';
+      break;
+    default:
+      return { allowed: true };
+  }
+
+  const allowed = (curTime >= start && curTime <= end);
+  return {
+    allowed,
+    start,
+    end,
+    curTime,
+    label
+  };
+}
+
 function startDirectGpsClock(type) {
   if (!currentEmployee) {
     openEmployeePickerModal();
+    return;
+  }
+
+  const winCheck = isActionWithinTimeWindow(type);
+  if (!winCheck.allowed) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'อยู่นอกช่วงเวลาที่กำหนด',
+      html: `<div class="text-left text-sm space-y-2">
+        <p>ระบบกำหนดช่วงเวลาสำหรับ <strong>${winCheck.label}</strong>:</p>
+        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl font-mono text-center text-amber-800 font-bold text-base">
+          ⏰ ${winCheck.start} - ${winCheck.end} น.
+        </div>
+        <p class="text-xs text-slate-500 text-center">ขณะนี้เวลาในระบบคือ <strong>${winCheck.curTime} น.</strong></p>
+      </div>`,
+      confirmButtonText: 'เข้าใจแล้ว',
+      confirmButtonColor: '#2563eb'
+    });
     return;
   }
 
@@ -1128,6 +1194,26 @@ function openQrScannerModal(type) {
   if (type !== 'UNLOCK' && !currentEmployee) {
     openEmployeePickerModal();
     return;
+  }
+
+  if (type !== 'UNLOCK') {
+    const winCheck = isActionWithinTimeWindow(type);
+    if (!winCheck.allowed) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'อยู่นอกช่วงเวลาที่กำหนด',
+        html: `<div class="text-left text-sm space-y-2">
+          <p>ระบบกำหนดช่วงเวลาสำหรับ <strong>${winCheck.label}</strong>:</p>
+          <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl font-mono text-center text-amber-800 font-bold text-base">
+            ⏰ ${winCheck.start} - ${winCheck.end} น.
+          </div>
+          <p class="text-xs text-slate-500 text-center">ขณะนี้เวลาในระบบคือ <strong>${winCheck.curTime} น.</strong></p>
+        </div>`,
+        confirmButtonText: 'เข้าใจแล้ว',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
   }
 
   pendingScanType = type;
@@ -1576,6 +1662,35 @@ async function loadTodayStatus() {
               });
             };
           }
+        }
+      }
+
+      // Check Time Window Lock Restriction for current active action
+      if (currentAction !== 'DONE') {
+        const winCheck = isActionWithinTimeWindow(currentAction);
+        if (!winCheck.allowed) {
+          if (heroBtn) {
+            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-slate-300 shadow-lg flex flex-col items-center justify-center space-y-2.5 bg-slate-700/85 border-2 border-slate-600/80 cursor-pointer';
+            heroBtn.disabled = false;
+            heroBtn.onclick = () => {
+              Swal.fire({
+                icon: 'info',
+                title: 'อยู่นอกช่วงเวลาที่กำหนด',
+                html: `<div class="text-left text-sm space-y-2">
+                  <p>ระบบกำหนดช่วงเวลาสำหรับ <strong>${winCheck.label}</strong>:</p>
+                  <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl font-mono text-center text-amber-800 font-bold text-base">
+                    ⏰ ${winCheck.start} - ${winCheck.end} น.
+                  </div>
+                  <p class="text-xs text-slate-500 text-center">ขณะนี้เวลาในระบบคือ <strong>${winCheck.curTime} น.</strong></p>
+                </div>`,
+                confirmButtonText: 'รับทราบ',
+                confirmButtonColor: '#2563eb'
+              });
+            };
+          }
+          if (heroTitle) heroTitle.innerHTML = `<span class="flex items-center justify-center gap-2"><span class="text-amber-400">🔒</span> อยู่นอกช่วงเวลา (${winCheck.start}-${winCheck.end})</span>`;
+          if (heroSub) heroSub.textContent = `ระบบเปิดให้ลงเวลา ${winCheck.label} ช่วง ${winCheck.start} - ${winCheck.end} น. (ขณะนี้ ${winCheck.curTime} น.)`;
+          if (heroIcon) heroIcon.textContent = '⏳';
         }
       }
 

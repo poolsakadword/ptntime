@@ -218,7 +218,16 @@ async function getSettings(db) {
     leave_type_sick_no_cert: 'true',
     leave_type_business: 'false',
     leave_type_annual: 'false',
-    leave_type_without_pay: 'false'
+    leave_type_without_pay: 'false',
+    enable_time_window_restrictions: 'false',
+    window_in_start: '06:00',
+    window_in_end: '12:00',
+    window_break_out_start: '11:30',
+    window_break_out_end: '14:30',
+    window_break_in_start: '12:00',
+    window_break_in_end: '15:30',
+    window_out_start: '17:00',
+    window_out_end: '23:59'
   };
 
   const map = { ...defaults };
@@ -232,6 +241,39 @@ async function getSettings(db) {
     }
   }
   return map;
+}
+
+function validateTimeWindow(settings, actionType, curTimeStr) {
+  if (String(settings.enable_time_window_restrictions) !== 'true') return null;
+  let start = '00:00';
+  let end = '23:59';
+  let label = '';
+  switch (actionType) {
+    case 'IN':
+      start = settings.window_in_start || '06:00';
+      end = settings.window_in_end || '12:00';
+      label = 'เข้างาน (IN)';
+      break;
+    case 'BREAK_OUT':
+      start = settings.window_break_out_start || '11:30';
+      end = settings.window_break_out_end || '14:30';
+      label = 'เริ่มพัก (Break OUT)';
+      break;
+    case 'BREAK_IN':
+      start = settings.window_break_in_start || '12:00';
+      end = settings.window_break_in_end || '15:30';
+      label = 'กลับเข้าทำงาน (Break IN)';
+      break;
+    case 'OUT':
+      start = settings.window_out_start || '17:00';
+      end = settings.window_out_end || '23:59';
+      label = 'เลิกงาน (Clock OUT)';
+      break;
+  }
+  if (curTimeStr < start || curTimeStr > end) {
+    return `อยู่นอกช่วงเวลาที่กำหนด: ระบบอนุญาตให้ลงเวลา ${label} เฉพาะช่วง ${start} - ${end} น. เท่านั้น (ขณะนี้เวลา ${curTimeStr} น.)`;
+  }
+  return null;
 }
 
 export async function onRequest(context) {
@@ -623,6 +665,10 @@ async function handleAction(db, action, params) {
 
       if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
 
+      // Check Time Window Lock
+      const winErr = validateTimeWindow(settings, 'IN', timeStr);
+      if (winErr) return { success: false, message: winErr };
+
       // Check Device Lock
       if (settings.enable_device_lock === 'true') {
         const bound = await db.prepare('SELECT device_id, device_name FROM employee_devices WHERE emp_id = ?').bind(empId).first();
@@ -711,6 +757,10 @@ async function handleAction(db, action, params) {
 
       if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
 
+      // Check Time Window Lock
+      const winErr = validateTimeWindow(settings, 'BREAK_OUT', timeStr);
+      if (winErr) return { success: false, message: winErr };
+
       // Check Device Lock
       if (settings.enable_device_lock === 'true') {
         const bound = await db.prepare('SELECT device_id, device_name FROM employee_devices WHERE emp_id = ?').bind(empId).first();
@@ -789,6 +839,10 @@ async function handleAction(db, action, params) {
       const timeStr = curTimeStr;
 
       if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
+
+      // Check Time Window Lock
+      const winErr = validateTimeWindow(settings, 'BREAK_IN', timeStr);
+      if (winErr) return { success: false, message: winErr };
 
       // Check Device Lock
       if (settings.enable_device_lock === 'true') {
@@ -880,6 +934,10 @@ async function handleAction(db, action, params) {
       const timeStr = curTimeStr;
 
       if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
+
+      // Check Time Window Lock
+      const winErr = validateTimeWindow(settings, 'OUT', timeStr);
+      if (winErr) return { success: false, message: winErr };
 
       // Check Device Lock
       if (settings.enable_device_lock === 'true') {
