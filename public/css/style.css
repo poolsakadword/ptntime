@@ -29,33 +29,41 @@ input, select, textarea {
   border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
-/* Camera Preview */
-.camera-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 280px;
-  height: 280px;
-  margin: 0 auto;
-  border-radius: 28px;
-  overflow: hidden;
-  box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.25);
-  border: 4px solid #ffffff;
-}
-
-.camera-wrapper video,
-.camera-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scaleX(-1); /* mirror selfie view */
-}
-
-.camera-overlay {
-  position: absolute;
+/* Fullscreen Camera Modal */
+#modalCameraFullscreen {
+  position: fixed;
   inset: 0;
-  pointer-events: none;
-  border-radius: 24px;
-  border: 2px dashed rgba(255, 255, 255, 0.7);
+  z-index: 99999;
+  background: #000000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#modalCameraFullscreen.hidden {
+  display: none !important;
+}
+
+.cam-video-mirrored {
+  transform: scaleX(-1);
+}
+
+.cam-video-normal {
+  transform: scaleX(1);
+}
+
+.face-guide-oval {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.48);
+  border: 2.5px dashed rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+}
+
+.shutter-btn-outer {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.shutter-btn-outer:active {
+  transform: scale(0.92);
 }
 
 /* Pulse badge */

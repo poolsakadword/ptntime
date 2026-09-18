@@ -469,81 +469,202 @@ function getCurrentLocation(silent = false) {
 }
 
 // ==============================================================================
-// 5. CAMERA SELFIE VERIFICATION
+// 5. FULLSCREEN SELFIE CAMERA SYSTEM (MODERN FULL-VIEWPORT MODAL)
 // ==============================================================================
-async function startCamera() {
-  const video = document.getElementById('videoPreview');
-  const photo = document.getElementById('photoPreview');
-  const placeholder = document.getElementById('cameraPlaceholder');
-  const btnStart = document.getElementById('btnStartCamera');
-  const btnCapture = document.getElementById('btnCapturePhoto');
-  const btnRetake = document.getElementById('btnRetakePhoto');
+let fsCameraStream = null;
+let currentCameraFacing = 'user'; // 'user' (front) or 'environment' (back)
+let activePendingClock = null; // { type: 'IN' | 'OUT', qrToken: string | null }
+
+async function openFullscreenCamera(type, qrToken) {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+
+  // Geofence check before opening camera
+  if (!currentLocation) {
+    getCurrentLocation();
+    Swal.fire({
+      icon: 'info',
+      title: 'กำลังตรวจสอบพิกัด GPS',
+      text: 'กรุณารอสักครู่เพื่อให้ระบบตรวจพิกัดสาขา แล้วกดใหม่อีกครั้ง'
+    });
+    return;
+  }
+
+  if (currentDistanceMeters > appSettings.geofence_radius_meters && appSettings.allow_outside_clockin !== 'true') {
+    Swal.fire({
+      icon: 'error',
+      title: 'อยู่นอกพื้นที่สำนักงาน',
+      text: `คุณอยู่ห่างจากสำนักงาน ${currentDistanceMeters} เมตร (อนุญาตไม่เกิน ${appSettings.geofence_radius_meters} ม.)`
+    });
+    return;
+  }
+
+  activePendingClock = { type, qrToken };
+
+  const modal = document.getElementById('modalCameraFullscreen');
+  const titleEl = document.getElementById('camModalTitle');
+  const subEl = document.getElementById('camModalSubtitle');
+
+  if (titleEl) {
+    titleEl.textContent = type === 'IN' ? '📸 ถ่ายรูปเซลฟี่เข้างาน (IN)' : '📸 ถ่ายรูปเซลฟี่ออกงาน (OUT)';
+  }
+  if (subEl) {
+    subEl.textContent = qrToken ? 'สแกน QR สำเร็จ! จัดใบหน้าในกรอบ แล้วกดปุ่มถ่ายรูป' : 'จัดใบหน้าในกรอบ แล้วกดปุ่มถ่ายรูปเพื่อลงเวลา';
+  }
+
+  modal?.classList.remove('hidden');
+  await initFullscreenCameraStream();
+}
+
+async function initFullscreenCameraStream() {
+  const video = document.getElementById('fsVideoPreview');
+  if (!video) return;
 
   try {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(t => t.stop());
+    if (fsCameraStream) {
+      fsCameraStream.getTracks().forEach(t => t.stop());
+      fsCameraStream = null;
     }
 
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } },
+    const constraints = {
+      video: {
+        facingMode: currentCameraFacing,
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
       audio: false
-    });
+    };
 
-    if (video) {
-      video.srcObject = cameraStream;
-      video.classList.remove('hidden');
-      if (photo) photo.classList.add('hidden');
-      if (placeholder) placeholder.classList.add('hidden');
-      btnStart?.classList.add('hidden');
-      btnCapture?.classList.remove('hidden');
-      btnRetake?.classList.add('hidden');
+    fsCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = fsCameraStream;
+
+    if (currentCameraFacing === 'user') {
+      video.classList.add('cam-video-mirrored');
+      video.classList.remove('cam-video-normal');
+    } else {
+      video.classList.add('cam-video-normal');
+      video.classList.remove('cam-video-mirrored');
     }
   } catch (err) {
+    console.error('Camera access error:', err);
+    closeFullscreenCamera();
     Swal.fire({
       icon: 'warning',
       title: 'ไม่สามารถเปิดกล้องได้',
-      text: 'กรุณาอนุญาตให้เว็บเข้าถึงกล้องหน้าเพื่อถ่ายเซลฟี่'
+      text: 'กรุณาอนุญาตให้เบราว์เซอร์เข้าถึงกล้องหน้าเพื่อถ่ายรูปเซลฟี่ยืนยันตัวตน'
     });
   }
 }
 
-function capturePhoto() {
-  const video = document.getElementById('videoPreview');
-  const photo = document.getElementById('photoPreview');
-  const canvas = document.getElementById('photoCanvas');
-  const btnCapture = document.getElementById('btnCapturePhoto');
-  const btnRetake = document.getElementById('btnRetakePhoto');
+function toggleCameraFacing() {
+  currentCameraFacing = (currentCameraFacing === 'user') ? 'environment' : 'user';
+  initFullscreenCameraStream();
+}
 
-  if (!video || !canvas) return;
+function closeFullscreenCamera() {
+  const modal = document.getElementById('modalCameraFullscreen');
+  modal?.classList.add('hidden');
 
-  canvas.width = 320;
-  canvas.height = 320;
+  if (fsCameraStream) {
+    fsCameraStream.getTracks().forEach(t => t.stop());
+    fsCameraStream = null;
+  }
+  activePendingClock = null;
+}
+
+function triggerShutterCapture() {
+  const video = document.getElementById('fsVideoPreview');
+  const canvas = document.getElementById('fsPhotoCanvas');
+  const flash = document.getElementById('camFlashOverlay');
+
+  if (!video || !canvas || !activePendingClock) return;
+
+  // 1. Shutter Flash Effect & Haptic Vibration
+  if (flash) {
+    flash.style.opacity = '0.85';
+    setTimeout(() => { flash.style.opacity = '0'; }, 180);
+  }
+  if (navigator.vibrate) {
+    try { navigator.vibrate(50); } catch(e) {}
+  }
+
+  // 2. Crop and Compress Frame from Video
+  const targetSize = 400; // 400x400 square crop
+  canvas.width = targetSize;
+  canvas.height = targetSize;
   const ctx = canvas.getContext('2d');
-  // Mirror back
-  ctx.translate(canvas.width, 0);
-  ctx.scale(-1, 1);
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  capturedPhoto = canvas.toDataURL('image/jpeg', 0.7);
+  const vw = video.videoWidth || 640;
+  const vh = video.videoHeight || 480;
+  const cropSize = Math.min(vw, vh);
+  const startX = (vw - cropSize) / 2;
+  const startY = (vh - cropSize) / 2;
 
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
+  ctx.save();
+  if (currentCameraFacing === 'user') {
+    ctx.translate(targetSize, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+  ctx.restore();
+
+  const photoBase64 = canvas.toDataURL('image/jpeg', 0.75);
+
+  const pendingData = Object.assign({}, activePendingClock);
+  closeFullscreenCamera();
+
+  // 3. Immediately Submit Clock Action with Photo
+  submitClockWithPhoto(pendingData.type, pendingData.qrToken, photoBase64);
+}
+
+function startDirectGpsClock(type) {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
   }
 
-  video.classList.add('hidden');
-  if (photo) {
-    photo.src = capturedPhoto;
-    photo.classList.remove('hidden');
+  if (appSettings && appSettings.allow_direct_gps === 'false') {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง',
+      text: 'ระบบตั้งค่าให้พนักงานต้องสแกน QR Code ประจำสาขาเท่านั้น กรุณาสแกน QR Code เพื่อบันทึกเวลา'
+    });
+    return;
   }
-  btnCapture?.classList.add('hidden');
-  btnRetake?.classList.remove('hidden');
 
-  if (pendingClockData) {
-    const saved = pendingClockData;
-    pendingClockData = null;
-    executeClockAction(saved.type, saved.qrToken);
+  openFullscreenCamera(type, null);
+}
+
+// Legacy helper for direct GPS dialog
+function handleDirectGpsClock() {
+  if (appSettings && appSettings.allow_direct_gps === 'false') {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง',
+      text: 'ระบบเปิดให้ลงเวลาผ่านการสแกน QR Code ประจำสาขาเท่านั้น กรุณาสแกน QR Code เพื่อบันทึกเวลา'
+    });
+    return;
   }
+
+  Swal.fire({
+    title: 'เลือกการลงเวลาด้วย GPS',
+    text: 'กรุณาเลือกบันทึกเวลาเข้างาน หรือ ออกงาน',
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: 'บันทึกเข้างาน (IN)',
+    denyButtonText: 'บันทึกออกงาน (OUT)',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#059669',
+    denyButtonColor: '#dc2626'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      startDirectGpsClock('IN');
+    } else if (result.isDenied) {
+      startDirectGpsClock('OUT');
+    }
+  });
 }
 
 // ==============================================================================
@@ -579,7 +700,8 @@ function openQrScannerModal(type) {
           if (pendingScanType === 'UNLOCK') {
             submitScanMasterQrUnlock(decodedText);
           } else {
-            executeClockAction(pendingScanType, decodedText);
+            // Seamlessly open Fullscreen Camera to take selfie!
+            openFullscreenCamera(pendingScanType, decodedText);
           }
         });
       },
@@ -603,39 +725,10 @@ function closeQrScannerModal() {
   }
 }
 
-function handleDirectGpsClock() {
-  if (appSettings && appSettings.allow_direct_gps === 'false') {
-    Swal.fire({
-      icon: 'warning',
-      title: 'ไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง',
-      text: 'ระบบเปิดให้ลงเวลาผ่านการสแกน QR Code ประจำสาขาเท่านั้น กรุณาสแกน QR Code เพื่อบันทึกเวลา'
-    });
-    return;
-  }
-
-  Swal.fire({
-    title: 'เลือกการลงเวลาด้วย GPS',
-    text: 'กรุณาเลือกบันทึกเวลาเข้างาน หรือ ออกงาน',
-    showCancelButton: true,
-    showDenyButton: true,
-    confirmButtonText: 'บันทึกเข้างาน (IN)',
-    denyButtonText: 'บันทึกออกงาน (OUT)',
-    cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#059669',
-    denyButtonColor: '#dc2626'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      executeClockAction('IN', null);
-    } else if (result.isDenied) {
-      executeClockAction('OUT', null);
-    }
-  });
-}
-
 // ==============================================================================
-// 7. EXECUTE CLOCK IN / OUT ACTION
+// 7. SUBMIT CLOCK IN / OUT ACTION
 // ==============================================================================
-async function executeClockAction(type, qrToken) {
+async function submitClockWithPhoto(type, qrToken, photoUrl) {
   if (!currentEmployee) {
     openEmployeePickerModal();
     return;
@@ -667,27 +760,6 @@ async function executeClockAction(type, qrToken) {
     return;
   }
 
-  // Selfie check
-  if (!capturedPhoto) {
-    const snapFirst = await Swal.fire({
-      title: 'ถ่ายภาพเซลฟี่ยืนยันตัวตน',
-      text: 'คุณยังไม่ได้ถ่ายภาพเซลฟี่ ต้องการเปิดกล้องเพื่อถ่ายภาพยืนยัน หรือบันทึกทันที?',
-      icon: 'camera',
-      showCancelButton: true,
-      confirmButtonText: '📸 เปิดกล้องถ่ายภาพ',
-      cancelButtonText: 'บันทึกเลย (ไม่ถ่ายรูป)',
-      confirmButtonColor: '#0284c7',
-      cancelButtonColor: '#64748b'
-    });
-
-    if (snapFirst.isConfirmed) {
-      pendingClockData = { type, qrToken };
-      startCamera();
-      document.getElementById('stepCameraSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-  }
-
   const actionName = (type === 'IN') ? 'clockIn' : 'clockOut';
   Swal.fire({ title: `กำลังบันทึกเวลา...`, didOpen: () => Swal.showLoading() });
 
@@ -700,7 +772,7 @@ async function executeClockAction(type, qrToken) {
         empId: currentEmployee.empId,
         lat: currentLocation ? currentLocation.lat : null,
         lng: currentLocation ? currentLocation.lng : null,
-        photoUrl: capturedPhoto,
+        photoUrl: photoUrl || null,
         qrToken: qrToken || null,
         deviceId: getOrCreateDeviceId()
       })
@@ -715,6 +787,7 @@ async function executeClockAction(type, qrToken) {
             <div class="text-sm space-y-1">
               <p>เวลา: <b class="text-emerald-700">${data.clockInTime}</b></p>
               <p>สถานะ: <b>${data.status === 'LATE' ? 'มาสาย (' + data.lateMinutes + ' นาที)' : 'ตรงเวลา ปกติ'}</b></p>
+              <p class="text-xs text-slate-500 pt-1">📸 บันทึกรูปถ่ายและพิกัด GPS สำเร็จ</p>
             </div>
           `
         });
@@ -726,6 +799,7 @@ async function executeClockAction(type, qrToken) {
             <div class="text-sm space-y-1">
               <p>เวลาออกงาน: <b class="text-rose-700">${data.clockOutTime}</b></p>
               <p>งานปกติ: <b>${data.workHours} ชม.</b> | OT วันนี้: <b class="text-indigo-700">${data.otHours} ชม.</b></p>
+              <p class="text-xs text-slate-500 pt-1">📸 บันทึกรูปถ่ายและพิกัด GPS สำเร็จ</p>
             </div>
           `
         });
@@ -738,6 +812,11 @@ async function executeClockAction(type, qrToken) {
   } catch(e) {
     Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
   }
+}
+
+// Backward compatibility alias
+async function executeClockAction(type, qrToken) {
+  openFullscreenCamera(type, qrToken);
 }
 
 // ==============================================================================
