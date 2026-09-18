@@ -253,15 +253,21 @@ async function handleAction(db, action, params) {
   switch (action) {
     // 1. Initial Data
     case 'getInitialData': {
-      const empRows = await db.prepare('SELECT emp_id, full_name, department, position, phone, citizen_id FROM employees WHERE status IS NULL OR status = "Active" ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
+      const empRows = await db.prepare('SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status FROM employees ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
       const employees = (empRows.results || []).map(e => ({
         empId: e.emp_id,
-        fullName: e.full_name,
+        fullName: e.full_name || '',
+        nickname: e.nickname || '',
         department: e.department || '-',
         position: e.position || '-',
         phone: e.phone || '',
+        status: e.status || 'Active',
         last4Citizen: (e.citizen_id || '').slice(-4)
-      }));
+      })).sort((a, b) => {
+        const numA = parseInt(String(a.empId).replace(/[^0-9]/g, ''), 10) || 0;
+        const numB = parseInt(String(b.empId).replace(/[^0-9]/g, ''), 10) || 0;
+        return numA - numB;
+      });
 
       const dynamicToken = await getDynamicQrToken(0);
       const secondsLeft = 20 - (Math.floor(Date.now() / 1000) % 20);
@@ -764,7 +770,7 @@ async function handleAction(db, action, params) {
     case 'getSupervisorDashboard': {
       const date = params.date || today;
 
-      const empTotal = await db.prepare('SELECT COUNT(*) as count FROM employees WHERE status IS NULL OR status = "Active"').first();
+      const empTotal = await db.prepare('SELECT COUNT(*) as count FROM employees').first();
       const logsToday = await db.prepare(`
         SELECT t.*, e.full_name, e.department, e.position 
         FROM time_logs t

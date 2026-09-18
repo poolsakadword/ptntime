@@ -155,7 +155,8 @@ function populateEmployeeDropdown() {
   employeeList.forEach(e => {
     const opt = document.createElement('option');
     opt.value = e.empId;
-    opt.textContent = `[${e.empId}] ${e.fullName} (${e.department})`;
+    const nick = e.nickname ? ` (${e.nickname})` : '';
+    opt.textContent = `[${e.empId}] ${e.fullName}${nick} - ${e.department}`;
     sel.appendChild(opt);
   });
 }
