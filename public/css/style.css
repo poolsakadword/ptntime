@@ -12,22 +12,29 @@ body {
   font-family: 'Prompt', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #f1f5f9;
   color: #1e293b;
+  font-size: 15px;
+  line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent auto-zoom on mobile inputs */
+input, select, textarea {
+  font-size: 15px !important;
 }
 
 /* Glassmorphism Card */
 .glass-card {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
 /* Camera Preview */
 .camera-wrapper {
   position: relative;
   width: 100%;
-  max-width: 280px;
-  height: 280px;
+  max-width: 250px;
+  height: 250px;
   margin: 0 auto;
   border-radius: 9999px;
   overflow: hidden;

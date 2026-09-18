@@ -136,11 +136,23 @@ function restoreSavedEmployee() {
 
 function updateHeaderEmployeeView() {
   const btnText = document.getElementById('headerEmpName');
+  const avatarEl = document.getElementById('headerEmpAvatar');
+  const subEl = document.getElementById('headerEmpSub');
   if (btnText) {
     if (currentEmployee) {
-      btnText.textContent = `${currentEmployee.empId} ${currentEmployee.fullName.split(' ')[0]}`;
+      const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
+      btnText.textContent = `${currentEmployee.empId} ${currentEmployee.fullName}${nick}`;
+      if (avatarEl) {
+        const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
+        avatarEl.textContent = numPart ? numPart.slice(-2) : 'PTN';
+      }
+      if (subEl) {
+        subEl.textContent = currentEmployee.department || 'พนักงาน';
+      }
     } else {
-      btnText.textContent = 'เลือกรหัสพนักงาน';
+      btnText.textContent = 'กรุณาแตะเพื่อเลือกรหัสพนักงาน';
+      if (avatarEl) avatarEl.textContent = '⏱️';
+      if (subEl) subEl.textContent = 'แตะเพื่อระบุตัวตนเข้าใช้งาน';
     }
   }
 }
@@ -555,19 +567,19 @@ async function loadTodayStatus() {
         if (clockInEl) clockInEl.textContent = log.clock_in;
         if (lateEl) {
           lateEl.textContent = log.late_minutes > 0 ? `สาย ${log.late_minutes} นาที` : 'ตรงเวลา ปกติ';
-          lateEl.className = log.late_minutes > 0 ? 'text-[10px] text-amber-600 font-bold' : 'text-[10px] text-emerald-600 font-semibold';
+          lateEl.className = log.late_minutes > 0 ? 'text-xs text-amber-700 font-bold' : 'text-xs text-emerald-700 font-semibold';
         }
 
         if (log.clock_out) {
           if (clockOutEl) clockOutEl.textContent = log.clock_out;
           if (workSummaryEl) workSummaryEl.textContent = `ปกติ ${log.work_hours} ชม. + OT ${log.ot_hours || 0} ชม.`;
           if (badge) {
-            badge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800';
+            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
             badge.textContent = 'บันทึกครบถ้วนแล้ว';
           }
         } else {
           if (badge) {
-            badge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-sky-100 text-sky-800 animate-pulse';
+            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200 animate-pulse';
             badge.textContent = 'กำลังปฏิบัติงาน (เข้างานแล้ว)';
           }
         }
@@ -575,7 +587,7 @@ async function loadTodayStatus() {
         if (clockInEl) clockInEl.textContent = '--:--:--';
         if (clockOutEl) clockOutEl.textContent = '--:--:--';
         if (badge) {
-          badge.className = 'px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-600';
+          badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200';
           badge.textContent = 'ยังไม่ลงเวลา';
         }
       }
@@ -604,13 +616,13 @@ async function loadAdvanceEligibility() {
 
       if (data.isAllowedDay) {
         if (badge) {
-          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800';
+          badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
           badge.textContent = '🟢 เปิดรับคำขอวันนี้';
         }
         if (submitBtn) submitBtn.disabled = false;
       } else {
         if (badge) {
-          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800';
+          badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200';
           badge.textContent = '🔒 เปิดเฉพาะวันเสาร์';
         }
         if (submitBtn) submitBtn.disabled = true;
@@ -692,19 +704,19 @@ async function loadEmployeeHistory() {
       data.logs.forEach(l => {
         const isLate = l.late_minutes > 0;
         html += `
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between text-xs">
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-xs">
             <div class="space-y-1">
-              <div class="font-bold text-slate-800">${l.date}</div>
-              <div class="flex items-center space-x-2 text-[11px] text-slate-600">
-                <span>เข้า: <b>${l.clock_in || '--'}</b></span>
-                <span>ออก: <b>${l.clock_out || '--'}</b></span>
-                <span>(งานปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
+              <div class="font-bold text-slate-900 text-sm">${l.date}</div>
+              <div class="flex items-center space-x-2 text-xs text-slate-600">
+                <span>เข้า: <b class="text-emerald-700">${l.clock_in || '--'}</b></span>
+                <span>ออก: <b class="text-rose-700">${l.clock_out || '--'}</b></span>
+                <span>(ปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
               </div>
             </div>
             <div class="text-right">
               ${isLate 
-                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">สาย ${l.late_minutes} น.</span>`
-                : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">ปกติ</span>`
+                ? `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">สาย ${l.late_minutes} น.</span>`
+                : `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">ปกติ</span>`
               }
             </div>
           </div>
@@ -713,7 +725,7 @@ async function loadEmployeeHistory() {
       container.innerHTML = html;
     }
   } catch(e) {
-    if (container) container.innerHTML = '<div class="text-center py-6 text-xs text-rose-500">โหลดข้อมูลไม่สำเร็จ</div>';
+    if (container) container.innerHTML = '<div class="text-center py-6 text-sm text-rose-500 font-medium">โหลดข้อมูลไม่สำเร็จ</div>';
   }
 }
 
@@ -733,22 +745,22 @@ function switchSubTab(sub) {
 
   [advContent, leaveContent, otContent, statusContent].forEach(el => el?.classList.add('hidden'));
   [advBtn, leaveBtn, otBtn, statusBtn].forEach(b => {
-    if (b) b.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition';
+    if (b) b.className = 'flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition';
   });
 
   if (sub === 'advance') {
     advContent?.classList.remove('hidden');
-    if (advBtn) advBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-emerald-700 transition';
+    if (advBtn) advBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-emerald-700 transition';
     loadAdvanceEligibility();
   } else if (sub === 'leave') {
     leaveContent?.classList.remove('hidden');
-    if (leaveBtn) leaveBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-sky-700 transition';
+    if (leaveBtn) leaveBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-sky-700 transition';
   } else if (sub === 'ot') {
     otContent?.classList.remove('hidden');
-    if (otBtn) otBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-indigo-700 transition';
+    if (otBtn) otBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-indigo-700 transition';
   } else if (sub === 'status') {
     statusContent?.classList.remove('hidden');
-    if (statusBtn) statusBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-slate-800 transition';
+    if (statusBtn) statusBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-slate-800 transition';
     loadMyRequests();
   }
 }
@@ -878,46 +890,46 @@ async function loadMyRequests() {
       }
 
       advances.forEach(ad => {
-        const badgeColor = ad.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : (ad.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
-        const badgeText = ad.status === 'APPROVED' ? 'อนุมัติแล้ว' : (ad.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รออนุมัติ');
+        const badgeColor = ad.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (ad.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-900 border-amber-200');
+        const badgeText = ad.status === 'APPROVED' ? '✓ อนุมัติแล้ว' : (ad.status === 'REJECTED' ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
         html += `
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-1">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-slate-800">💵 ขอเบิกเงิน: ${ad.amount} บาท</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${badgeText}</span>
+              <span class="font-extrabold text-slate-800 text-sm">💵 ขอเบิกเงิน: ${ad.amount} บาท</span>
+              <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
             </div>
-            <div class="text-slate-600 text-[11px]">วันที่ขอ: ${ad.request_date} (วันทำงาน ${ad.days_worked} วัน)</div>
-            ${ad.reason ? `<div class="text-slate-500 text-[10px]">เหตุผล: ${ad.reason}</div>` : ''}
+            <div class="text-slate-600 text-xs font-medium">วันที่ขอ: ${ad.request_date} (วันทำงาน ${ad.days_worked} วัน)</div>
+            ${ad.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${ad.reason}</div>` : ''}
           </div>
         `;
       });
 
       leaves.forEach(lv => {
-        const badgeColor = lv.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : (lv.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
-        const badgeText = lv.status === 'APPROVED' ? 'อนุมัติแล้ว' : (lv.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รออนุมัติ');
+        const badgeColor = lv.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (lv.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-900 border-amber-200');
+        const badgeText = lv.status === 'APPROVED' ? '✓ อนุมัติแล้ว' : (lv.status === 'REJECTED' ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
         html += `
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-1">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-slate-800">ขอลางาน: ${lv.leave_type}</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${badgeText}</span>
+              <span class="font-extrabold text-slate-800 text-sm">🏖️ ขอลางาน: ${lv.leave_type}</span>
+              <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
             </div>
-            <div class="text-slate-600 text-[11px]">วันที่: ${lv.start_date} ถึง ${lv.end_date} (${lv.days_count} วัน)</div>
-            ${lv.reason ? `<div class="text-slate-500 text-[10px]">เหตุผล: ${lv.reason}</div>` : ''}
+            <div class="text-slate-600 text-xs font-medium">วันที่: ${lv.start_date} ถึง ${lv.end_date} (${lv.days_count} วัน)</div>
+            ${lv.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${lv.reason}</div>` : ''}
           </div>
         `;
       });
 
       ots.forEach(ot => {
-        const badgeColor = ot.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : (ot.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
-        const badgeText = ot.status === 'APPROVED' ? 'อนุมัติแล้ว' : (ot.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รออนุมัติ');
+        const badgeColor = ot.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (ot.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-900 border-amber-200');
+        const badgeText = ot.status === 'APPROVED' ? '✓ อนุมัติแล้ว' : (ot.status === 'REJECTED' ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
         html += `
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-1">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-slate-800">ขอทำ OT (${ot.ot_type}x)</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${badgeText}</span>
+              <span class="font-extrabold text-slate-800 text-sm">⏱️ ขอทำ OT (${ot.ot_type}x)</span>
+              <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
             </div>
-            <div class="text-slate-600 text-[11px]">วันที่: ${ot.date} — ขอ: ${ot.planned_hours} ชม. (จริง: ${ot.actual_hours || 0} ชม.)</div>
-            ${ot.reason ? `<div class="text-slate-500 text-[10px]">เหตุผล: ${ot.reason}</div>` : ''}
+            <div class="text-slate-600 text-xs font-medium">วันที่: ${ot.date} — ขอ: ${ot.planned_hours} ชม. (จริง: ${ot.actual_hours || 0} ชม.)</div>
+            ${ot.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${ot.reason}</div>` : ''}
           </div>
         `;
       });
@@ -1004,21 +1016,21 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
   let html = '';
   (advances || []).forEach(ad => {
     html += `
-      <div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-1.5">
+      <div class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 space-y-2">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-emerald-900">[ขอเบิกเงินล่วงหน้า] ${ad.full_name || ad.emp_id}</span>
-          <span class="text-[10px] text-slate-500">${ad.request_date}</span>
+          <span class="font-bold text-emerald-950 text-sm">💵 ขอเบิกเงิน: ${ad.full_name || ad.emp_id}</span>
+          <span class="text-xs text-slate-500 font-medium">${ad.request_date}</span>
         </div>
-        <div class="text-[11px] text-slate-700">
-          ยอดเงินขอเบิก: <b class="text-emerald-700 text-sm">${ad.amount} บาท</b> (วันทำงาน ${ad.days_worked} วัน)<br>
-          ${ad.reason ? `เหตุผล: <i>${ad.reason}</i>` : ''}
+        <div class="text-xs text-slate-700">
+          ยอดเงินขอเบิก: <b class="text-emerald-800 text-base font-extrabold">${ad.amount} บาท</b> (วันทำงาน ${ad.days_worked} วัน)<br>
+          ${ad.reason ? `<span class="text-slate-600 mt-1 block">เหตุผล: <i>${ad.reason}</i></span>` : ''}
         </div>
-        <div class="flex space-x-2 pt-1">
-          <button onclick="approveReject('advance', ${ad.id}, 'APPROVE')" class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs">
-            อนุมัติ
+        <div class="flex space-x-2 pt-1.5">
+          <button onclick="approveReject('advance', ${ad.id}, 'APPROVE')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
+            ✓ อนุมัติ
           </button>
-          <button onclick="approveReject('advance', ${ad.id}, 'REJECT')" class="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs">
-            ไม่อนุมัติ
+          <button onclick="approveReject('advance', ${ad.id}, 'REJECT')" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
+            ✕ ไม่อนุมัติ
           </button>
         </div>
       </div>
@@ -1027,27 +1039,27 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
 
   (leaves || []).forEach(lv => {
     html += `
-      <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+      <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-2">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-slate-800">[ใบลา] ${lv.full_name || lv.emp_id}</span>
-          <span class="text-[10px] text-slate-500">${lv.created_at?.substring(0, 16) || ''}</span>
+          <span class="font-bold text-slate-900 text-sm">🏖️ ขอลางาน: ${lv.full_name || lv.emp_id}</span>
+          <span class="text-xs text-slate-500 font-medium">${lv.created_at?.substring(0, 16) || ''}</span>
         </div>
-        <div class="text-[11px] text-slate-600">
-          ประเภท: <b>${lv.leave_type}</b> (${lv.days_count} วัน)<br>
+        <div class="text-xs text-slate-700">
+          ประเภท: <b class="text-sky-800 font-bold">${lv.leave_type}</b> (${lv.days_count} วัน)<br>
           ช่วงวัน: ${lv.start_date} ถึง ${lv.end_date}<br>
-          ${lv.reason ? `เหตุผล: <i>${lv.reason}</i>` : ''}
+          ${lv.reason ? `<span class="text-slate-600 mt-1 block">เหตุผล: <i>${lv.reason}</i></span>` : ''}
         </div>
         ${lv.medical_cert_url ? `
-          <button onclick="previewCertPhoto('${lv.medical_cert_url}')" class="text-[11px] text-sky-600 font-semibold underline">
+          <button onclick="previewCertPhoto('${lv.medical_cert_url}')" class="text-xs text-sky-600 font-bold underline py-0.5">
             📄 ดูรูปภาพใบรับรองแพทย์
           </button>
         ` : ''}
-        <div class="flex space-x-2 pt-1">
-          <button onclick="approveReject('leave', ${lv.id}, 'APPROVE')" class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs">
-            อนุมัติ
+        <div class="flex space-x-2 pt-1.5">
+          <button onclick="approveReject('leave', ${lv.id}, 'APPROVE')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
+            ✓ อนุมัติ
           </button>
-          <button onclick="approveReject('leave', ${lv.id}, 'REJECT')" class="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs">
-            ไม่อนุมัติ
+          <button onclick="approveReject('leave', ${lv.id}, 'REJECT')" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
+            ✕ ไม่อนุมัติ
           </button>
         </div>
       </div>
@@ -1056,21 +1068,21 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
 
   (ots || []).forEach(ot => {
     html += `
-      <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+      <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-2">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-slate-800">[ขอ OT] ${ot.full_name || ot.emp_id}</span>
-          <span class="text-[10px] text-slate-500">${ot.created_at?.substring(0, 16) || ''}</span>
+          <span class="font-bold text-slate-900 text-sm">⏱️ ขอ OT: ${ot.full_name || ot.emp_id}</span>
+          <span class="text-xs text-slate-500 font-medium">${ot.created_at?.substring(0, 16) || ''}</span>
         </div>
-        <div class="text-[11px] text-slate-600">
-          วันที่: <b>${ot.date}</b> — จำนวน: <b>${ot.planned_hours} ชม.</b> (อัตรา ${ot.ot_type}x)<br>
-          ${ot.reason ? `รายละเอียด: <i>${ot.reason}</i>` : ''}
+        <div class="text-xs text-slate-700">
+          วันที่: <b>${ot.date}</b> — จำนวน: <b class="text-indigo-800 font-bold">${ot.planned_hours} ชม.</b> (อัตรา ${ot.ot_type}x)<br>
+          ${ot.reason ? `<span class="text-slate-600 mt-1 block">รายละเอียด: <i>${ot.reason}</i></span>` : ''}
         </div>
-        <div class="flex space-x-2 pt-1">
-          <button onclick="approveReject('ot', ${ot.id}, 'APPROVE')" class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs">
-            อนุมัติ
+        <div class="flex space-x-2 pt-1.5">
+          <button onclick="approveReject('ot', ${ot.id}, 'APPROVE')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
+            ✓ อนุมัติ
           </button>
-          <button onclick="approveReject('ot', ${ot.id}, 'REJECT')" class="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs">
-            ไม่อนุมัติ
+          <button onclick="approveReject('ot', ${ot.id}, 'REJECT')" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
+            ✕ ไม่อนุมัติ
           </button>
         </div>
       </div>
@@ -1094,7 +1106,7 @@ function renderSupervisorTodayLogs(logs) {
   if (!container) return;
 
   if (!logs || logs.length === 0) {
-    container.innerHTML = '<div class="text-center py-4 text-slate-400">ยังไม่มีพนักงานลงเวลาในวันนี้</div>';
+    container.innerHTML = '<div class="text-center py-6 text-slate-400 font-medium text-sm">ยังไม่มีพนักงานลงเวลาในวันนี้</div>';
     return;
   }
 
@@ -1102,23 +1114,23 @@ function renderSupervisorTodayLogs(logs) {
   logs.forEach(l => {
     const isLate = l.late_minutes > 0;
     html += `
-      <div class="p-2.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between text-xs">
-        <div class="flex items-center space-x-2.5">
+      <div class="p-3 rounded-2xl border border-slate-200 bg-white flex items-center justify-between text-xs shadow-sm">
+        <div class="flex items-center space-x-3">
           ${l.in_photo_url ? `
-            <img src="${l.in_photo_url}" class="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-sm cursor-pointer" onclick="previewCertPhoto('${l.in_photo_url}')" />
+            <img src="${l.in_photo_url}" class="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm cursor-pointer" onclick="previewCertPhoto('${l.in_photo_url}')" />
           ` : `
-            <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">👤</div>
+            <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">👤</div>
           `}
           <div>
-            <div class="font-bold text-slate-800">${l.full_name || l.emp_id}</div>
-            <div class="text-[11px] text-slate-500">
-              เข้า: ${l.clock_in || '-'} | ออก: ${l.clock_out || '-'}
+            <div class="font-bold text-slate-900 text-sm">${l.full_name || l.emp_id}</div>
+            <div class="text-xs text-slate-500 mt-0.5">
+              เข้า: <b class="text-emerald-700">${l.clock_in || '-'}</b> | ออก: <b class="text-rose-700">${l.clock_out || '-'}</b>
             </div>
           </div>
         </div>
         <div class="text-right">
-          ${isLate ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">สาย ${l.late_minutes} น.</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">ปกติ</span>`}
-          ${l.ot_hours > 0 ? `<div class="text-[10px] text-indigo-600 font-bold mt-0.5">+OT ${l.ot_hours} ชม.</div>` : ''}
+          ${isLate ? `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">สาย ${l.late_minutes} น.</span>` : `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">ปกติ</span>`}
+          ${l.ot_hours > 0 ? `<div class="text-xs text-indigo-700 font-bold mt-1">+OT ${l.ot_hours} ชม.</div>` : ''}
         </div>
       </div>
     `;
