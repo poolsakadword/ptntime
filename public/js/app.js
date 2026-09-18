@@ -30,7 +30,9 @@ let appSettings = {
   enable_ot_requests: 'true',
   enable_advance_requests: 'true',
   allow_direct_gps: 'true',
-  qr_mode: 'HYBRID'
+  qr_mode: 'HYBRID',
+  break_tracking_mode: 'AUTO_DEDUCT',
+  break_duration_minutes: 60
 };
 let currentLocation = null;
 let currentDistanceMeters = null;
@@ -508,7 +510,15 @@ async function openFullscreenCamera(type, qrToken) {
   const subEl = document.getElementById('camModalSubtitle');
 
   if (titleEl) {
-    titleEl.textContent = type === 'IN' ? '📸 ถ่ายรูปเซลฟี่เข้างาน (IN)' : '📸 ถ่ายรูปเซลฟี่ออกงาน (OUT)';
+    if (type === 'IN') {
+      titleEl.textContent = '📸 ถ่ายรูปเซลฟี่เข้างาน (IN)';
+    } else if (type === 'BREAK_OUT') {
+      titleEl.textContent = '☕ ถ่ายรูปเซลฟี่ออกไปพัก (Break OUT)';
+    } else if (type === 'BREAK_IN') {
+      titleEl.textContent = '💼 ถ่ายรูปเซลฟี่กลับเข้าทำงาน (Break IN)';
+    } else {
+      titleEl.textContent = '📸 ถ่ายรูปเซลฟี่ออกงาน (OUT)';
+    }
   }
   if (subEl) {
     subEl.textContent = qrToken ? 'สแกน QR สำเร็จ! จัดใบหน้าในกรอบ แล้วกดปุ่มถ่ายรูป' : 'จัดใบหน้าในกรอบ แล้วกดปุ่มถ่ายรูปเพื่อลงเวลา';
@@ -679,6 +689,10 @@ function openQrScannerModal(type) {
   pendingScanType = type;
   if (type === 'UNLOCK') {
     document.getElementById('qrScannerTitle').textContent = 'สแกน QR ปลดล็อกของหัวหน้างาน';
+  } else if (type === 'BREAK_OUT') {
+    document.getElementById('qrScannerTitle').textContent = 'สแกน QR Code ออกไปพัก (Break OUT)';
+  } else if (type === 'BREAK_IN') {
+    document.getElementById('qrScannerTitle').textContent = 'สแกน QR Code กลับเข้าทำงาน (Break IN)';
   } else {
     document.getElementById('qrScannerTitle').textContent = type === 'IN' ? 'สแกน QR Code เข้างาน' : 'สแกน QR Code ออกงาน';
   }
@@ -760,7 +774,12 @@ async function submitClockWithPhoto(type, qrToken, photoUrl) {
     return;
   }
 
-  const actionName = (type === 'IN') ? 'clockIn' : 'clockOut';
+  let actionName = 'clockIn';
+  if (type === 'IN') actionName = 'clockIn';
+  else if (type === 'OUT') actionName = 'clockOut';
+  else if (type === 'BREAK_OUT') actionName = 'breakOut';
+  else if (type === 'BREAK_IN') actionName = 'breakIn';
+
   Swal.fire({ title: `กำลังบันทึกเวลา...`, didOpen: () => Swal.showLoading() });
 
   try {
@@ -788,6 +807,29 @@ async function submitClockWithPhoto(type, qrToken, photoUrl) {
               <p>เวลา: <b class="text-emerald-700">${data.clockInTime}</b></p>
               <p>สถานะ: <b>${data.status === 'LATE' ? 'มาสาย (' + data.lateMinutes + ' นาที)' : 'ตรงเวลา ปกติ'}</b></p>
               <p class="text-xs text-slate-500 pt-1">📸 บันทึกรูปถ่ายและพิกัด GPS สำเร็จ</p>
+            </div>
+          `
+        });
+      } else if (type === 'BREAK_OUT') {
+        Swal.fire({
+          icon: 'success',
+          title: 'บันทึกเวลาออกไปพักสำเร็จ!',
+          html: `
+            <div class="text-sm space-y-1">
+              <p>เวลาเริ่มพัก: <b class="text-amber-700">${data.breakOutTime}</b></p>
+              <p class="text-xs text-slate-500 pt-1">☕ พักผ่อนตามอัธยาศัย อย่าลืมสแกนกลับเข้าทำงานเมื่อหมดเวลาพัก</p>
+            </div>
+          `
+        });
+      } else if (type === 'BREAK_IN') {
+        Swal.fire({
+          icon: 'success',
+          title: 'บันทึกเวลากลับเข้าทำงานสำเร็จ!',
+          html: `
+            <div class="text-sm space-y-1">
+              <p>เวลากลับเข้างาน: <b class="text-emerald-700">${data.breakInTime}</b></p>
+              <p>ใช้เวลาพัก: <b>${data.breakMinutes} นาที</b> ${data.overbreakMinutes > 0 ? `<span class="text-rose-600 font-bold">(เกินเวลา ${data.overbreakMinutes} นาที)</span>` : '<span class="text-emerald-600 font-bold">(อยู่ในเกณฑ์)</span>'}</p>
+              <p class="text-xs text-slate-500 pt-1">💼 ขอให้มีความสุขกับการทำงานช่วงบ่ายครับ</p>
             </div>
           `
         });
@@ -820,7 +862,7 @@ async function executeClockAction(type, qrToken) {
 }
 
 // ==============================================================================
-// 8. TODAY STATUS LOAD
+// 8. TODAY STATUS LOAD (Dual Mode: 2-punch AUTO_DEDUCT & 4-punch BREAK_PUNCH)
 // ==============================================================================
 async function loadTodayStatus() {
   if (!currentEmployee) return;
@@ -829,39 +871,284 @@ async function loadTodayStatus() {
     const res = await fetch(`${API_URL}?action=getTodayStatus&empId=${currentEmployee.empId}`);
     const data = await res.json();
     if (data.success) {
+      if (data.settings) {
+        appSettings = { ...appSettings, ...data.settings };
+      }
+
       const log = data.log;
+      const isBreakMode = (appSettings.break_tracking_mode === 'BREAK_PUNCH');
       const clockInEl = document.getElementById('todayClockInTime');
       const clockOutEl = document.getElementById('todayClockOutTime');
       const lateEl = document.getElementById('todayLateInfo');
       const workSummaryEl = document.getElementById('todayWorkSummary');
       const badge = document.getElementById('todayStatusBadge');
 
+      const breakSummaryRow = document.getElementById('todayBreakSummaryRow');
+      const breakOutEl = document.getElementById('todayBreakOutTime');
+      const breakInEl = document.getElementById('todayBreakInTime');
+      const breakDurationEl = document.getElementById('todayBreakDurationInfo');
+
+      const stdPunchBox = document.getElementById('containerStandardPunch');
+      const breakPunchBox = document.getElementById('containerBreakPunch');
+
+      // Update Basic Times
+      if (clockInEl) clockInEl.textContent = (log && log.clock_in) ? log.clock_in : '--:--:--';
+      if (clockOutEl) clockOutEl.textContent = (log && log.clock_out) ? log.clock_out : '--:--:--';
+
       if (log && log.clock_in) {
-        if (clockInEl) clockInEl.textContent = log.clock_in;
         if (lateEl) {
           lateEl.textContent = log.late_minutes > 0 ? `สาย ${log.late_minutes} นาที` : 'ตรงเวลา ปกติ';
           lateEl.className = log.late_minutes > 0 ? 'text-xs text-amber-700 font-bold' : 'text-xs text-emerald-700 font-semibold';
         }
+      } else {
+        if (lateEl) {
+          lateEl.textContent = 'เกณฑ์ ' + (appSettings.work_start_time || '09:30') + ' น.';
+          lateEl.className = 'text-[11px] md:text-xs text-emerald-700 font-medium';
+        }
+      }
 
-        if (log.clock_out) {
-          if (clockOutEl) clockOutEl.textContent = log.clock_out;
-          if (workSummaryEl) workSummaryEl.textContent = `ปกติ ${log.work_hours} ชม. + OT ${log.ot_hours || 0} ชม.`;
+      if (log && log.clock_out) {
+        if (workSummaryEl) workSummaryEl.textContent = `ปกติ ${log.work_hours} ชม. + OT ${log.ot_hours || 0} ชม.`;
+      } else {
+        if (workSummaryEl) workSummaryEl.textContent = 'ปกติ 0 ชม.';
+      }
+
+      // Handle Break Summary Display
+      if (isBreakMode) {
+        if (breakSummaryRow) breakSummaryRow.classList.remove('hidden');
+        if (breakOutEl) breakOutEl.textContent = (log && log.break_out) ? log.break_out : '--:--:--';
+        if (breakInEl) breakInEl.textContent = (log && log.break_in) ? log.break_in : '--:--:--';
+        if (breakDurationEl) {
+          if (log && log.break_minutes > 0) {
+            breakDurationEl.textContent = `พัก ${log.break_minutes} นาที` + (log.overbreak_minutes > 0 ? ` (เกิน ${log.overbreak_minutes} น.)` : '');
+            breakDurationEl.className = log.overbreak_minutes > 0 ? 'text-[10px] md:text-[11px] text-rose-700 font-bold' : 'text-[10px] md:text-[11px] text-teal-700 font-semibold';
+          } else if (log && log.break_out) {
+            breakDurationEl.textContent = 'กำลังพักอยู่';
+            breakDurationEl.className = 'text-[10px] md:text-[11px] text-amber-700 font-bold animate-pulse';
+          } else {
+            breakDurationEl.textContent = 'รอพัก';
+            breakDurationEl.className = 'text-[10px] md:text-[11px] text-slate-500 font-medium';
+          }
+        }
+      } else {
+        if (breakSummaryRow) breakSummaryRow.classList.add('hidden');
+      }
+
+      // Render Workflow Step 3 Based on Mode
+      if (isBreakMode) {
+        if (stdPunchBox) stdPunchBox.classList.add('hidden');
+        if (breakPunchBox) breakPunchBox.classList.remove('hidden');
+
+        const stateText = document.getElementById('breakPunchStateText');
+        const stateBadge = document.getElementById('breakPunchStateBadge');
+        const actionsGrid = document.getElementById('breakActionButtonsGrid');
+        const gpsGrid = document.getElementById('breakDirectGpsButtonsGrid');
+
+        if (!log || !log.clock_in) {
+          // State 1: Not clocked in
+          if (stateText) stateText.textContent = '☀️ ขั้นตอนที่ 1/4 : ยังไม่ได้บันทึกเวลาเข้างานเช้า';
+          if (stateBadge) {
+            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-slate-200 text-slate-700';
+            stateBadge.textContent = '1/4 เข้าเช้า';
+          }
+          if (badge) {
+            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200';
+            badge.textContent = 'ยังไม่ลงเวลา';
+          }
+
+          if (actionsGrid) {
+            actionsGrid.innerHTML = `
+              <button onclick="openQrScannerModal('IN')" class="w-full md:col-span-2 py-5 md:py-6 px-5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-4 transition group">
+                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
+                  ☀️
+                </div>
+                <div class="text-left">
+                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR เข้างานเช้า (IN)</div>
+                  <div class="text-xs md:text-sm font-semibold text-emerald-100 mt-0.5">บันทึกเวลาเริ่มงานเช้า (ครั้งที่ 1/4)</div>
+                </div>
+              </button>
+            `;
+          }
+
+          if (gpsGrid) {
+            gpsGrid.innerHTML = `
+              <button type="button" onclick="startDirectGpsClock('IN')" class="md:col-span-2 py-3 px-4 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-900 font-bold rounded-2xl border border-emerald-300 flex items-center justify-center space-x-2 transition shadow-sm">
+                <span class="text-lg">📸</span>
+                <span class="text-sm md:text-base font-black">ถ่ายรูปเข้างานเช้าด้วย GPS (IN)</span>
+              </button>
+            `;
+          }
+
+        } else if (log.clock_in && !log.break_out && !log.clock_out) {
+          // State 2: Clocked in, ready to Break Out (or Clock Out)
+          if (stateText) stateText.textContent = `☀️ เข้างานเช้าแล้ว (${log.clock_in}) กำลังปฏิบัติงาน`;
+          if (stateBadge) {
+            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-sky-100 text-sky-800 border border-sky-300 animate-pulse';
+            stateBadge.textContent = '2/4 รอพัก';
+          }
+          if (badge) {
+            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200 animate-pulse';
+            badge.textContent = 'เข้างานเช้าแล้ว';
+          }
+
+          if (actionsGrid) {
+            actionsGrid.innerHTML = `
+              <button onclick="openQrScannerModal('BREAK_OUT')" class="w-full py-5 md:py-6 px-5 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-amber-500/30 flex items-center justify-center space-x-4 transition group">
+                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
+                  ☕
+                </div>
+                <div class="text-left">
+                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกไปพัก</div>
+                  <div class="text-xs md:text-sm font-semibold text-amber-100 mt-0.5">พักกลางวัน (Break OUT - 2/4)</div>
+                </div>
+              </button>
+
+              <button onclick="openQrScannerModal('OUT')" class="w-full py-5 md:py-6 px-5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-4 transition group">
+                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
+                  🚪
+                </div>
+                <div class="text-left">
+                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกงาน</div>
+                  <div class="text-xs md:text-sm font-semibold text-rose-100 mt-0.5">เลิกงานกลับบ้าน (Clock OUT)</div>
+                </div>
+              </button>
+            `;
+          }
+
+          if (gpsGrid) {
+            gpsGrid.innerHTML = `
+              <button type="button" onclick="startDirectGpsClock('BREAK_OUT')" class="py-3 px-4 bg-amber-50 hover:bg-amber-100 active:scale-[0.98] text-amber-900 font-bold rounded-2xl border border-amber-300 flex items-center justify-center space-x-2 transition shadow-sm">
+                <span class="text-lg">📸</span>
+                <span class="text-sm md:text-base font-black">ถ่ายรูปออกไปพัก (GPS)</span>
+              </button>
+              <button type="button" onclick="startDirectGpsClock('OUT')" class="py-3 px-4 bg-rose-50 hover:bg-rose-100 active:scale-[0.98] text-rose-900 font-bold rounded-2xl border border-rose-300 flex items-center justify-center space-x-2 transition shadow-sm">
+                <span class="text-lg">📸</span>
+                <span class="text-sm md:text-base font-black">ถ่ายรูปออกงาน (GPS)</span>
+              </button>
+            `;
+          }
+
+        } else if (log.break_out && !log.break_in && !log.clock_out) {
+          // State 3: Currently on Break, waiting Break IN
+          if (stateText) stateText.textContent = `☕ กำลังอยู่ในช่วงพัก (เริ่มพัก ${log.break_out})`;
+          if (stateBadge) {
+            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-amber-200 text-amber-900 border border-amber-400 animate-pulse';
+            stateBadge.textContent = '3/4 กำลังพักผ่อน';
+          }
+          if (badge) {
+            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse';
+            badge.textContent = 'กำลังอยู่ในช่วงพักผ่อน';
+          }
+
+          if (actionsGrid) {
+            actionsGrid.innerHTML = `
+              <button onclick="openQrScannerModal('BREAK_IN')" class="w-full md:col-span-2 py-5 md:py-6 px-5 bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-teal-600/30 flex items-center justify-center space-x-4 transition group">
+                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
+                  💼
+                </div>
+                <div class="text-left">
+                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR กลับเข้าทำงาน</div>
+                  <div class="text-xs md:text-sm font-semibold text-teal-100 mt-0.5">หมดเวลาพัก / เข้างานบ่าย (Break IN - 3/4)</div>
+                </div>
+              </button>
+            `;
+          }
+
+          if (gpsGrid) {
+            gpsGrid.innerHTML = `
+              <button type="button" onclick="startDirectGpsClock('BREAK_IN')" class="md:col-span-2 py-3 px-4 bg-teal-50 hover:bg-teal-100 active:scale-[0.98] text-teal-900 font-bold rounded-2xl border border-teal-300 flex items-center justify-center space-x-2 transition shadow-sm">
+                <span class="text-lg">📸</span>
+                <span class="text-sm md:text-base font-black">ถ่ายรูปกลับเข้าทำงานด้วย GPS (Break IN)</span>
+              </button>
+            `;
+          }
+
+        } else if (log.break_in && !log.clock_out) {
+          // State 4: Back from break, working afternoon shift
+          if (stateText) stateText.textContent = `💼 ปฏิบัติงานช่วงบ่าย (พักไป ${log.break_minutes || 0} นาที) รอลงเวลาเลิกงาน`;
+          if (stateBadge) {
+            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
+            stateBadge.textContent = '4/4 รอเลิกงาน';
+          }
+          if (badge) {
+            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200 animate-pulse';
+            badge.textContent = 'ปฏิบัติงานช่วงบ่าย';
+          }
+
+          if (actionsGrid) {
+            actionsGrid.innerHTML = `
+              <button onclick="openQrScannerModal('OUT')" class="w-full md:col-span-2 py-5 md:py-6 px-5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-4 transition group">
+                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition text-2xl">
+                  🚪
+                </div>
+                <div class="text-left">
+                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกงาน (Clock OUT)</div>
+                  <div class="text-xs md:text-sm font-semibold text-rose-100 mt-0.5">เลิกงานประจำวัน / จบ OT (ครั้งที่ 4/4)</div>
+                </div>
+              </button>
+            `;
+          }
+
+          if (gpsGrid) {
+            gpsGrid.innerHTML = `
+              <button type="button" onclick="startDirectGpsClock('OUT')" class="md:col-span-2 py-3 px-4 bg-rose-50 hover:bg-rose-100 active:scale-[0.98] text-rose-900 font-bold rounded-2xl border border-rose-300 flex items-center justify-center space-x-2 transition shadow-sm">
+                <span class="text-lg">📸</span>
+                <span class="text-sm md:text-base font-black">ถ่ายรูปออกงานด้วย GPS (OUT)</span>
+              </button>
+            `;
+          }
+
+        } else if (log.clock_out) {
+          // State 5: Completed
+          if (stateText) stateText.textContent = `✅ บันทึกเวลาครบ 4 ครั้งเรียบร้อยแล้ว (ออกงานเวลา ${log.clock_out})`;
+          if (stateBadge) {
+            stateBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-200 text-emerald-900';
+            stateBadge.textContent = 'ครบ 4 ครั้ง';
+          }
           if (badge) {
             badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
             badge.textContent = 'บันทึกครบถ้วนแล้ว';
           }
-        } else {
-          if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200 animate-pulse';
-            badge.textContent = 'กำลังปฏิบัติงาน (เข้างานแล้ว)';
+
+          if (actionsGrid) {
+            actionsGrid.innerHTML = `
+              <div class="md:col-span-2 p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl text-center">
+                <div class="text-3xl mb-1">🎉</div>
+                <div class="text-lg font-black text-emerald-950">บันทึกเวลาทำงานของวันนี้ครบถ้วนแล้ว</div>
+                <div class="text-xs md:text-sm text-emerald-800 font-semibold mt-1">
+                  เข้า: ${log.clock_in} | พัก: ${log.break_out || '-'} ถึง ${log.break_in || '-'} | ออก: ${log.clock_out}
+                </div>
+              </div>
+            `;
+          }
+
+          if (gpsGrid) {
+            gpsGrid.innerHTML = '';
           }
         }
+
       } else {
-        if (clockInEl) clockInEl.textContent = '--:--:--';
-        if (clockOutEl) clockOutEl.textContent = '--:--:--';
-        if (badge) {
-          badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200';
-          badge.textContent = 'ยังไม่ลงเวลา';
+        // Mode 1: Standard 2-Punch Mode (AUTO_DEDUCT)
+        if (stdPunchBox) stdPunchBox.classList.remove('hidden');
+        if (breakPunchBox) breakPunchBox.classList.add('hidden');
+
+        if (log && log.clock_in) {
+          if (log.clock_out) {
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
+              badge.textContent = 'บันทึกครบถ้วนแล้ว';
+            }
+          } else {
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200 animate-pulse';
+              badge.textContent = 'กำลังปฏิบัติงาน (เข้างานแล้ว)';
+            }
+          }
+        } else {
+          if (badge) {
+            badge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200';
+            badge.textContent = 'ยังไม่ลงเวลา';
+          }
         }
       }
     }

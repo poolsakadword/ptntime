@@ -151,6 +151,19 @@
                 <div id="todayWorkSummary" class="text-[11px] md:text-xs text-rose-700 font-medium">ปกติ 0 ชม.</div>
               </div>
             </div>
+
+            <!-- Break Info Row for 4-punch mode (Hidden by default, shown in BREAK_PUNCH mode) -->
+            <div id="todayBreakSummaryRow" class="hidden mt-2 pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-center">
+              <div class="bg-amber-50 border border-amber-200 rounded-2xl p-2">
+                <div class="text-[11px] md:text-xs text-amber-800 font-bold">☕ ออกพัก (Break OUT)</div>
+                <div id="todayBreakOutTime" class="text-base md:text-lg font-black text-amber-950 font-mono mt-0.5">--:--:--</div>
+              </div>
+              <div class="bg-teal-50 border border-teal-200 rounded-2xl p-2">
+                <div class="text-[11px] md:text-xs text-teal-800 font-bold">💼 เข้าหลังพัก (Break IN)</div>
+                <div id="todayBreakInTime" class="text-base md:text-lg font-black text-teal-950 font-mono mt-0.5">--:--:--</div>
+                <div id="todayBreakDurationInfo" class="text-[10px] md:text-[11px] text-teal-700 font-medium">รอพัก</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -225,56 +238,82 @@
             </div>
           </div>
 
-          <!-- STEP 3: บันทึกเวลาเข้า-ออกงาน (QR Code หรือ GPS โดยตรง) -->
+          <!-- STEP 3: บันทึกเวลาเข้า-ออกงาน (รองรับทั้ง 2 โหมด: 2 ครั้ง และ 4 ครั้ง) -->
           <div class="bg-gradient-to-br from-white via-sky-50/40 to-emerald-50/40 rounded-3xl p-4 md:p-6 border-2 border-emerald-300 shadow-md">
             <div class="flex items-center space-x-3 mb-3.5">
               <span class="w-8 h-8 md:w-9 md:h-9 rounded-2xl bg-emerald-600 text-white font-black text-sm md:text-base flex items-center justify-center shadow-md flex-shrink-0">3</span>
               <div>
                 <h3 class="text-base md:text-xl font-black text-slate-900 leading-tight">ขั้นตอนที่ 3 : บันทึกเวลาเข้างาน หรือ ออกงาน</h3>
-                <p class="text-xs md:text-sm text-emerald-800 font-semibold">สแกน QR ประจำสาขา หรือกดถ่ายรูปด้วย GPS โดยตรง</p>
+                <p class="text-xs md:text-sm text-emerald-800 font-semibold" id="step3Subtitle">สแกน QR ประจำสาขา หรือกดถ่ายรูปด้วย GPS โดยตรง</p>
               </div>
             </div>
 
-            <!-- Prominent Dual QR Buttons (Extra Large, High Contrast) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <!-- Button IN -->
-              <button id="btnClockInQr" onclick="openQrScannerModal('IN')" class="w-full py-5 md:py-6 px-5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-4 transition group disabled:opacity-50">
-                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition">
-                  <svg class="w-7 h-7 md:w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                </div>
-                <div class="text-left">
-                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR เข้างาน</div>
-                  <div class="text-xs md:text-sm font-semibold text-emerald-100 mt-0.5">บันทึกเวลาเริ่มงาน (IN)</div>
-                </div>
-              </button>
+            <!-- MODE 1: Standard 2-Punch Container (AUTO_DEDUCT) -->
+            <div id="containerStandardPunch">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- Button IN -->
+                <button id="btnClockInQr" onclick="openQrScannerModal('IN')" class="w-full py-5 md:py-6 px-5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-4 transition group disabled:opacity-50">
+                  <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition">
+                    <svg class="w-7 h-7 md:w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                  </div>
+                  <div class="text-left">
+                    <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR เข้างาน</div>
+                    <div class="text-xs md:text-sm font-semibold text-emerald-100 mt-0.5">บันทึกเวลาเริ่มงาน (IN)</div>
+                  </div>
+                </button>
 
-              <!-- Button OUT -->
-              <button id="btnClockOutQr" onclick="openQrScannerModal('OUT')" class="w-full py-5 md:py-6 px-5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-4 transition group disabled:opacity-50">
-                <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition">
-                  <svg class="w-7 h-7 md:w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                <!-- Button OUT -->
+                <button id="btnClockOutQr" onclick="openQrScannerModal('OUT')" class="w-full py-5 md:py-6 px-5 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold rounded-2xl md:rounded-3xl shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-4 transition group disabled:opacity-50">
+                  <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition">
+                    <svg class="w-7 h-7 md:w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                  </div>
+                  <div class="text-left">
+                    <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกงาน</div>
+                    <div class="text-xs md:text-sm font-semibold text-rose-100 mt-0.5">เลิกงาน / จบ OT (OUT)</div>
+                  </div>
+                </button>
+              </div>
+
+              <!-- Alternative Direct GPS Buttons -->
+              <div id="containerDirectGps" class="mt-4 pt-4 border-t border-emerald-200/70 text-center space-y-2">
+                <div class="text-xs md:text-sm text-slate-600 font-bold flex items-center justify-center gap-1">
+                  <span>📍 ไม่ได้ใช้ QR Code?</span>
+                  <span class="text-emerald-700">กดถ่ายรูปเพื่อลงเวลาด้วย GPS ได้ทันที:</span>
                 </div>
-                <div class="text-left">
-                  <div class="text-lg md:text-2xl font-black tracking-wide leading-tight">สแกน QR ออกงาน</div>
-                  <div class="text-xs md:text-sm font-semibold text-rose-100 mt-0.5">เลิกงาน / จบ OT (OUT)</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <button type="button" onclick="startDirectGpsClock('IN')" class="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-900 font-bold rounded-2xl border border-emerald-300 flex items-center justify-center space-x-2 transition shadow-sm">
+                    <span class="text-lg">📸</span>
+                    <span class="text-sm md:text-base font-black">ถ่ายรูปเข้างาน (GPS)</span>
+                  </button>
+                  <button type="button" onclick="startDirectGpsClock('OUT')" class="py-3 px-4 bg-rose-50 hover:bg-rose-100 active:scale-[0.98] text-rose-900 font-bold rounded-2xl border border-rose-300 flex items-center justify-center space-x-2 transition shadow-sm">
+                    <span class="text-lg">📸</span>
+                    <span class="text-sm md:text-base font-black">ถ่ายรูปออกงาน (GPS)</span>
+                  </button>
                 </div>
-              </button>
+              </div>
             </div>
 
-            <!-- Alternative Direct GPS Buttons (Auto toggled by settings) -->
-            <div id="containerDirectGps" class="mt-4 pt-4 border-t border-emerald-200/70 text-center space-y-2">
-              <div class="text-xs md:text-sm text-slate-600 font-bold flex items-center justify-center gap-1">
-                <span>📍 ไม่ได้ใช้ QR Code?</span>
-                <span class="text-emerald-700">กดถ่ายรูปเพื่อลงเวลาด้วย GPS ได้ทันที:</span>
+            <!-- MODE 2: 4-Punch Dynamic Container (BREAK_PUNCH) -->
+            <div id="containerBreakPunch" class="hidden space-y-3.5">
+              <!-- Break Punch State Banner -->
+              <div id="breakPunchStateBanner" class="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 flex items-center justify-between text-sm font-bold">
+                <span id="breakPunchStateText">กำลังตรวจสอบสถานะการลงเวลา...</span>
+                <span id="breakPunchStateBadge" class="px-2.5 py-1 rounded-lg text-xs font-black bg-sky-200 text-sky-900">4 ครั้ง</span>
               </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                <button type="button" onclick="startDirectGpsClock('IN')" class="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-900 font-bold rounded-2xl border border-emerald-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                  <span class="text-lg">📸</span>
-                  <span class="text-sm md:text-base font-black">ถ่ายรูปเข้างาน (GPS)</span>
-                </button>
-                <button type="button" onclick="startDirectGpsClock('OUT')" class="py-3 px-4 bg-rose-50 hover:bg-rose-100 active:scale-[0.98] text-rose-900 font-bold rounded-2xl border border-rose-300 flex items-center justify-center space-x-2 transition shadow-sm">
-                  <span class="text-lg">📸</span>
-                  <span class="text-sm md:text-base font-black">ถ่ายรูปออกงาน (GPS)</span>
-                </button>
+
+              <!-- Dynamic Action Buttons for Break Mode -->
+              <div id="breakActionButtonsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- Buttons injected dynamically by app.js -->
+              </div>
+
+              <!-- Direct GPS for Break Mode -->
+              <div id="containerBreakDirectGps" class="mt-3 pt-3 border-t border-emerald-200/70 text-center space-y-2">
+                <div class="text-xs md:text-sm text-slate-600 font-bold flex items-center justify-center gap-1">
+                  <span>📍 ถ่ายรูปด้วย GPS โดยตรง:</span>
+                </div>
+                <div id="breakDirectGpsButtonsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <!-- Direct GPS buttons injected dynamically -->
+                </div>
               </div>
             </div>
           </div>

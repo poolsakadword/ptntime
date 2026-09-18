@@ -101,6 +101,18 @@ async function ensureTables(db) {
   `).run().catch(() => {});
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_time_logs_emp_date ON time_logs(emp_id, date)').run().catch(() => {});
 
+  // Safe migrations for Break Tracking columns
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_out TEXT').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_in TEXT').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_out_photo_url TEXT').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_in_photo_url TEXT').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_out_lat REAL').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_out_lng REAL').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_in_lat REAL').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_in_lng REAL').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN break_minutes INTEGER DEFAULT 0').run().catch(() => {});
+  await db.prepare('ALTER TABLE time_logs ADD COLUMN overbreak_minutes INTEGER DEFAULT 0').run().catch(() => {});
+
   // 2. leave_requests
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS leave_requests (
@@ -193,7 +205,9 @@ async function getSettings(db) {
     static_qr_key: STATIC_QR_CODE_KEY,
     allow_outside_clockin: 'false',
     enable_device_lock: 'true',
-    allow_direct_gps: 'true'
+    allow_direct_gps: 'true',
+    break_tracking_mode: 'AUTO_DEDUCT', // 'AUTO_DEDUCT' (2 punches) or 'BREAK_PUNCH' (4 punches)
+    break_duration_minutes: 60
   };
 
   const map = { ...defaults };
@@ -669,6 +683,176 @@ async function handleAction(db, action, params) {
       };
     }
 
+    // 6.1 Break Out (ออกไปพัก)
+    case 'breakOut': {
+      const { empId, lat, lng, photoUrl, qrToken, remark } = params;
+      const date = params.date || today;
+      const timeStr = curTimeStr;
+
+      if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
+
+      // Check Device Lock
+      if (settings.enable_device_lock === 'true') {
+        const bound = await db.prepare('SELECT device_id, device_name FROM employee_devices WHERE emp_id = ?').bind(empId).first();
+        if (bound && params.deviceId && bound.device_id !== params.deviceId) {
+          return {
+            success: false,
+            message: 'อุปกรณ์นี้ไม่ตรงกับเครื่องที่ผูกไว้กับบัญชีของคุณ กรุณาใช้เครื่องประจำตัวของคุณ หรือขอให้หัวหน้างานปลดล็อก'
+          };
+        }
+      }
+
+      // Verify QR Code if provided or required
+      if (!qrToken && settings.allow_direct_gps === 'false') {
+        return {
+          success: false,
+          message: 'ระบบไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง ต้องสแกน QR Code ประจำสาขาเท่านั้น'
+        };
+      }
+
+      if (qrToken) {
+        const curDynToken = await getDynamicQrToken(0);
+        const prevDynToken = await getDynamicQrToken(-1);
+        const isDynamicMatch = (qrToken === curDynToken || qrToken === prevDynToken);
+        const isStaticMatch = (qrToken === settings.static_qr_key || qrToken === STATIC_QR_CODE_KEY);
+
+        if (settings.qr_mode === 'DYNAMIC_ONLY' && !isDynamicMatch) {
+          return { success: false, message: 'QR Code บนหน้าจอหมดอายุแล้ว กรุณาสแกนใหม่จากหน้าจอเคาน์เตอร์' };
+        } else if (settings.qr_mode === 'STATIC_ONLY' && !isStaticMatch) {
+          return { success: false, message: 'ป้าย QR Code ไม่ถูกต้อง' };
+        } else if (settings.qr_mode === 'HYBRID' && !isDynamicMatch && !isStaticMatch) {
+          return { success: false, message: 'QR Code ไม่ถูกต้องหรือหมดอายุแล้ว' };
+        }
+      }
+
+      const existing = await db.prepare('SELECT * FROM time_logs WHERE emp_id = ? AND date = ?').bind(empId, date).first();
+      if (!existing || !existing.clock_in) {
+        return { success: false, message: 'ยังไม่ได้บันทึกเวลาเข้างานเช้า ไม่สามารถบันทึกออกไปพักได้' };
+      }
+      if (existing.break_out) {
+        return { success: false, message: 'คุณได้บันทึกเวลาออกไปพักของวันนี้ไปแล้ว (' + existing.break_out + ')' };
+      }
+      if (existing.clock_out) {
+        return { success: false, message: 'คุณได้บันทึกเลิกงานของวันนี้ไปแล้ว' };
+      }
+
+      // Check distance
+      let distanceMeters = null;
+      if (lat && lng && settings.office_lat && settings.office_lng) {
+        distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
+        if (distanceMeters > settings.geofence_radius_meters && settings.allow_outside_clockin !== 'true') {
+          return {
+            success: false,
+            message: `อยู่นอกพื้นที่สำนักงาน (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${settings.geofence_radius_meters} ม.) ไม่สามารถลงเวลาได้`
+          };
+        }
+      }
+
+      await db.prepare(`
+        UPDATE time_logs 
+        SET break_out = ?, break_out_lat = ?, break_out_lng = ?, break_out_photo_url = ?
+        WHERE id = ?
+      `).bind(timeStr, lat || null, lng || null, photoUrl || null, existing.id).run();
+
+      return {
+        success: true,
+        message: 'บันทึกเวลาออกไปพักสำเร็จ (Break OUT)',
+        breakOutTime: timeStr,
+        distanceMeters
+      };
+    }
+
+    // 6.2 Break In (กลับเข้าทำงานหลังพัก)
+    case 'breakIn': {
+      const { empId, lat, lng, photoUrl, qrToken, remark } = params;
+      const date = params.date || today;
+      const timeStr = curTimeStr;
+
+      if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
+
+      // Check Device Lock
+      if (settings.enable_device_lock === 'true') {
+        const bound = await db.prepare('SELECT device_id, device_name FROM employee_devices WHERE emp_id = ?').bind(empId).first();
+        if (bound && params.deviceId && bound.device_id !== params.deviceId) {
+          return {
+            success: false,
+            message: 'อุปกรณ์นี้ไม่ตรงกับเครื่องที่ผูกไว้กับบัญชีของคุณ กรุณาใช้เครื่องประจำตัวของคุณ หรือขอให้หัวหน้างานปลดล็อก'
+          };
+        }
+      }
+
+      // Verify QR Code if provided or required
+      if (!qrToken && settings.allow_direct_gps === 'false') {
+        return {
+          success: false,
+          message: 'ระบบไม่อนุญาตให้ลงเวลาด้วย GPS โดยตรง ต้องสแกน QR Code ประจำสาขาเท่านั้น'
+        };
+      }
+
+      if (qrToken) {
+        const curDynToken = await getDynamicQrToken(0);
+        const prevDynToken = await getDynamicQrToken(-1);
+        const isDynamicMatch = (qrToken === curDynToken || qrToken === prevDynToken);
+        const isStaticMatch = (qrToken === settings.static_qr_key || qrToken === STATIC_QR_CODE_KEY);
+
+        if (settings.qr_mode === 'DYNAMIC_ONLY' && !isDynamicMatch) {
+          return { success: false, message: 'QR Code บนหน้าจอหมดอายุแล้ว กรุณาสแกนใหม่จากหน้าจอเคาน์เตอร์' };
+        } else if (settings.qr_mode === 'STATIC_ONLY' && !isStaticMatch) {
+          return { success: false, message: 'ป้าย QR Code ไม่ถูกต้อง' };
+        } else if (settings.qr_mode === 'HYBRID' && !isDynamicMatch && !isStaticMatch) {
+          return { success: false, message: 'QR Code ไม่ถูกต้องหรือหมดอายุแล้ว' };
+        }
+      }
+
+      const existing = await db.prepare('SELECT * FROM time_logs WHERE emp_id = ? AND date = ?').bind(empId, date).first();
+      if (!existing || !existing.clock_in) {
+        return { success: false, message: 'ยังไม่ได้บันทึกเวลาเข้างานเช้า' };
+      }
+      if (!existing.break_out) {
+        return { success: false, message: 'ยังไม่ได้บันทึกเวลาออกไปพัก กรุณาบันทึกออกไปพักก่อน' };
+      }
+      if (existing.break_in) {
+        return { success: false, message: 'คุณได้บันทึกเวลากลับเข้าทำงานหลังพักไปแล้ว (' + existing.break_in + ')' };
+      }
+      if (existing.clock_out) {
+        return { success: false, message: 'คุณได้บันทึกเลิกงานของวันนี้ไปแล้ว' };
+      }
+
+      // Check distance
+      let distanceMeters = null;
+      if (lat && lng && settings.office_lat && settings.office_lng) {
+        distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
+        if (distanceMeters > settings.geofence_radius_meters && settings.allow_outside_clockin !== 'true') {
+          return {
+            success: false,
+            message: `อยู่นอกพื้นที่สำนักงาน (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${settings.geofence_radius_meters} ม.) ไม่สามารถลงเวลาได้`
+          };
+        }
+      }
+
+      // Calculate break duration
+      const breakOutMin = timeToMinutes(existing.break_out);
+      const breakInMin = timeToMinutes(timeStr);
+      const actualBreakMinutes = Math.max(0, breakInMin - breakOutMin);
+      const allowedBreakMinutes = Number(settings.break_duration_minutes) || 60;
+      const overBreakMinutes = Math.max(0, actualBreakMinutes - allowedBreakMinutes);
+
+      await db.prepare(`
+        UPDATE time_logs 
+        SET break_in = ?, break_in_lat = ?, break_in_lng = ?, break_in_photo_url = ?, break_minutes = ?, overbreak_minutes = ?
+        WHERE id = ?
+      `).bind(timeStr, lat || null, lng || null, photoUrl || null, actualBreakMinutes, overBreakMinutes, existing.id).run();
+
+      return {
+        success: true,
+        message: 'บันทึกเวลากลับเข้าทำงานสำเร็จ (Break IN)',
+        breakInTime: timeStr,
+        breakMinutes: actualBreakMinutes,
+        overbreakMinutes: overBreakMinutes,
+        distanceMeters
+      };
+    }
+
     // 7. Clock Out (Single Scan-out handling normal work and automatic OT from 19:00)
     case 'clockOut': {
       const { empId, lat, lng, photoUrl, qrToken, remark } = params;
@@ -716,6 +900,11 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'ยังไม่พบบันทึกเวลาเข้างานของวันนี้ กรุณาบันทึกเข้างานก่อน' };
       }
 
+      // In BREAK_PUNCH mode, prevent clocking out while still on break without punch back
+      if (existing.break_out && !existing.break_in) {
+        return { success: false, message: 'คุณกำลังอยู่ในช่วงพัก (ยังไม่ได้บันทึกกลับเข้าทำงาน Break IN) กรุณาบันทึกเข้าทำงานหลังพักก่อนลงเวลาออกงาน' };
+      }
+
       const isSunday = (dayOfWeekNumber === 0);
       const inMinutes = timeToMinutes(existing.clock_in);
       const outMinutes = timeToMinutes(timeStr);
@@ -727,12 +916,18 @@ async function handleAction(db, action, params) {
       let normalMinutes = 0;
       let calculatedOtHours = 0;
 
+      // Determine break deduction
+      let breakDeduction = 0;
+      if (existing.break_minutes != null && existing.break_minutes > 0) {
+        breakDeduction = existing.break_minutes;
+      } else if (inMinutes <= lunchStart && (isSunday ? outMinutes >= lunchEnd : Math.min(outMinutes, workEndMinutes) >= lunchEnd)) {
+        breakDeduction = Number(settings.break_duration_minutes) || 60;
+      }
+
       if (isSunday) {
         // Sunday: All hours count as Sunday OT at sunday_ot_rate (1.0x default)
         let totalSunMinutes = Math.max(0, outMinutes - inMinutes);
-        if (inMinutes <= lunchStart && outMinutes >= lunchEnd) {
-          totalSunMinutes -= 60; // deduct 1 lunch hour
-        }
+        totalSunMinutes = Math.max(0, totalSunMinutes - breakDeduction);
         if (settings.ot_rounding_mode === 'HALF_HOUR') {
           calculatedOtHours = Math.floor(totalSunMinutes / 30) * 0.5;
         } else {
@@ -744,10 +939,7 @@ async function handleAction(db, action, params) {
         // Normal work cut at workEndMinutes (19:00)
         const cappedEnd = Math.min(outMinutes, workEndMinutes);
         normalMinutes = Math.max(0, cappedEnd - inMinutes);
-        // Deduct lunch hour 13:00 - 14:00 (60 min)
-        if (inMinutes <= lunchStart && cappedEnd >= lunchEnd) {
-          normalMinutes = Math.max(0, normalMinutes - 60);
-        }
+        normalMinutes = Math.max(0, normalMinutes - breakDeduction);
 
         // Automatic OT: If Clock Out is after ot_start_time (19:00)
         if (outMinutes > otStartMinutes) {
