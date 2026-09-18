@@ -300,7 +300,7 @@ async function handleAction(db, action, params) {
 
   switch (action) {
     case 'getInitialData': {
-      const empRows = await db.prepare('SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url FROM employees ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
+      const empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
       const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at, updated_at FROM employee_devices').all().catch(() => ({ results: [] }));
       const deviceMap = {};
       for (const d of deviceRows.results || []) {
@@ -370,6 +370,7 @@ async function handleAction(db, action, params) {
 
       const emp = await db.prepare('SELECT * FROM employees WHERE emp_id = ?').bind(empId).first();
       if (!emp) return { success: false, message: 'ไม่พบรหัสพนักงานนี้ในระบบ' };
+      if (emp.status === 'Resigned') return { success: false, message: 'พนักงานรหัสนี้พ้นสภาพการเป็นพนักงานแล้ว (ลาออก)' };
 
       if (pinOrPhone) {
         const last4 = (emp.citizen_id || '').slice(-4);
@@ -467,6 +468,11 @@ async function handleAction(db, action, params) {
     case 'checkDeviceBinding': {
       const { empId, deviceId } = params;
       if (!empId) return { success: false, message: 'ระบุ empId' };
+
+      const emp = await db.prepare('SELECT status FROM employees WHERE emp_id = ?').bind(empId).first();
+      if (!emp || emp.status === 'Resigned') {
+        return { success: true, isBound: false, isResigned: true, message: 'พนักงานพ้นสภาพการเป็นพนักงานแล้ว' };
+      }
 
       const bound = await db.prepare('SELECT * FROM employee_devices WHERE emp_id = ?').bind(empId).first();
       if (!bound) {

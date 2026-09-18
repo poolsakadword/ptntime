@@ -288,6 +288,18 @@ async function restoreSavedEmployee() {
         const res = await fetch(API_URL + '?action=checkDeviceBinding&empId=' + encodeURIComponent(currentEmployee.empId) + '&deviceId=' + encodeURIComponent(devId));
         const data = await res.json();
         if (data.success) {
+          if (data.isResigned) {
+            currentEmployee = null;
+            isDeviceLocked = false;
+            localStorage.removeItem('ptn_time_emp');
+            updateHeaderEmployeeView();
+            Swal.fire({
+              icon: 'error',
+              title: 'พ้นสภาพการเป็นพนักงาน',
+              text: 'รหัสพนักงานนี้พ้นสภาพการเป็นพนักงานแล้ว (ลาออก)'
+            });
+            return;
+          }
           if (data.isBound) {
             if (data.isThisDevice) {
               isDeviceLocked = true;
@@ -429,6 +441,7 @@ function handleHeaderEmployeeCardClick() {
 
 function openEmployeePickerModal() {
   document.getElementById('modalEmployeePicker')?.classList.remove('hidden');
+  loadInitialData(); // Real-time sync: fetch latest employee list from D1
   const sel = document.getElementById('empSelectDropdown');
   if (sel && currentEmployee) {
     sel.value = currentEmployee.empId;
