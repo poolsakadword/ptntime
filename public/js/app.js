@@ -38,6 +38,7 @@ let capturedPhoto = null;
 let supervisorSession = null;
 let html5QrScannerInstance = null;
 let pendingScanType = 'IN'; // 'IN', 'OUT', or 'UNLOCK'
+let pendingClockData = null; // { type, qrToken } for two-step clock-in/out
 let isDeviceLocked = false;
 let masterQrInterval = null;
 
@@ -195,6 +196,12 @@ function updateHeaderEmployeeView() {
   const btnTagText = document.getElementById('headerEmpBtnText');
   const btnTagIcon = document.getElementById('headerEmpBtnIcon');
 
+  const stepEmpName = document.getElementById('step1EmpName');
+  const stepEmpId = document.getElementById('step1EmpId');
+  const stepEmpAvatar = document.getElementById('step1EmpAvatar');
+  const stepLockBadge = document.getElementById('step1LockBadge');
+  const stepStatusIcon = document.getElementById('step1StatusIcon');
+
   if (btnText) {
     if (currentEmployee) {
       const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
@@ -223,6 +230,31 @@ function updateHeaderEmployeeView() {
       lockBadge?.classList.add('hidden');
       if (btnTagText) btnTagText.textContent = 'เลือก';
       if (btnTagIcon) btnTagIcon.innerHTML = '<span class="text-xs">👉</span>';
+    }
+  }
+
+  // Update Step 1 Employee Card
+  if (stepEmpName) {
+    if (currentEmployee) {
+      const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
+      stepEmpName.textContent = `${currentEmployee.fullName}${nick}`;
+      if (stepEmpId) stepEmpId.textContent = `${currentEmployee.empId} • ${currentEmployee.department || 'พนักงาน'}`;
+      if (stepEmpAvatar) {
+        const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
+        stepEmpAvatar.textContent = numPart ? numPart.slice(-2) : '👤';
+      }
+      if (isDeviceLocked) {
+        stepLockBadge?.classList.remove('hidden');
+      } else {
+        stepLockBadge?.classList.add('hidden');
+      }
+      if (stepStatusIcon) stepStatusIcon.innerHTML = '✅';
+    } else {
+      stepEmpName.textContent = 'กรุณาแตะเลือกชื่อพนักงาน';
+      if (stepEmpId) stepEmpId.textContent = 'ยังไม่ระบุ';
+      if (stepEmpAvatar) stepEmpAvatar.textContent = '👤';
+      stepLockBadge?.classList.add('hidden');
+      if (stepStatusIcon) stepStatusIcon.innerHTML = '👉';
     }
   }
 }
@@ -496,6 +528,12 @@ function capturePhoto() {
   }
   btnCapture?.classList.add('hidden');
   btnRetake?.classList.remove('hidden');
+
+  if (pendingClockData) {
+    const saved = pendingClockData;
+    pendingClockData = null;
+    executeClockAction(saved.type, saved.qrToken);
+  }
 }
 
 // ==============================================================================
@@ -604,15 +642,19 @@ async function executeClockAction(type, qrToken) {
   if (!capturedPhoto) {
     const snapFirst = await Swal.fire({
       title: 'ถ่ายภาพเซลฟี่ยืนยันตัวตน',
-      text: 'ต้องการเปิดกล้องหน้าเพื่อถ่ายภาพเซลฟี่ก่อนบันทึก หรือบันทึกทันที?',
-      icon: 'question',
+      text: 'คุณยังไม่ได้ถ่ายภาพเซลฟี่ ต้องการเปิดกล้องเพื่อถ่ายภาพยืนยัน หรือบันทึกทันที?',
+      icon: 'camera',
       showCancelButton: true,
-      confirmButtonText: 'เปิดกล้องถ่ายเซลฟี่',
-      cancelButtonText: 'บันทึกเลย'
+      confirmButtonText: '📸 เปิดกล้องถ่ายภาพ',
+      cancelButtonText: 'บันทึกเลย (ไม่ถ่ายรูป)',
+      confirmButtonColor: '#0284c7',
+      cancelButtonColor: '#64748b'
     });
 
     if (snapFirst.isConfirmed) {
+      pendingClockData = { type, qrToken };
       startCamera();
+      document.getElementById('stepCameraSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
   }
