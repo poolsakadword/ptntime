@@ -1382,7 +1382,7 @@ async function saveAttendanceSettings() {
 // 13. TAB NAVIGATION
 // ==============================================================================
 function switchTab(tab) {
-  const tabs = ['clock', 'history', 'requests', 'supervisor'];
+  const tabs = ['clock', 'history', 'requests'];
   tabs.forEach(t => {
     const section = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
     const navBtn = document.getElementById('navBtn' + t.charAt(0).toUpperCase() + t.slice(1));
@@ -1403,8 +1403,6 @@ function switchTab(tab) {
     loadEmployeeHistory();
   } else if (tab === 'requests') {
     loadAdvanceEligibility();
-  } else if (tab === 'supervisor' && supervisorSession) {
-    loadSupervisorDashboard();
   }
 }
 
