@@ -126,9 +126,18 @@ function applyFeatureToggles() {
   const otBtn = document.getElementById('subTabBtnOt');
   const advBtn = document.getElementById('subTabBtnAdvance');
 
-  if (appSettings.enable_leave_requests === 'false' && leaveBtn) leaveBtn.classList.add('hidden');
-  if (appSettings.enable_ot_requests === 'false' && otBtn) otBtn.classList.add('hidden');
-  if (appSettings.enable_advance_requests === 'false' && advBtn) advBtn.classList.add('hidden');
+  if (leaveBtn) {
+    if (appSettings.enable_leave_requests === 'false') leaveBtn.classList.add('hidden');
+    else leaveBtn.classList.remove('hidden');
+  }
+  if (otBtn) {
+    if (appSettings.enable_ot_requests === 'false') otBtn.classList.add('hidden');
+    else otBtn.classList.remove('hidden');
+  }
+  if (advBtn) {
+    if (appSettings.enable_advance_requests === 'false') advBtn.classList.add('hidden');
+    else advBtn.classList.remove('hidden');
+  }
 }
 
 async function restoreSavedEmployee() {
@@ -860,6 +869,19 @@ async function loadEmployeeHistory() {
 // 11. SUB-TABS (LEAVE / OT / ADVANCE / STATUS)
 // ==============================================================================
 function switchSubTab(sub) {
+  if (sub === 'advance' && appSettings.enable_advance_requests === 'false') {
+    Swal.fire('ระบบขอเบิกเงินล่วงหน้าปิดให้บริการชั่วคราว', 'กรุณาติดต่อฝ่ายบุคคล/HR', 'info');
+    return;
+  }
+  if (sub === 'leave' && appSettings.enable_leave_requests === 'false') {
+    Swal.fire('ระบบขอลางานออนไลน์ปิดให้บริการชั่วคราว', 'กรุณาติดต่อฝ่ายบุคคล/HR', 'info');
+    return;
+  }
+  if (sub === 'ot' && appSettings.enable_ot_requests === 'false') {
+    Swal.fire('ระบบขอทำ OT ออนไลน์ปิดให้บริการชั่วคราว', 'กรุณาติดต่อฝ่ายบุคคล/HR', 'info');
+    return;
+  }
+
   const advBtn = document.getElementById('subTabBtnAdvance');
   const leaveBtn = document.getElementById('subTabBtnLeave');
   const otBtn = document.getElementById('subTabBtnOt');
@@ -1402,7 +1424,16 @@ function switchTab(tab) {
   if (tab === 'history') {
     loadEmployeeHistory();
   } else if (tab === 'requests') {
-    loadAdvanceEligibility();
+    applyFeatureToggles();
+    if (appSettings.enable_advance_requests !== 'false') {
+      switchSubTab('advance');
+    } else if (appSettings.enable_leave_requests !== 'false') {
+      switchSubTab('leave');
+    } else if (appSettings.enable_ot_requests !== 'false') {
+      switchSubTab('ot');
+    } else {
+      switchSubTab('status');
+    }
   }
 }
 
