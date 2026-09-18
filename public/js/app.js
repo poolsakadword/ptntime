@@ -37,7 +37,18 @@ let cameraStream = null;
 let capturedPhoto = null;
 let supervisorSession = null;
 let html5QrScannerInstance = null;
-let pendingScanType = 'IN'; // 'IN' or 'OUT'
+let pendingScanType = 'IN'; // 'IN', 'OUT', or 'UNLOCK'
+let isDeviceLocked = false;
+let masterQrInterval = null;
+
+function getOrCreateDeviceId() {
+  let id = localStorage.getItem('ptn_device_id');
+  if (!id) {
+    id = 'dev-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now().toString(36);
+    localStorage.setItem('ptn_device_id', id);
+  }
+  return id;
+}
 
 // ==============================================================================
 // 1. INITIALIZATION & LIVE CLOCK
@@ -120,11 +131,44 @@ function applyFeatureToggles() {
   if (appSettings.enable_advance_requests === 'false' && advBtn) advBtn.classList.add('hidden');
 }
 
-function restoreSavedEmployee() {
+async function restoreSavedEmployee() {
   const saved = localStorage.getItem('ptn_time_emp');
   if (saved) {
     try {
       currentEmployee = JSON.parse(saved);
+      const devId = getOrCreateDeviceId();
+      // Verify with backend if device is still bound
+      try {
+        const res = await fetch(API_URL + '?action=checkDeviceBinding&empId=' + encodeURIComponent(currentEmployee.empId) + '&deviceId=' + encodeURIComponent(devId));
+        const data = await res.json();
+        if (data.success) {
+          if (data.isBound) {
+            if (data.isThisDevice) {
+              isDeviceLocked = true;
+            } else {
+              // Account bound to another device!
+              currentEmployee = null;
+              isDeviceLocked = false;
+              localStorage.removeItem('ptn_time_emp');
+              updateHeaderEmployeeView();
+              Swal.fire({
+                icon: 'warning',
+                title: 'บัญชีถูกผูกกับเครื่องอื่น',
+                text: 'บัญชีนี้ถูกผูกไว้กับอุปกรณ์เครื่องอื่นแล้ว หากต้องการใช้เครื่องนี้ กรุณาแจ้งหัวหน้างานเพื่อปลดล็อก'
+              });
+              setTimeout(openEmployeePickerModal, 600);
+              return;
+            }
+          } else {
+            // Unbound (e.g. remote reset by admin!)
+            isDeviceLocked = false;
+          }
+        }
+      } catch(err) {
+        // Offline or fallback, retain lock
+        isDeviceLocked = true;
+      }
+
       updateHeaderEmployeeView();
       loadTodayStatus();
       loadAdvanceEligibility();
@@ -138,6 +182,10 @@ function updateHeaderEmployeeView() {
   const btnText = document.getElementById('headerEmpName');
   const avatarEl = document.getElementById('headerEmpAvatar');
   const subEl = document.getElementById('headerEmpSub');
+  const lockBadge = document.getElementById('headerLockBadge');
+  const btnTagText = document.getElementById('headerEmpBtnText');
+  const btnTagIcon = document.getElementById('headerEmpBtnIcon');
+
   if (btnText) {
     if (currentEmployee) {
       const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
@@ -149,10 +197,23 @@ function updateHeaderEmployeeView() {
       if (subEl) {
         subEl.textContent = currentEmployee.department || 'พนักงาน';
       }
+
+      if (isDeviceLocked) {
+        lockBadge?.classList.remove('hidden');
+        if (btnTagText) btnTagText.textContent = 'ปลดล็อก';
+        if (btnTagIcon) btnTagIcon.innerHTML = '<span class="text-xs">🔒</span>';
+      } else {
+        lockBadge?.classList.add('hidden');
+        if (btnTagText) btnTagText.textContent = 'เปลี่ยน';
+        if (btnTagIcon) btnTagIcon.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+      }
     } else {
       btnText.textContent = 'กรุณาแตะเพื่อเลือกรหัสพนักงาน';
       if (avatarEl) avatarEl.textContent = '⏱️';
       if (subEl) subEl.textContent = 'แตะเพื่อระบุตัวตนเข้าใช้งาน';
+      lockBadge?.classList.add('hidden');
+      if (btnTagText) btnTagText.textContent = 'เลือก';
+      if (btnTagIcon) btnTagIcon.innerHTML = '<span class="text-xs">👉</span>';
     }
   }
 }
@@ -171,6 +232,14 @@ function populateEmployeeDropdown() {
     opt.textContent = `[${e.empId}] ${e.fullName}${nick} - ${e.department}`;
     sel.appendChild(opt);
   });
+}
+
+function handleHeaderEmployeeCardClick() {
+  if (isDeviceLocked) {
+    openDeviceUnlockModal();
+  } else {
+    openEmployeePickerModal();
+  }
 }
 
 function openEmployeePickerModal() {
@@ -200,13 +269,17 @@ async function confirmEmployeeLogin() {
   const pinInput = document.getElementById('empPinInput');
   const empId = sel?.value;
   const pin = pinInput?.value.trim() || '1234';
+  const deviceId = getOrCreateDeviceId();
 
   if (!empId) {
     Swal.fire('กรุณาเลือกพนักงาน', '', 'warning');
     return;
   }
 
+  Swal.fire({ title: 'กำลังยืนยันตัวตน...', didOpen: () => Swal.showLoading() });
+
   try {
+    // 1. Employee Login verification
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -217,27 +290,59 @@ async function confirmEmployeeLogin() {
       })
     });
     const data = await res.json();
-    if (data.success) {
-      currentEmployee = data.employee;
-      localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
-      updateHeaderEmployeeView();
-      closeEmployeePickerModal();
-      loadTodayStatus();
-      loadAdvanceEligibility();
-      Swal.fire({
-        icon: 'success',
-        title: `ยินดีต้อนรับ`,
-        text: `${currentEmployee.fullName} (${currentEmployee.empId})`,
-        timer: 1500,
-        showConfirmButton: false
-      });
-    } else {
+    if (!data.success) {
       Swal.fire('เข้าใช้งานไม่สำเร็จ', data.message || 'รหัสยืนยันไม่ถูกต้อง', 'error');
+      return;
     }
+
+    // 2. Bind Device (Device Lock)
+    const bindRes = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'bindDevice',
+        empId,
+        deviceId,
+        deviceName: navigator.userAgent.indexOf('iPhone') !== -1 ? 'iPhone' : (navigator.userAgent.indexOf('Android') !== -1 ? 'Android' : 'Web Browser')
+      })
+    });
+    const bindData = await bindRes.json();
+
+    if (!bindData.success && bindData.code === 'BOUND_TO_OTHER_DEVICE') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่สามารถเลือกผู้ใช้นี้ได้',
+        html: `
+          <div class="text-xs text-slate-600 text-left space-y-2">
+            <p class="font-bold text-rose-700">${bindData.message}</p>
+            <p>เพื่อความถูกต้องของเวลาทำงาน พนักงานแต่ละท่านจะถูกผูกไว้กับเครื่องประจำตัว หากทำเครื่องหายหรือเปลี่ยนเครื่องใหม่ กรุณาติดต่อหัวหน้างานเพื่อปลดล็อก</p>
+          </div>
+        `
+      });
+      return;
+    }
+
+    // Success
+    currentEmployee = data.employee;
+    isDeviceLocked = true;
+    localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
+    updateHeaderEmployeeView();
+    closeEmployeePickerModal();
+    loadTodayStatus();
+    loadAdvanceEligibility();
+
+    Swal.fire({
+      icon: 'success',
+      title: `ผูกอุปกรณ์สำเร็จ!`,
+      text: `${currentEmployee.fullName} (${currentEmployee.empId}) ระบบได้ล็อกเครื่องนี้ไว้กับคุณเรียบร้อยแล้ว`,
+      timer: 2000,
+      showConfirmButton: false
+    });
   } catch(e) {
     const found = employeeList.find(x => x.empId === empId);
     if (found) {
       currentEmployee = found;
+      isDeviceLocked = true;
       localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
       updateHeaderEmployeeView();
       closeEmployeePickerModal();
@@ -388,13 +493,17 @@ function capturePhoto() {
 // 6. QR SCANNER MODAL (html5-qrcode)
 // ==============================================================================
 function openQrScannerModal(type) {
-  if (!currentEmployee) {
+  if (type !== 'UNLOCK' && !currentEmployee) {
     openEmployeePickerModal();
     return;
   }
 
   pendingScanType = type;
-  document.getElementById('qrScannerTitle').textContent = type === 'IN' ? 'สแกน QR Code เข้างาน' : 'สแกน QR Code ออกงาน';
+  if (type === 'UNLOCK') {
+    document.getElementById('qrScannerTitle').textContent = 'สแกน QR ปลดล็อกของหัวหน้างาน';
+  } else {
+    document.getElementById('qrScannerTitle').textContent = type === 'IN' ? 'สแกน QR Code เข้างาน' : 'สแกน QR Code ออกงาน';
+  }
   document.getElementById('modalQrScanner')?.classList.remove('hidden');
 
   try {
@@ -410,7 +519,11 @@ function openQrScannerModal(type) {
         // Success callback
         html5QrScannerInstance.stop().then(() => {
           closeQrScannerModal();
-          executeClockAction(pendingScanType, decodedText);
+          if (pendingScanType === 'UNLOCK') {
+            submitScanMasterQrUnlock(decodedText);
+          } else {
+            executeClockAction(pendingScanType, decodedText);
+          }
         });
       },
       (error) => {
@@ -508,7 +621,8 @@ async function executeClockAction(type, qrToken) {
         lat: currentLocation ? currentLocation.lat : null,
         lng: currentLocation ? currentLocation.lng : null,
         photoUrl: capturedPhoto,
-        qrToken: qrToken || null
+        qrToken: qrToken || null,
+        deviceId: getOrCreateDeviceId()
       })
     });
     const data = await res.json();
@@ -998,6 +1112,7 @@ async function loadSupervisorDashboard() {
 
       renderSupervisorPendingApprovals(data.pendingLeaves, data.pendingOts, data.pendingAdvances);
       renderSupervisorTodayLogs(data.logsToday);
+      loadDeviceLocksList();
     }
   } catch(e) {
     console.warn('Dashboard note:', e);
@@ -1271,3 +1386,215 @@ function switchTab(tab) {
     loadSupervisorDashboard();
   }
 }
+
+// ==============================================================================
+// 14. DEVICE LOCK & 3-WAY UNLOCK CONTROLLERS
+// ==============================================================================
+function openDeviceUnlockModal() {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+  const nameEl = document.getElementById('unlockCurrentEmpName');
+  if (nameEl) {
+    const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
+    nameEl.textContent = `[${currentEmployee.empId}] ${currentEmployee.fullName}${nick} - ${currentEmployee.department || 'พนักงาน'}`;
+  }
+  const passEl = document.getElementById('unlockSupervisorPass');
+  if (passEl) passEl.value = '';
+  document.getElementById('modalDeviceUnlock')?.classList.remove('hidden');
+}
+
+function closeDeviceUnlockModal() {
+  document.getElementById('modalDeviceUnlock')?.classList.add('hidden');
+}
+
+async function submitSupervisorPasswordUnlock() {
+  const u = document.getElementById('unlockSupervisorUser')?.value.trim();
+  const p = document.getElementById('unlockSupervisorPass')?.value.trim();
+  if (!u || !p) {
+    Swal.fire('กรุณากรอกชื่อผู้ใช้และรหัสผ่านหัวหน้างาน/HR', '', 'warning');
+    return;
+  }
+
+  Swal.fire({ title: 'กำลังตรวจสอบสิทธิ์หัวหน้างาน...', didOpen: () => Swal.showLoading() });
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'unlockDeviceWithPassword',
+        empId: currentEmployee ? currentEmployee.empId : null,
+        deviceId: getOrCreateDeviceId(),
+        username: u,
+        password: p
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      isDeviceLocked = false;
+      currentEmployee = null;
+      localStorage.removeItem('ptn_time_emp');
+      updateHeaderEmployeeView();
+      closeDeviceUnlockModal();
+      await Swal.fire({
+        icon: 'success',
+        title: 'ปลดล็อกเครื่องสำเร็จ!',
+        text: 'อุปกรณ์นี้สามารถเลือกหรือผูกกับพนักงานคนใหม่ได้แล้ว',
+        timer: 1800,
+        showConfirmButton: false
+      });
+      openEmployeePickerModal();
+    } else {
+      Swal.fire('ปลดล็อกไม่สำเร็จ', data.message, 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+function startScanMasterQrToUnlock() {
+  closeDeviceUnlockModal();
+  openQrScannerModal('UNLOCK');
+}
+
+async function submitScanMasterQrUnlock(token) {
+  Swal.fire({ title: 'กำลังยืนยัน Master QR...', didOpen: () => Swal.showLoading() });
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'unlockDeviceWithQr',
+        empId: currentEmployee ? currentEmployee.empId : null,
+        deviceId: getOrCreateDeviceId(),
+        qrToken: token
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      isDeviceLocked = false;
+      currentEmployee = null;
+      localStorage.removeItem('ptn_time_emp');
+      updateHeaderEmployeeView();
+      await Swal.fire({
+        icon: 'success',
+        title: 'ปลดล็อกด้วย Master QR สำเร็จ!',
+        text: 'อุปกรณ์นี้ได้รับการปลดล็อกโดยหัวหน้างานเรียบร้อยแล้ว',
+        timer: 1800,
+        showConfirmButton: false
+      });
+      openEmployeePickerModal();
+    } else {
+      Swal.fire('ปลดล็อกไม่สำเร็จ', data.message, 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+// SUPERVISOR MASTER QR GENERATOR (Method 2 Display)
+async function openMasterQrModal() {
+  document.getElementById('modalMasterQrDisplay')?.classList.remove('hidden');
+  await refreshMasterQr();
+  if (masterQrInterval) clearInterval(masterQrInterval);
+  masterQrInterval = setInterval(refreshMasterQr, 20000);
+}
+
+function closeMasterQrModal() {
+  document.getElementById('modalMasterQrDisplay')?.classList.add('hidden');
+  if (masterQrInterval) {
+    clearInterval(masterQrInterval);
+    masterQrInterval = null;
+  }
+}
+
+async function refreshMasterQr() {
+  try {
+    const res = await fetch(API_URL + '?action=getMasterUnlockQr');
+    const data = await res.json();
+    if (data.success) {
+      const box = document.getElementById('masterQrBox');
+      const tokenText = document.getElementById('masterQrTokenText');
+      const countdown = document.getElementById('masterQrCountdown');
+      if (tokenText) tokenText.textContent = data.token;
+      if (countdown) countdown.textContent = data.secondsLeft;
+
+      if (box && window.QRCode) {
+        box.innerHTML = '';
+        new QRCode(box, {
+          text: data.token,
+          width: 190,
+          height: 190,
+          colorDark: "#047857",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+    }
+  } catch(e) {
+    console.warn('Master QR error:', e);
+  }
+}
+
+// SUPERVISOR DEVICE LOCKS LIST
+async function loadDeviceLocksList() {
+  const container = document.getElementById('supervisorDeviceLocksList');
+  if (!container) return;
+  try {
+    const res = await fetch(API_URL + '?action=getDeviceLockList');
+    const data = await res.json();
+    if (data.success && data.devices && data.devices.length > 0) {
+      container.innerHTML = data.devices.map(d => `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="font-bold text-slate-900 text-xs truncate">
+              [${d.emp_id}] ${d.full_name || 'พนักงาน'} ${d.nickname ? '(' + d.nickname + ')' : ''}
+            </div>
+            <div class="text-[10px] text-slate-500 truncate">
+              📱 ${d.device_name || 'Mobile Web'} &bull; ผูกเมื่อ: ${d.bound_at?.substring(0, 16) || '-'}
+            </div>
+          </div>
+          <button onclick="supervisorResetDevice('${d.emp_id}', '${d.full_name || d.emp_id}')" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] rounded-xl flex-shrink-0 transition active:scale-95">
+            ปลดล็อก
+          </button>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<div class="text-center py-4 text-slate-400 text-xs">ยังไม่มีพนักงานผูกเครื่องในระบบ ✨</div>';
+    }
+  } catch(e) {
+    container.innerHTML = '<div class="text-center py-4 text-rose-500 text-xs">โหลดรายการไม่สำเร็จ</div>';
+  }
+}
+
+async function supervisorResetDevice(empId, empName) {
+  const confirm = await Swal.fire({
+    title: `ปลดล็อกเครื่องพนักงาน?`,
+    text: `ต้องการปลดล็อกอุปกรณ์ของ [${empId}] ${empName} ใช่หรือไม่? พนักงานจะสามารถเลือกหรือผูกเครื่องใหม่ได้`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ใช่, ปลดล็อกทันที',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#dc2626'
+  });
+  if (!confirm.isConfirmed) return;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resetEmployeeDevice', empId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      Swal.fire('ปลดล็อกสำเร็จ', data.message, 'success');
+      loadDeviceLocksList();
+    } else {
+      Swal.fire('เกิดข้อผิดพลาด', data.message, 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
