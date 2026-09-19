@@ -112,6 +112,8 @@ try {
   if (cachedEmp) {
     currentEmployee = JSON.parse(cachedEmp);
   }
+  const cachedFont = localStorage.getItem('ptn_time_font_size') || 'lg';
+  document.documentElement.setAttribute('data-font-size', cachedFont);
 } catch(e) {}
 
 function getOrCreateDeviceId() {
@@ -128,6 +130,7 @@ function getOrCreateDeviceId() {
 // ==============================================================================
 window.addEventListener('DOMContentLoaded', async () => {
   // 1. Instant paint cached state (0ms - prevents initial UI flash!)
+  initFontSizePreference();
   updateHeaderEmployeeView();
   updateShiftDisplay();
   applyFeatureToggles();
@@ -3217,4 +3220,40 @@ function checkRequestStatusChanges(leaves = [], ots = [], advances = []) {
 
   localStorage.setItem(currentKey, JSON.stringify(newStatuses));
 }
+
+// ==============================================================================
+// 15. DYNAMIC FONT SIZE CONTROLLER (3 SIZES: MD, LG, XL)
+// ==============================================================================
+
+function initFontSizePreference() {
+  const saved = localStorage.getItem('ptn_time_font_size') || 'lg'; // Default to Large (+15%)
+  applyAppFontSize(saved);
+}
+
+function changeAppFontSize(size) {
+  localStorage.setItem('ptn_time_font_size', size);
+  applyAppFontSize(size);
+}
+
+function applyAppFontSize(size) {
+  document.documentElement.setAttribute('data-font-size', size);
+  const btnMd = document.getElementById('btnFontMd');
+  const btnLg = document.getElementById('btnFontLg');
+  const btnXl = document.getElementById('btnFontXl');
+
+  if (btnMd && btnLg && btnXl) {
+    btnMd.className = 'px-1.5 py-0.5 rounded transition text-slate-600 hover:bg-sky-50';
+    btnLg.className = 'px-1.5 py-0.5 rounded transition text-slate-600 hover:bg-sky-50';
+    btnXl.className = 'px-1.5 py-0.5 rounded transition text-slate-600 hover:bg-sky-50';
+
+    if (size === 'md') {
+      btnMd.className = 'px-1.5 py-0.5 rounded bg-sky-600 text-white font-black shadow-sm';
+    } else if (size === 'xl') {
+      btnXl.className = 'px-1.5 py-0.5 rounded bg-indigo-600 text-white font-black shadow-sm';
+    } else {
+      btnLg.className = 'px-1.5 py-0.5 rounded bg-sky-600 text-white font-black shadow-sm';
+    }
+  }
+}
+
 

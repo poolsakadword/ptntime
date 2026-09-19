@@ -15,11 +15,57 @@ body {
   font-size: 15px;
   line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
+  transition: font-size 0.2s ease;
 }
+
+/* ==========================================================================
+   DYNAMIC FONT SCALING (3 SIZES: MEDIUM, LARGE, EXTRA LARGE)
+   ========================================================================== */
+html[data-font-size="md"] {
+  font-size: 15px;
+}
+
+/* SIZE 2: LARGE (+15% - RECOMMENDED) */
+html[data-font-size="lg"] {
+  font-size: 17px;
+}
+html[data-font-size="lg"] h1 { font-size: 1.30rem !important; }
+html[data-font-size="lg"] h2 { font-size: 1.20rem !important; }
+html[data-font-size="lg"] h3 { font-size: 1.12rem !important; }
+html[data-font-size="lg"] #headerEmpName { font-size: 1.25rem !important; }
+html[data-font-size="lg"] #headerEmpSub { font-size: 0.95rem !important; }
+html[data-font-size="lg"] #shiftTickerText { font-size: 1.05rem !important; }
+html[data-font-size="lg"] #liveClock { font-size: 2.85rem !important; }
+html[data-font-size="lg"] #heroActionTitle { font-size: 1.55rem !important; }
+html[data-font-size="lg"] #heroActionSubtitle { font-size: 1.00rem !important; }
+html[data-font-size="lg"] .text-\[10px\] { font-size: 12px !important; }
+html[data-font-size="lg"] .text-\[11px\] { font-size: 13px !important; }
+html[data-font-size="lg"] .text-xs { font-size: 14px !important; }
+html[data-font-size="lg"] .text-sm { font-size: 15.5px !important; }
+html[data-font-size="lg"] .text-base { font-size: 17.5px !important; }
+
+/* SIZE 3: EXTRA LARGE (+30% - MAXIMUM LEGIBILITY) */
+html[data-font-size="xl"] {
+  font-size: 19px;
+}
+html[data-font-size="xl"] h1 { font-size: 1.50rem !important; }
+html[data-font-size="xl"] h2 { font-size: 1.38rem !important; }
+html[data-font-size="xl"] h3 { font-size: 1.25rem !important; }
+html[data-font-size="xl"] #headerEmpName { font-size: 1.45rem !important; }
+html[data-font-size="xl"] #headerEmpSub { font-size: 1.08rem !important; }
+html[data-font-size="xl"] #shiftTickerText { font-size: 1.20rem !important; }
+html[data-font-size="xl"] #liveClock { font-size: 3.30rem !important; }
+html[data-font-size="xl"] #heroActionTitle { font-size: 1.80rem !important; }
+html[data-font-size="xl"] #heroActionSubtitle { font-size: 1.15rem !important; }
+html[data-font-size="xl"] .text-\[10px\] { font-size: 13.5px !important; }
+html[data-font-size="xl"] .text-\[11px\] { font-size: 14.5px !important; }
+html[data-font-size="xl"] .text-xs { font-size: 15.5px !important; }
+html[data-font-size="xl"] .text-sm { font-size: 17.5px !important; }
+html[data-font-size="xl"] .text-base { font-size: 19.5px !important; }
 
 /* Prevent auto-zoom on mobile inputs */
 input, select, textarea {
-  font-size: 15px !important;
+  font-size: 16px !important;
 }
 
 /* Glassmorphism Card */

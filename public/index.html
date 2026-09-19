@@ -118,8 +118,14 @@
         <span class="text-sky-700 font-semibold">☀️ เวลางาน:</span>
         <span class="font-semibold text-slate-900" id="shiftTickerText">09:30 - 19:00 น.</span>
       </div>
-      <div class="text-slate-600 font-normal">
-        🍱 พัก 13:00 - 14:00 น.
+      <div class="flex items-center gap-2">
+        <span class="text-slate-600 font-normal hidden sm:inline">🍱 พัก 13:00 - 14:00 น.</span>
+        <!-- Font Size Switcher Pill (3 Sizes: Medium, Large, Extra Large) -->
+        <div class="inline-flex bg-white border border-sky-300/80 rounded-lg p-0.5 shadow-sm text-xs font-bold items-center" title="ปรับขนาดตัวอักษร">
+          <button type="button" onclick="changeAppFontSize('md')" id="btnFontMd" class="px-1.5 py-0.5 rounded transition text-slate-600 hover:bg-sky-50" title="ขนาดกลาง (ปกติ)">ก</button>
+          <button type="button" onclick="changeAppFontSize('lg')" id="btnFontLg" class="px-1.5 py-0.5 rounded transition text-slate-600 hover:bg-sky-50" title="ขนาดใหญ่ (+15%)">ก+</button>
+          <button type="button" onclick="changeAppFontSize('xl')" id="btnFontXl" class="px-1.5 py-0.5 rounded transition text-slate-600 hover:bg-sky-50" title="ขนาดใหญ่พิเศษ (+30%)">ก++</button>
+        </div>
       </div>
     </div>
 
