@@ -313,6 +313,22 @@ function applyFeatureToggles() {
   if (remoteContainer) remoteContainer.classList.toggle('hidden', !remoteEnabled);
   if (noMethodNotice) noMethodNotice.classList.toggle('hidden', pwEnabled || qrEnabled || remoteEnabled);
 
+  const clockSub = document.getElementById('liveClockSubtext');
+  if (clockSub) {
+    const cutDay = Number(appSettings.cutoff_day) || 25;
+    clockSub.textContent = `ตัดวิกทุกวันที่ ${cutDay}`;
+  }
+
+  const histCutoff = document.getElementById('historyCutoffLabel');
+  if (histCutoff) {
+    const cutDay = Number(appSettings.cutoff_day) || 25;
+    if (cutDay >= 30) {
+      histCutoff.textContent = 'รอบตัดวิก วันที่ 1 ถึงสิ้นเดือน ประจำเดือน';
+    } else {
+      histCutoff.textContent = `รอบตัดวิก ${cutDay + 1} ถึง ${cutDay} ประจำเดือน`;
+    }
+  }
+
   renderLeaveTypeOptions();
 }
 
