@@ -227,7 +227,10 @@ async function getSettings(db) {
     window_break_in_start: '12:00',
     window_break_in_end: '15:30',
     window_out_start: '17:00',
-    window_out_end: '23:59'
+    window_out_end: '23:59',
+    enable_kiosk_lock: 'true',
+    kiosk_pin: '123456',
+    kiosk_require_geofence: 'true'
   };
 
   const map = { ...defaults };
@@ -374,9 +377,12 @@ async function handleAction(db, action, params) {
       const dynamicToken = await getDynamicQrToken(0);
       const secondsLeft = 20 - (Math.floor(Date.now() / 1000) % 20);
 
+      const safeSettings = { ...settings };
+      delete safeSettings.kiosk_pin;
+
       return {
         success: true,
-        settings,
+        settings: safeSettings,
         today,
         currentTime: curTimeStr,
         dayOfWeek: dayOfWeekNumber,
@@ -387,8 +393,53 @@ async function handleAction(db, action, params) {
       };
     }
 
-    // 2. Kiosk Dynamic QR Token
+    // 2. Kiosk Dynamic QR Token (Secured with PIN & Geofence)
     case 'getKioskQrToken': {
+      const kioskPin = String(params.kioskPin || '').trim();
+      const lat = params.lat !== undefined && params.lat !== null && params.lat !== '' ? Number(params.lat) : null;
+      const lng = params.lng !== undefined && params.lng !== null && params.lng !== '' ? Number(params.lng) : null;
+
+      // 1. PIN verification if kiosk lock is enabled
+      if (settings.enable_kiosk_lock === 'true') {
+        if (!kioskPin) {
+          return { success: false, requireAuth: true, message: 'กรุณากรอกรหัสผ่าน Kiosk PIN เพื่อเปิดหน้าจอเคาน์เตอร์' };
+        }
+        const isDefaultPin = (kioskPin === String(settings.kiosk_pin || '123456'));
+        let isUserMatch = false;
+        if (!isDefaultPin) {
+          const userMatch = await db.prepare('SELECT id FROM users WHERE password = ?').bind(kioskPin).first().catch(() => null);
+          if (userMatch) isUserMatch = true;
+        }
+        if (!isDefaultPin && !isUserMatch) {
+          return { success: false, requireAuth: true, message: 'รหัส Kiosk PIN ไม่ถูกต้อง' };
+        }
+      }
+
+      // 2. GPS Geofence verification if kiosk geofence is enabled
+      let distanceMeters = null;
+      if (settings.kiosk_require_geofence === 'true') {
+        if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
+          return {
+            success: false,
+            requireGps: true,
+            message: 'ไม่สามารถระบุตำแหน่งพิกัด GPS ของอุปกรณ์ Kiosk ได้ กรุณาเปิด Location Service'
+          };
+        }
+        if (settings.office_lat && settings.office_lng) {
+          distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
+          const maxRadius = settings.geofence_radius_meters || 200;
+          if (distanceMeters > maxRadius) {
+            return {
+              success: false,
+              isOutOfRange: true,
+              distanceMeters: Math.round(distanceMeters),
+              maxRadius: maxRadius,
+              message: `เครื่อง Kiosk อยู่นอกรัศมีสาขา (${Math.round(distanceMeters)} ม. จากบริษัท เกินรัศมีอนุญาต ${maxRadius} ม.)`
+            };
+          }
+        }
+      }
+
       const token = await getDynamicQrToken(0);
       const secondsLeft = 20 - (Math.floor(Date.now() / 1000) % 20);
       const clockedCountRow = await db.prepare('SELECT COUNT(*) as count FROM time_logs WHERE date = ? AND clock_in IS NOT NULL').bind(today).first();
@@ -399,7 +450,57 @@ async function handleAction(db, action, params) {
         secondsLeft,
         today,
         currentTime: curTimeStr,
-        clockedTodayCount: clockedCountRow?.count || 0
+        clockedTodayCount: clockedCountRow?.count || 0,
+        distanceMeters: distanceMeters !== null ? Math.round(distanceMeters) : null,
+        officeName: settings.office_name
+      };
+    }
+
+    // 2.1 Verify Kiosk PIN and GPS Position
+    case 'verifyKioskAuth': {
+      const kioskPin = String(params.kioskPin || '').trim();
+      const lat = params.lat !== undefined && params.lat !== null && params.lat !== '' ? Number(params.lat) : null;
+      const lng = params.lng !== undefined && params.lng !== null && params.lng !== '' ? Number(params.lng) : null;
+
+      if (settings.enable_kiosk_lock === 'true') {
+        if (!kioskPin) {
+          return { success: false, message: 'กรุณากรอกรหัส Kiosk PIN' };
+        }
+        const isDefaultPin = (kioskPin === String(settings.kiosk_pin || '123456'));
+        let isUserMatch = false;
+        if (!isDefaultPin) {
+          const userMatch = await db.prepare('SELECT id FROM users WHERE password = ?').bind(kioskPin).first().catch(() => null);
+          if (userMatch) isUserMatch = true;
+        }
+        if (!isDefaultPin && !isUserMatch) {
+          return { success: false, message: 'รหัส Kiosk PIN ไม่ถูกต้อง' };
+        }
+      }
+
+      let distanceMeters = null;
+      if (settings.kiosk_require_geofence === 'true') {
+        if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
+          return { success: false, requireGps: true, message: 'กรุณาเปิดสิทธิ์เข้าถึงพิกัด GPS บนอุปกรณ์ Kiosk' };
+        }
+        if (settings.office_lat && settings.office_lng) {
+          distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
+          const maxRadius = settings.geofence_radius_meters || 200;
+          if (distanceMeters > maxRadius) {
+            return {
+              success: false,
+              isOutOfRange: true,
+              distanceMeters: Math.round(distanceMeters),
+              maxRadius: maxRadius,
+              message: `อุปกรณ์ Kiosk อยู่นอกพื้นที่สาขา (${Math.round(distanceMeters)} ม. เกินรัศมี ${maxRadius} ม.)`
+            };
+          }
+        }
+      }
+
+      return {
+        success: true,
+        message: 'ยืนยันตัวตนหน้าจอ Kiosk สำเร็จ',
+        distanceMeters: distanceMeters !== null ? Math.round(distanceMeters) : null
       };
     }
 
