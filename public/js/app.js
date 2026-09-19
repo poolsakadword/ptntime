@@ -994,6 +994,49 @@ async function openFullscreenCamera(type, qrToken) {
   }
 }
 
+async function getCameraStreamWithFallback(facing) {
+  const constraintsTier1 = {
+    video: {
+      facingMode: facing ? { ideal: facing } : 'user',
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    },
+    audio: false
+  };
+
+  const tryAcquire = async (constraints) => {
+    // Retry up to 3 times if previous camera session was literally just stopped
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        const isBusy = (err.name === 'NotReadableError' || err.name === 'TrackStartError' || err.name === 'AbortError');
+        if (isBusy && attempt < 2) {
+          console.warn(`Camera hardware releasing previous session (attempt ${attempt + 1}), waiting 300ms...`);
+          await new Promise(r => setTimeout(r, 300));
+        } else {
+          throw err;
+        }
+      }
+    }
+  };
+
+  try {
+    return await tryAcquire(constraintsTier1);
+  } catch (e1) {
+    console.warn('Camera constraints Tier 1 failed:', e1);
+    try {
+      return await tryAcquire({
+        video: { facingMode: facing ? { ideal: facing } : 'user' },
+        audio: false
+      });
+    } catch (e2) {
+      console.warn('Camera constraints Tier 2 failed:', e2);
+      return await tryAcquire({ video: true, audio: false });
+    }
+  }
+}
+
 async function initFullscreenCameraStream() {
   const video = document.getElementById('fsVideoPreview');
   const spinner = document.getElementById('camLoadingSpinner');
@@ -1002,44 +1045,31 @@ async function initFullscreenCameraStream() {
   if (spinner) spinner.classList.remove('hidden');
 
   try {
+    // 1. Thoroughly terminate previous tracks if any
     if (fsCameraStream) {
       fsCameraStream.getTracks().forEach(t => {
-        try { t.stop(); } catch(e) {}
+        try { 
+          t.stop();
+          t.enabled = false;
+        } catch(e) {}
       });
       fsCameraStream = null;
+      await new Promise(r => setTimeout(r, 150));
     }
+
+    // 2. Reset Video Element Media Engine (Crucial for 2nd+ times in Safari/Chrome!)
     try { video.pause(); } catch(e) {}
+    video.onloadedmetadata = null;
+    video.oncanplay = null;
+    video.onloadeddata = null;
     video.srcObject = null;
+    video.removeAttribute('src');
+    try { video.load(); } catch(e) {}
 
-    // Multi-tier constraints fallback for broad device/browser compatibility
-    const constraintsTier1 = {
-      video: {
-        facingMode: currentCameraFacing ? { ideal: currentCameraFacing } : 'user',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      },
-      audio: false
-    };
+    // 3. Acquire Stream with Multi-tier & Hardware Release Retry
+    fsCameraStream = await getCameraStreamWithFallback(currentCameraFacing);
 
-    let stream = null;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia(constraintsTier1);
-    } catch (e1) {
-      console.warn('Camera constraints Tier 1 note:', e1);
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: currentCameraFacing ? { ideal: currentCameraFacing } : 'user' },
-          audio: false
-        });
-      } catch (e2) {
-        console.warn('Camera constraints Tier 2 note:', e2);
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      }
-    }
-
-    fsCameraStream = stream;
-
-    // Critical DOM properties for iOS Safari / Android WebKit to render video stream inline
+    // 4. Critical DOM properties for iOS Safari / Android WebKit to render video stream inline
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
@@ -1050,7 +1080,7 @@ async function initFullscreenCameraStream() {
 
     video.srcObject = fsCameraStream;
 
-    // Trigger video playback and hide loading spinner
+    // 5. Trigger video playback and hide loading spinner
     const startPlayback = async () => {
       try {
         await video.play();
@@ -1101,12 +1131,20 @@ function closeFullscreenCamera() {
   const video = document.getElementById('fsVideoPreview');
   if (video) {
     try { video.pause(); } catch(e) {}
+    video.onloadedmetadata = null;
+    video.oncanplay = null;
+    video.onloadeddata = null;
     video.srcObject = null;
+    video.removeAttribute('src');
+    try { video.load(); } catch(e) {}
   }
 
   if (fsCameraStream) {
     fsCameraStream.getTracks().forEach(t => {
-      try { t.stop(); } catch(e) {}
+      try { 
+        t.stop();
+        t.enabled = false;
+      } catch(e) {}
     });
     fsCameraStream = null;
   }
@@ -1369,8 +1407,16 @@ function closeQrScannerModal() {
   document.getElementById('modalQrScanner')?.classList.add('hidden');
   if (html5QrScannerInstance) {
     try {
-      html5QrScannerInstance.stop().catch(() => {});
-    } catch(e) {}
+      html5QrScannerInstance.stop().then(() => {
+        try { html5QrScannerInstance.clear(); } catch(e) {}
+        html5QrScannerInstance = null;
+      }).catch(() => {
+        try { html5QrScannerInstance.clear(); } catch(e) {}
+        html5QrScannerInstance = null;
+      });
+    } catch(e) {
+      html5QrScannerInstance = null;
+    }
   }
 }
 
