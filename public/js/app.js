@@ -216,13 +216,79 @@ async function loadInitialData() {
       if (data.branches) {
         branchList = data.branches;
       }
+
+      // Synchronize currentEmployee with updated data from employeeList
+      if (currentEmployee && currentEmployee.empId) {
+        const freshEmp = employeeList.find(e => e.empId === currentEmployee.empId);
+        if (freshEmp) {
+          currentEmployee = { ...currentEmployee, ...freshEmp };
+          try {
+            localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
+          } catch(e) {}
+        }
+      }
+
       populateEmployeeDropdown();
-      updateShiftDisplay();
+      updateHeaderEmployeeView();
       applyFeatureToggles();
+
+      // Recalculate GPS location for this employee's branch
+      if (currentLocation) {
+        getCurrentLocation(true, false);
+      }
     }
   } catch (e) {
     console.warn('Backend API connection note:', e);
   }
+}
+
+function getCurrentEmployeeTargetBranch() {
+  if (!currentEmployee) {
+    return branchList[0] || {
+      branch_id: 'B01',
+      branch_name: 'สำนักงานใหญ่',
+      lat: appSettings.office_lat,
+      lng: appSettings.office_lng,
+      radius_meters: appSettings.geofence_radius_meters || 200,
+      work_start_time: appSettings.work_start_time || '09:30',
+      work_end_time: appSettings.work_end_time || '19:00',
+      lunch_start_time: appSettings.lunch_start_time || '13:00',
+      lunch_end_time: appSettings.lunch_end_time || '14:00'
+    };
+  }
+
+  const isRoaming = (currentEmployee.allowAllBranches === true || currentEmployee.allow_all_branches === 'true');
+
+  if (isRoaming && currentLocation && branchList.length > 0) {
+    let closest = null;
+    let minDistance = Infinity;
+    for (const b of branchList) {
+      if (b.lat && b.lng && b.status !== 'INACTIVE') {
+        const dist = calculateHaversineMeters(currentLocation.lat, currentLocation.lng, b.lat, b.lng);
+        if (dist !== null && dist < minDistance) {
+          minDistance = dist;
+          closest = b;
+        }
+      }
+    }
+    if (closest) return closest;
+  }
+
+  const bId = currentEmployee.branchId || currentEmployee.branch_id || 'B01';
+  const target = branchList.find(b => b.branch_id === bId);
+  if (target) return target;
+
+  return branchList[0] || {
+    branch_id: 'B01',
+    branch_name: 'สำนักงานใหญ่',
+    lat: appSettings.office_lat,
+    lng: appSettings.office_lng,
+    radius_meters: appSettings.geofence_radius_meters || 200,
+    work_start_time: appSettings.work_start_time || '09:30',
+    work_end_time: appSettings.work_end_time || '19:00',
+    lunch_start_time: appSettings.lunch_start_time || '13:00',
+    lunch_end_time: appSettings.lunch_end_time || '14:00'
+  };
 }
 
 function updateShiftDisplay() {
@@ -230,22 +296,14 @@ function updateShiftDisplay() {
   const lunchEl = document.getElementById('shiftLunchText');
   const branchBadge = document.getElementById('shiftBranchBadge');
 
-  let targetBranch = null;
-  let isRoaming = false;
-  if (currentEmployee) {
-    if (currentEmployee.allowAllBranches === true || currentEmployee.allow_all_branches === 'true') {
-      isRoaming = true;
-    } else {
-      const bId = currentEmployee.branchId || currentEmployee.branch_id || 'B01';
-      targetBranch = branchList.find(b => b.branch_id === bId);
-    }
-  }
+  const targetBranch = getCurrentEmployeeTargetBranch();
+  const isRoaming = currentEmployee && (currentEmployee.allowAllBranches === true || currentEmployee.allow_all_branches === 'true');
 
-  const startTime = targetBranch ? targetBranch.work_start_time : appSettings.work_start_time;
-  const endTime = targetBranch ? targetBranch.work_end_time : appSettings.work_end_time;
-  const lunchStart = targetBranch ? targetBranch.lunch_start_time : appSettings.lunch_start_time;
-  const lunchEnd = targetBranch ? targetBranch.lunch_end_time : appSettings.lunch_end_time;
-  const branchName = isRoaming ? 'ทุกสาขา (Roaming)' : (targetBranch ? targetBranch.branch_name : (branchList[0]?.branch_name || 'สำนักงานใหญ่'));
+  const startTime = targetBranch ? (targetBranch.work_start_time || appSettings.work_start_time) : appSettings.work_start_time;
+  const endTime = targetBranch ? (targetBranch.work_end_time || appSettings.work_end_time) : appSettings.work_end_time;
+  const lunchStart = targetBranch ? (targetBranch.lunch_start_time || appSettings.lunch_start_time) : appSettings.lunch_start_time;
+  const lunchEnd = targetBranch ? (targetBranch.lunch_end_time || appSettings.lunch_end_time) : appSettings.lunch_end_time;
+  const branchName = isRoaming ? `${targetBranch.branch_name} (Roaming)` : (targetBranch ? targetBranch.branch_name : 'สำนักงานใหญ่');
 
   if (shiftEl) {
     shiftEl.textContent = `${startTime} - ${endTime} น.`;
@@ -410,6 +468,14 @@ async function restoreSavedEmployee() {
             // Unbound (e.g. remote reset by admin!)
             isDeviceLocked = false;
           }
+
+          if (data.branchId) {
+            currentEmployee.branchId = data.branchId;
+            currentEmployee.allowAllBranches = data.allowAllBranches;
+            try {
+              localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
+            } catch(e) {}
+          }
         }
       } catch(err) {
         // Offline or fallback, retain lock
@@ -419,6 +485,11 @@ async function restoreSavedEmployee() {
       updateHeaderEmployeeView();
       loadTodayStatus();
       loadAdvanceEligibility();
+
+      // Recalculate GPS location for this employee's branch
+      if (currentLocation) {
+        getCurrentLocation(true, false);
+      }
     } catch(e) {}
   } else {
     setTimeout(openEmployeePickerModal, 500);
@@ -451,8 +522,14 @@ function updateHeaderEmployeeView() {
           avatarEl.textContent = numPart ? numPart.slice(-2) : 'PTN';
         }
       }
+
+      const targetBranch = getCurrentEmployeeTargetBranch();
+      const bTag = (currentEmployee.allowAllBranches === true || currentEmployee.allow_all_branches === 'true') 
+        ? ' • ทุกสาขา (Roaming)' 
+        : (targetBranch ? ` • ${targetBranch.branch_name}` : '');
+
       if (subEl) {
-        subEl.textContent = currentEmployee.department || 'พนักงาน';
+        subEl.textContent = (currentEmployee.department || 'พนักงาน') + bTag;
       }
 
       if (isDeviceLocked) {
@@ -479,7 +556,11 @@ function updateHeaderEmployeeView() {
     if (currentEmployee) {
       const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
       stepEmpName.textContent = `${currentEmployee.fullName}${nick}`;
-      if (stepEmpId) stepEmpId.textContent = `${currentEmployee.empId} • ${currentEmployee.department || 'พนักงาน'}`;
+      const targetBranch = getCurrentEmployeeTargetBranch();
+      const bTag = (currentEmployee.allowAllBranches === true || currentEmployee.allow_all_branches === 'true') 
+        ? ' • ทุกสาขา (Roaming)' 
+        : (targetBranch ? ` • ${targetBranch.branch_name}` : '');
+      if (stepEmpId) stepEmpId.textContent = `${currentEmployee.empId} • ${currentEmployee.department || 'พนักงาน'}${bTag}`;
       if (stepEmpAvatar) {
         if (currentEmployee.photoUrl) {
           stepEmpAvatar.innerHTML = `<img src="${currentEmployee.photoUrl}" alt="Avatar" class="w-full h-full object-cover rounded-xl">`;
@@ -518,7 +599,11 @@ function populateEmployeeDropdown() {
     const opt = document.createElement('option');
     opt.value = e.empId;
     const nick = e.nickname ? ` (${e.nickname})` : '';
-    opt.textContent = `[${e.empId}] ${e.fullName}${nick} - ${e.department}`;
+    const bObj = branchList.find(b => b.branch_id === (e.branchId || e.branch_id));
+    const bTag = (e.allowAllBranches === true || e.allow_all_branches === 'true')
+      ? ' [ทุกสาขา]'
+      : (bObj ? ` [${bObj.branch_name}]` : '');
+    opt.textContent = `[${e.empId}] ${e.fullName}${nick} - ${e.department || 'พนักงาน'}${bTag}`;
     sel.appendChild(opt);
   });
 }
@@ -621,6 +706,9 @@ async function confirmEmployeeLogin() {
     loadTodayStatus();
     loadAdvanceEligibility();
 
+    // Recalculate GPS location for this employee's branch
+    getCurrentLocation(true, false);
+
     Swal.fire({
       icon: 'success',
       title: `ผูกอุปกรณ์สำเร็จ!`,
@@ -638,6 +726,7 @@ async function confirmEmployeeLogin() {
       closeEmployeePickerModal();
       loadTodayStatus();
       loadAdvanceEligibility();
+      getCurrentLocation(true, false);
     }
   }
 }
@@ -696,22 +785,28 @@ function getCurrentLocation(silent = false, isManual = false) {
       const lng = pos.coords.longitude;
       currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
 
-      const dist = calculateHaversineMeters(lat, lng, appSettings.office_lat, appSettings.office_lng);
+      const targetBranch = getCurrentEmployeeTargetBranch();
+      const targetLat = targetBranch.lat || appSettings.office_lat;
+      const targetLng = targetBranch.lng || appSettings.office_lng;
+      const targetRadius = targetBranch.radius_meters || appSettings.geofence_radius_meters || 200;
+      const targetBranchName = targetBranch.branch_name || 'สำนักงานใหญ่';
+
+      const dist = calculateHaversineMeters(lat, lng, targetLat, targetLng);
       currentDistanceMeters = dist;
 
-      const isInside = dist <= appSettings.geofence_radius_meters;
+      const isInside = dist <= targetRadius;
 
       if (statusText) statusText.textContent = `พิกัด GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      if (distText) distText.textContent = `ห่างจากสำนักงาน: ${dist} ม. (รัศมีอนุญาต ${appSettings.geofence_radius_meters} ม.)`;
+      if (distText) distText.textContent = `ห่างจาก${targetBranchName}: ${dist} ม. (รัศมีอนุญาต ${targetRadius} ม.)`;
 
       if (badge && pulse) {
         if (isInside) {
           badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-700';
-          badge.textContent = '🟢 อยู่ในพื้นที่บริษัท';
+          badge.textContent = `🟢 อยู่ในพื้นที่ ${targetBranchName}`;
           pulse.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
         } else {
           badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-100 text-rose-700';
-          badge.textContent = '🔴 อยู่นอกพื้นที่';
+          badge.textContent = `🔴 อยู่นอกพื้นที่ ${targetBranchName}`;
           pulse.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
         }
       }
@@ -721,12 +816,12 @@ function getCurrentLocation(silent = false, isManual = false) {
           toast: true,
           position: 'top-end',
           showConfirmButton: false,
-          timer: 2000,
+          timer: 2500,
           timerProgressBar: false
         });
         Toast.fire({
           icon: isInside ? 'success' : 'warning',
-          title: isInside ? 'อัปเดตพิกัด GPS สำเร็จ' : `อยู่นอกพื้นที่สำนักงาน (${dist} ม.)`
+          title: isInside ? `อยู่ในพื้นที่ ${targetBranchName}` : `อยู่นอกพื้นที่ ${targetBranchName} (${dist} ม.)`
         });
       }
     },
@@ -1042,11 +1137,15 @@ async function openFullscreenCamera(type, qrToken) {
     return;
   }
 
-  if (currentDistanceMeters > appSettings.geofence_radius_meters && appSettings.allow_outside_clockin !== 'true') {
+  const targetBranch = getCurrentEmployeeTargetBranch();
+  const maxRadius = targetBranch.radius_meters || appSettings.geofence_radius_meters || 200;
+  const branchName = targetBranch.branch_name || 'สำนักงาน';
+
+  if (currentDistanceMeters > maxRadius && appSettings.allow_outside_clockin !== 'true') {
     Swal.fire({
       icon: 'error',
-      title: 'อยู่นอกพื้นที่สำนักงาน',
-      text: `คุณอยู่ห่างจากสำนักงาน ${currentDistanceMeters} เมตร (อนุญาตไม่เกิน ${appSettings.geofence_radius_meters} ม.)`
+      title: `อยู่นอกพื้นที่ ${branchName}`,
+      text: `คุณอยู่ห่างจาก ${branchName} ${currentDistanceMeters} เมตร (อนุญาตไม่เกิน ${maxRadius} ม.)`
     });
     return;
   }
@@ -1563,11 +1662,15 @@ async function submitClockWithPhoto(type, qrToken, photoUrl) {
     return;
   }
 
-  if (currentDistanceMeters > appSettings.geofence_radius_meters && appSettings.allow_outside_clockin !== 'true') {
+  const targetBranch = getCurrentEmployeeTargetBranch();
+  const maxRadius = targetBranch.radius_meters || appSettings.geofence_radius_meters || 200;
+  const branchName = targetBranch.branch_name || 'สำนักงาน';
+
+  if (currentDistanceMeters > maxRadius && appSettings.allow_outside_clockin !== 'true') {
     Swal.fire({
       icon: 'error',
-      title: 'อยู่นอกพื้นที่สำนักงาน',
-      text: `คุณอยู่ห่างจากสำนักงาน ${currentDistanceMeters} เมตร (อนุญาตไม่เกิน ${appSettings.geofence_radius_meters} ม.)`
+      title: `อยู่นอกพื้นที่ ${branchName}`,
+      text: `คุณอยู่ห่างจาก ${branchName} ${currentDistanceMeters} เมตร (อนุญาตไม่เกิน ${maxRadius} ม.)`
     });
     return;
   }

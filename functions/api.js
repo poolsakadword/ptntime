@@ -669,7 +669,9 @@ async function handleAction(db, action, params) {
           photoUrl: emp.photo_url || '',
           department: emp.department,
           position: emp.position,
-          phone: emp.phone
+          phone: emp.phone,
+          branchId: emp.branch_id || 'B01',
+          allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true)
         }
       };
     }
@@ -739,14 +741,19 @@ async function handleAction(db, action, params) {
       const { empId, deviceId } = params;
       if (!empId) return { success: false, message: 'ระบุ empId' };
 
-      const emp = await db.prepare('SELECT status FROM employees WHERE emp_id = ?').bind(empId).first();
+      const emp = await db.prepare('SELECT status, branch_id, allow_all_branches FROM employees WHERE emp_id = ?').bind(empId).first();
       if (!emp || emp.status === 'Resigned') {
         return { success: true, isBound: false, isResigned: true, message: 'พนักงานพ้นสภาพการเป็นพนักงานแล้ว' };
       }
 
       const bound = await db.prepare('SELECT * FROM employee_devices WHERE emp_id = ?').bind(empId).first();
       if (!bound) {
-        return { success: true, isBound: false };
+        return {
+          success: true,
+          isBound: false,
+          branchId: emp.branch_id || 'B01',
+          allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true)
+        };
       }
 
       const isThisDevice = (bound.device_id === deviceId);
@@ -756,7 +763,9 @@ async function handleAction(db, action, params) {
         isThisDevice,
         boundAt: bound.bound_at,
         deviceName: bound.device_name,
-        deviceId: bound.device_id
+        deviceId: bound.device_id,
+        branchId: emp.branch_id || 'B01',
+        allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true)
       };
     }
 
