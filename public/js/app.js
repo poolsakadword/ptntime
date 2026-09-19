@@ -143,6 +143,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   restoreSavedEmployee();
   getCurrentLocation();
   
+  // Initialize PWA Service Worker & Push Notification Handlers
+  initServiceWorker().catch(() => {});
+  checkNotificationBanner();
+  updateNotifBadge();
+  checkActiveBreakOnWake();
+  if (currentEmployee) {
+    loadMyRequests().catch(() => {});
+  }
+  
   // Preload face detection engine in background
   initFaceDetectionEngine().catch(() => {});
   window.addEventListener('mediapipe-loaded', () => {
@@ -1492,17 +1501,19 @@ async function submitClockWithPhoto(type, qrToken, photoUrl) {
           `
         });
       } else if (type === 'BREAK_OUT') {
+        scheduleBreakReminders(data.breakOutTime || new Date().toLocaleTimeString('th-TH'));
         Swal.fire({
           icon: 'success',
           title: 'บันทึกเวลาออกไปพักสำเร็จ!',
           html: `
             <div class="text-sm space-y-1">
               <p>เวลาเริ่มพัก: <b class="text-amber-700">${data.breakOutTime}</b></p>
-              <p class="text-xs text-slate-500 pt-1">☕ พักผ่อนตามอัธยาศัย อย่าลืมสแกนกลับเข้าทำงานเมื่อหมดเวลาพัก</p>
+              <p class="text-xs text-slate-500 pt-1">☕ พักผ่อนตามอัธยาศัย ระบบจะแจ้งเตือนเมื่อใกล้หมดเวลาพัก</p>
             </div>
           `
         });
       } else if (type === 'BREAK_IN') {
+        clearBreakReminders();
         Swal.fire({
           icon: 'success',
           title: 'บันทึกเวลากลับเข้าทำงานสำเร็จ!',
@@ -2231,6 +2242,9 @@ async function loadMyRequests() {
       const ots = data.ots || [];
       const advances = data.advances || [];
 
+      // Check and fire realtime notification if any request status transitioned
+      checkRequestStatusChanges(leaves, ots, advances);
+
       if (leaves.length === 0 && ots.length === 0 && advances.length === 0) {
         container.innerHTML = '<div class="text-center py-6 text-slate-400">ยังไม่มีรายการคำขอในเดือนนี้</div>';
         return;
@@ -2845,5 +2859,362 @@ async function supervisorResetDevice(empId, empName) {
   } catch(e) {
     Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
   }
+}
+
+// ==============================================================================
+// 14. REALTIME PUSH NOTIFICATIONS & SERVICE WORKER (PWA)
+// ==============================================================================
+
+let swRegistration = null;
+let breakTimer50 = null;
+let breakTimer60 = null;
+
+// Register Service Worker
+async function initServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    try {
+      swRegistration = await navigator.serviceWorker.register('/sw.js');
+      console.log('PTN Time Service Worker registered');
+    } catch (e) {
+      console.warn('Service Worker registration note:', e);
+    }
+  }
+}
+
+// Request Notification Permission
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    Swal.fire('อุปกรณ์ไม่รองรับ', 'เบราว์เซอร์หรืออุปกรณ์นี้ไม่รองรับการแจ้งเตือนแบบ Push', 'info');
+    return false;
+  }
+
+  try {
+    const perm = await Notification.requestPermission();
+    checkNotificationBanner();
+
+    if (perm === 'granted') {
+      Swal.fire({
+        icon: 'success',
+        title: 'เปิดรับการแจ้งเตือนสำเร็จ! 🔔',
+        text: 'คุณจะได้รับการแจ้งเตือนเวลาเข้า-ออกงาน, เตือนเวลาพักเบรก, และผลการอนุมัติคำขอต่างๆ',
+        confirmButtonColor: '#0284c7'
+      });
+      sendPushOrLocalNotification(
+        'PTN Time เชื่อมต่อการแจ้งเตือนสำเร็จ 🔔',
+        'ยินดีต้อนรับ! ระบบพร้อมส่งการแจ้งเตือนสำคัญถึงคุณแล้ว',
+        'welcome'
+      );
+      return true;
+    } else if (perm === 'denied') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'การแจ้งเตือนถูกปิดกั้น',
+        text: 'กรุณาเปิดการอนุญาตการแจ้งเตือนในการตั้งค่าของเบราว์เซอร์/โทรศัพท์',
+        confirmButtonColor: '#0284c7'
+      });
+      return false;
+    }
+  } catch(e) {
+    console.error('Permission request error:', e);
+  }
+}
+
+function dismissNotifBanner() {
+  document.getElementById('notifPermissionBanner')?.classList.add('hidden');
+  localStorage.setItem('ptn_dismiss_notif_banner', 'true');
+}
+
+function checkNotificationBanner() {
+  const banner = document.getElementById('notifPermissionBanner');
+  if (!banner) return;
+  if (!('Notification' in window) || Notification.permission === 'granted' || localStorage.getItem('ptn_dismiss_notif_banner') === 'true') {
+    banner.classList.add('hidden');
+  } else {
+    banner.classList.remove('hidden');
+  }
+}
+
+// Send Push or Local Notification
+function sendPushOrLocalNotification(title, body, tag = 'ptntime', icon = 'https://cdn-icons-png.flaticon.com/512/2972/2972531.png') {
+  // 1. Record to internal in-app notification history
+  addNotificationToHistory(title, body, tag);
+
+  // 2. Play subtle chime sound
+  playNotificationSound();
+
+  // 3. Trigger Browser/PWA Notification
+  if ('Notification' in window && Notification.permission === 'granted') {
+    if (swRegistration && swRegistration.showNotification) {
+      swRegistration.showNotification(title, {
+        body: body,
+        icon: icon,
+        badge: icon,
+        tag: tag,
+        vibrate: [200, 100, 200],
+        data: { url: '/' }
+      });
+    } else {
+      try {
+        new Notification(title, { body, icon, tag });
+      } catch (e) {
+        console.warn('Native notification fallback error:', e);
+      }
+    }
+  }
+}
+
+// In-App Notification History Storage
+function getNotificationHistory() {
+  try {
+    return JSON.parse(localStorage.getItem('ptn_emp_notifications') || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function addNotificationToHistory(title, body, tag) {
+  const list = getNotificationHistory();
+  const now = new Date();
+  const item = {
+    id: 'notif_' + Date.now(),
+    title,
+    body,
+    tag,
+    time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+    date: now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }),
+    read: false
+  };
+  list.unshift(item);
+  // Keep last 30
+  if (list.length > 30) list.pop();
+  localStorage.setItem('ptn_emp_notifications', JSON.stringify(list));
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const badge = document.getElementById('notifBadge');
+  const list = getNotificationHistory();
+  const unreadCount = list.filter(x => !x.read).length;
+  if (badge) {
+    if (unreadCount > 0) {
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+
+function openNotificationDrawer() {
+  const modal = document.getElementById('modalNotifications');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  renderNotificationList();
+  // Mark all as read
+  const list = getNotificationHistory();
+  list.forEach(x => x.read = true);
+  localStorage.setItem('ptn_emp_notifications', JSON.stringify(list));
+  updateNotifBadge();
+}
+
+function closeNotificationDrawer() {
+  document.getElementById('modalNotifications')?.classList.add('hidden');
+}
+
+function clearAllNotifications() {
+  localStorage.setItem('ptn_emp_notifications', '[]');
+  renderNotificationList();
+  updateNotifBadge();
+}
+
+function renderNotificationList() {
+  const container = document.getElementById('notifListContainer');
+  if (!container) return;
+  const list = getNotificationHistory();
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-8 text-slate-400">
+        <span class="text-3xl block mb-2">🔕</span>
+        <div class="font-bold">ไม่มีการแจ้งเตือน</div>
+        <div class="text-[10px]">เมื่อมีการแจ้งเตือนใหม่จะแสดงที่นี่</div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(item => `
+    <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200 transition space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-slate-800 text-xs">${item.title}</span>
+        <span class="text-[10px] text-slate-400">${item.date} ${item.time}</span>
+      </div>
+      <div class="text-slate-600 text-[11px] leading-relaxed">${item.body}</div>
+    </div>
+  `).join('');
+}
+
+function testSendNotification() {
+  sendPushOrLocalNotification(
+    '⏰ ทดสอบการแจ้งเตือนเวลาพักเบรก',
+    'คุณพักไปแล้ว 50 นาที เหลือเวลา 10 นาที กรุณาเตรียมสแกนกลับเข้าทำงาน',
+    'test_break'
+  );
+  Swal.fire({
+    icon: 'success',
+    title: 'ส่งแจ้งเตือนเรียบร้อย',
+    text: 'การแจ้งเตือนได้ถูกบันทึกและส่งผ่าน Web Push แล้ว',
+    timer: 1500,
+    showConfirmButton: false
+  });
+  renderNotificationList();
+}
+
+// Subtle Audio Chime using Web Audio API
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.1); // A5
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {}
+}
+
+// Break Time Watcher: Schedule 50m and 60m notifications
+function scheduleBreakReminders(breakOutTimeStr) {
+  clearBreakReminders();
+  if (!breakOutTimeStr) return;
+
+  const now = new Date();
+  localStorage.setItem('ptn_break_start_timestamp', now.getTime().toString());
+
+  // Timer 50 minutes (50 * 60 * 1000)
+  breakTimer50 = setTimeout(() => {
+    sendPushOrLocalNotification(
+      '☕ ใกล้หมดเวลาพักแล้ว!',
+      'คุณพักไปแล้ว 50 นาที เหลือเวลาอีก 10 นาที กรุณาเตรียมสแกนกลับเข้าทำงาน',
+      'break_50'
+    );
+  }, 50 * 60 * 1000);
+
+  // Timer 60 minutes
+  breakTimer60 = setTimeout(() => {
+    sendPushOrLocalNotification(
+      '⚠️ ครบกำหนดเวลาพัก 60 นาทีแล้ว!',
+      'กรุณาสแกนกลับเข้าทำงานทันทีเพื่อไม่ให้ชั่วโมงทำงานถูกหัก',
+      'break_60'
+    );
+  }, 60 * 60 * 1000);
+}
+
+function clearBreakReminders() {
+  if (breakTimer50) clearTimeout(breakTimer50);
+  if (breakTimer60) clearTimeout(breakTimer60);
+  breakTimer50 = null;
+  breakTimer60 = null;
+  localStorage.removeItem('ptn_break_start_timestamp');
+}
+
+// Check Break duration when reopening app
+function checkActiveBreakOnWake() {
+  const stored = localStorage.getItem('ptn_break_start_timestamp');
+  if (!stored) return;
+  const elapsedMinutes = Math.floor((Date.now() - parseInt(stored, 10)) / 60000);
+  if (elapsedMinutes >= 60) {
+    sendPushOrLocalNotification(
+      '⚠️ คุณพักเกินเกณฑ์ 60 นาทีแล้ว!',
+      `ขณะนี้คุณพักไปแล้ว ${elapsedMinutes} นาที กรุณาสแกนกลับเข้าทำงานทันที`,
+      'break_over'
+    );
+  } else if (elapsedMinutes >= 50) {
+    sendPushOrLocalNotification(
+      '☕ ใกล้หมดเวลาพักแล้ว!',
+      `คุณพักไปแล้ว ${elapsedMinutes} นาที (เหลือ ${60 - elapsedMinutes} นาที) กรุณาเตรียมสแกนเข้าทำงาน`,
+      'break_warn'
+    );
+  }
+}
+
+// Status Watcher: Compares previous requests with new requests
+function checkRequestStatusChanges(leaves = [], ots = [], advances = []) {
+  const currentKey = `ptn_req_status_${currentEmployee ? currentEmployee.empId : 'all'}`;
+  let prevStatuses = {};
+  try {
+    prevStatuses = JSON.parse(localStorage.getItem(currentKey) || '{}');
+  } catch (e) {}
+
+  const newStatuses = {};
+
+  // Check OT
+  ots.forEach(ot => {
+    const id = 'ot_' + ot.id;
+    newStatuses[id] = ot.status;
+    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && ot.status !== 'PENDING') {
+      if (ot.status === 'APPROVED') {
+        sendPushOrLocalNotification(
+          '✅ คำขอ OT ได้รับการอนุมัติแล้ว',
+          `คำขอ OT วันที่ ${ot.ot_date} (${ot.ot_hours} ชม.) ได้รับการอนุมัติเข้างวดแล้ว`,
+          'ot_approved'
+        );
+      } else if (ot.status === 'REJECTED') {
+        sendPushOrLocalNotification(
+          '❌ คำขอ OT ไม่ได้รับการอนุมัติ',
+          `คำขอ OT วันที่ ${ot.ot_date} ถูกปฏิเสธ`,
+          'ot_rejected'
+        );
+      }
+    }
+  });
+
+  // Check Leave
+  leaves.forEach(lv => {
+    const id = 'lv_' + lv.id;
+    newStatuses[id] = lv.status;
+    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && lv.status !== 'PENDING') {
+      if (lv.status === 'APPROVED') {
+        sendPushOrLocalNotification(
+          '✅ คำขอลางานได้รับการอนุมัติแล้ว',
+          `คำขอลาวันที่ ${lv.start_date} ได้รับการอนุมัติแล้ว`,
+          'leave_approved'
+        );
+      } else if (lv.status === 'REJECTED') {
+        sendPushOrLocalNotification(
+          '❌ คำขอลางานถูกปฏิเสธ',
+          `คำขอลาวันที่ ${lv.start_date} ไม่ได้รับการอนุมัติ (${lv.reject_reason || '-'})`,
+          'leave_rejected'
+        );
+      }
+    }
+  });
+
+  // Check Advance
+  advances.forEach(ad => {
+    const id = 'ad_' + ad.id;
+    newStatuses[id] = ad.status;
+    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && ad.status !== 'PENDING') {
+      if (ad.status === 'APPROVED') {
+        sendPushOrLocalNotification(
+          '💵 คำขอเบิกเงินล่วงหน้าอนุมัติแล้ว',
+          `ยอดเบิก ฿${ad.amount} ได้รับการอนุมัติเรียบร้อย`,
+          'adv_approved'
+        );
+      } else if (ad.status === 'REJECTED') {
+        sendPushOrLocalNotification(
+          '❌ คำขอเบิกเงินล่วงหน้าไม่ผ่านอนุมัติ',
+          `ยอดเบิก ฿${ad.amount} ไม่ได้รับการอนุมัติ`,
+          'adv_rejected'
+        );
+      }
+    }
+  });
+
+  localStorage.setItem(currentKey, JSON.stringify(newStatuses));
 }
 

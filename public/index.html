@@ -76,10 +76,15 @@
             <p class="text-xs md:text-sm text-sky-100 font-normal" id="headerCompanyName">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</p>
           </div>
         </div>
-        
-        <span class="text-xs md:text-sm font-medium px-3 py-1 bg-white/20 text-white rounded-xl backdrop-blur border border-white/25 shadow-sm">
-          ตัดวิก 25
-        </span>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnOpenNotifications" onclick="openNotificationDrawer()" class="relative p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur border border-white/25 shadow-sm transition active:scale-95" title="การแจ้งเตือน">
+            <svg class="w-4 h-4 md:w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span id="notifBadge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
+          </button>
+          <span class="text-xs md:text-sm font-medium px-3 py-1.5 bg-white/20 text-white rounded-xl backdrop-blur border border-white/25 shadow-sm">
+            ตัดวิก 25
+          </span>
+        </div>
       </div>
 
       <!-- Employee Switcher / Profile Card (Prominent, High-contrast, Easy to Tap) -->
@@ -115,6 +120,21 @@
       </div>
       <div class="text-slate-600 font-normal">
         🍱 พัก 13:00 - 14:00 น.
+      </div>
+    </div>
+
+    <!-- Notification Permission Banner (shown if Notification.permission !== 'granted') -->
+    <div id="notifPermissionBanner" class="hidden bg-gradient-to-r from-sky-600 to-blue-700 text-white px-4 py-2.5 flex items-center justify-between shadow text-xs border-b border-white/20 animate-fadeIn">
+      <div class="flex items-center gap-2">
+        <span class="text-sm">🔔</span>
+        <div>
+          <span class="font-semibold">เปิดรับแจ้งเตือนบนมือถือ:</span>
+          <span class="opacity-90 ml-1 text-[11px]">เตือนเวลาพักเบรก และผลอนุมัติ OT ทันที</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+        <button type="button" onclick="requestNotificationPermission()" class="bg-white text-sky-800 font-bold px-2.5 py-1 rounded-lg shadow-sm hover:bg-sky-50 transition text-[11px] active:scale-95">เปิดใช้งาน</button>
+        <button type="button" onclick="dismissNotifBanner()" class="opacity-70 hover:opacity-100 p-1 text-sm leading-none" title="ปิด">&times;</button>
       </div>
     </div>
 
@@ -678,6 +698,41 @@
         <button onclick="closeMasterQrModal()" class="w-full py-2.5 text-xs font-bold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700">
           ปิดหน้าต่าง
         </button>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION DRAWER / MODAL -->
+    <div id="modalNotifications" class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center hidden backdrop-blur-sm">
+      <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between border-b pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg font-bold shadow-inner">
+              🔔
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">การแจ้งเตือนของฉัน</h3>
+              <p class="text-[11px] text-slate-500">ประวัติการแจ้งเตือนและเตือนเวลา</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="clearAllNotifications()" class="text-[11px] text-slate-400 hover:text-rose-600 transition font-medium">ล้างทั้งหมด</button>
+            <button type="button" onclick="closeNotificationDrawer()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 flex items-center justify-center">&times;</button>
+          </div>
+        </div>
+
+        <!-- Notification List -->
+        <div id="notifListContainer" class="flex-1 overflow-y-auto space-y-2 py-1 text-xs min-h-[160px] max-h-[350px]">
+          <!-- Dynamic Items rendered by JS -->
+        </div>
+
+        <div class="pt-2 border-t flex gap-2">
+          <button type="button" onclick="testSendNotification()" class="flex-1 py-2 text-xs font-bold rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 transition border border-sky-200">
+            🔔 ทดสอบแจ้งเตือน
+          </button>
+          <button type="button" onclick="closeNotificationDrawer()" class="py-2 px-4 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+            ปิด
+          </button>
+        </div>
       </div>
     </div>
 
