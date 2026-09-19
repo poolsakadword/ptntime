@@ -176,6 +176,106 @@ async function ensureTables(db) {
       value TEXT
     )
   `).run().catch(() => {});
+
+  // 6. branches (Multi-Branch Support)
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS branches (
+      branch_id TEXT PRIMARY KEY,
+      branch_name TEXT NOT NULL,
+      lat REAL NOT NULL,
+      lng REAL NOT NULL,
+      radius_meters INTEGER DEFAULT 200,
+      work_start_time TEXT DEFAULT '09:30',
+      work_end_time TEXT DEFAULT '19:00',
+      lunch_start_time TEXT DEFAULT '13:00',
+      lunch_end_time TEXT DEFAULT '14:00',
+      grace_minutes INTEGER DEFAULT 0,
+      ot_start_time TEXT DEFAULT '19:00',
+      kiosk_pin TEXT DEFAULT '123456',
+      status TEXT DEFAULT 'ACTIVE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run().catch(() => {});
+
+  // Seed default 4 branches if empty
+  const countRow = await db.prepare('SELECT COUNT(*) as count FROM branches').first().catch(() => null);
+  if (!countRow || countRow.count === 0) {
+    await db.prepare(`
+      INSERT OR IGNORE INTO branches (branch_id, branch_name, lat, lng, radius_meters, work_start_time, work_end_time, lunch_start_time, lunch_end_time, grace_minutes, ot_start_time, kiosk_pin, status)
+      VALUES 
+        ('B01', 'สำนักงานใหญ่', 13.727896, 100.524123, 200, '08:30', '17:30', '12:00', '13:00', 0, '17:30', '123456', 'ACTIVE'),
+        ('B02', 'สาขาที่ 2 (หน้าร้าน A)', 13.756300, 100.501800, 150, '09:30', '19:00', '13:00', '14:00', 0, '19:00', '123456', 'ACTIVE'),
+        ('B03', 'สาขาที่ 3 (หน้าร้าน B)', 13.712000, 100.589000, 150, '10:00', '20:00', '13:30', '14:30', 0, '20:00', '123456', 'ACTIVE'),
+        ('B04', 'สาขาที่ 4 (คลังสินค้า/สำรอง)', 13.789000, 100.550000, 200, '09:00', '18:00', '12:00', '13:00', 0, '18:00', '123456', 'ACTIVE')
+    `).run().catch(() => {});
+  }
+
+  await db.prepare("ALTER TABLE employees ADD COLUMN branch_id TEXT DEFAULT 'B01'").run().catch(() => {});
+  await db.prepare("ALTER TABLE employees ADD COLUMN allow_all_branches TEXT DEFAULT 'false'").run().catch(() => {});
+  await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_id TEXT").run().catch(() => {});
+  await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_name TEXT").run().catch(() => {});
+}
+
+async function getEmployeeBranchConfig(db, empId, lat, lng, defaultSettings) {
+  const emp = await db.prepare('SELECT emp_id, branch_id, allow_all_branches FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
+  const allowAll = (emp && (emp.allow_all_branches === 'true' || emp.allow_all_branches === true));
+  const assignedBranchId = emp?.branch_id || 'B01';
+
+  const branchRows = await db.prepare("SELECT * FROM branches WHERE status != 'INACTIVE' ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
+  const branches = branchRows.results || [];
+
+  let chosenBranch = null;
+
+  if (branches.length > 0) {
+    if (allowAll && lat && lng) {
+      let closest = null;
+      let minDistance = Infinity;
+      for (const b of branches) {
+        if (b.lat && b.lng) {
+          const dist = calculateDistanceMeters(lat, lng, b.lat, b.lng);
+          if (dist !== null && dist < minDistance) {
+            minDistance = dist;
+            closest = b;
+          }
+        }
+      }
+      chosenBranch = closest || branches.find(b => b.branch_id === assignedBranchId) || branches[0];
+    } else {
+      chosenBranch = branches.find(b => b.branch_id === assignedBranchId) || branches[0];
+    }
+  }
+
+  if (chosenBranch) {
+    return {
+      branchId: chosenBranch.branch_id,
+      branchName: chosenBranch.branch_name,
+      lat: chosenBranch.lat || defaultSettings.office_lat,
+      lng: chosenBranch.lng || defaultSettings.office_lng,
+      radiusMeters: chosenBranch.radius_meters || defaultSettings.geofence_radius_meters,
+      workStartTime: chosenBranch.work_start_time || defaultSettings.work_start_time,
+      workEndTime: chosenBranch.work_end_time || defaultSettings.work_end_time,
+      lunchStartTime: chosenBranch.lunch_start_time || defaultSettings.lunch_start_time,
+      lunchEndTime: chosenBranch.lunch_end_time || defaultSettings.lunch_end_time,
+      graceMinutes: (chosenBranch.grace_minutes !== undefined && chosenBranch.grace_minutes !== null) ? Number(chosenBranch.grace_minutes) : (Number(defaultSettings.grace_period_morning_minutes) || 0),
+      otStartTime: chosenBranch.ot_start_time || chosenBranch.work_end_time || defaultSettings.ot_start_time,
+      kioskPin: chosenBranch.kiosk_pin || defaultSettings.kiosk_pin || '123456'
+    };
+  }
+
+  return {
+    branchId: 'B01',
+    branchName: 'สำนักงานใหญ่',
+    lat: defaultSettings.office_lat,
+    lng: defaultSettings.office_lng,
+    radiusMeters: defaultSettings.geofence_radius_meters,
+    workStartTime: defaultSettings.work_start_time,
+    workEndTime: defaultSettings.work_end_time,
+    lunchStartTime: defaultSettings.lunch_start_time,
+    lunchEndTime: defaultSettings.lunch_end_time,
+    graceMinutes: Number(defaultSettings.grace_period_morning_minutes) || 0,
+    otStartTime: defaultSettings.ot_start_time,
+    kioskPin: defaultSettings.kiosk_pin || '123456'
+  };
 }
 
 async function getSettings(db) {
@@ -345,7 +445,8 @@ async function handleAction(db, action, params) {
 
   switch (action) {
     case 'getInitialData': {
-      const empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
+      const empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
+      const branchRows = await db.prepare("SELECT * FROM branches ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
       const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at, updated_at FROM employee_devices').all().catch(() => ({ results: [] }));
       const deviceMap = {};
       for (const d of deviceRows.results || []) {
@@ -365,6 +466,8 @@ async function handleAction(db, action, params) {
         department: e.department || '-',
         position: e.position || '-',
         phone: e.phone || '',
+        branchId: e.branch_id || 'B01',
+        allowAllBranches: (e.allow_all_branches === 'true' || e.allow_all_branches === true),
         status: e.status || 'Active',
         last4Citizen: (e.citizen_id || '').slice(-4),
         boundDevice: deviceMap[e.emp_id] || null
@@ -383,6 +486,7 @@ async function handleAction(db, action, params) {
       return {
         success: true,
         settings: safeSettings,
+        branches: branchRows.results || [],
         today,
         currentTime: curTimeStr,
         dayOfWeek: dayOfWeekNumber,
@@ -393,8 +497,18 @@ async function handleAction(db, action, params) {
       };
     }
 
-    // 2. Kiosk Dynamic QR Token (Secured with PIN & Geofence)
+    // 2. Kiosk Dynamic QR Token (Secured with PIN & Geofence per Branch)
     case 'getKioskQrToken': {
+      const branchId = String(params.branchId || params.branch_id || 'B01').trim();
+      const branchRow = await db.prepare("SELECT * FROM branches WHERE branch_id = ?").bind(branchId).first().catch(() => null);
+
+      const targetPin = (branchRow && branchRow.kiosk_pin) ? branchRow.kiosk_pin : (settings.kiosk_pin || '123456');
+      const targetLat = (branchRow && branchRow.lat) ? branchRow.lat : settings.office_lat;
+      const targetLng = (branchRow && branchRow.lng) ? branchRow.lng : settings.office_lng;
+      const targetRadius = (branchRow && branchRow.radius_meters) ? branchRow.radius_meters : (settings.geofence_radius_meters || 200);
+      const targetBranchName = branchRow ? branchRow.branch_name : 'สำนักงานใหญ่';
+      const targetOfficeName = branchRow ? `บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด (${branchRow.branch_name})` : settings.office_name;
+
       const kioskPin = String(params.kioskPin || '').trim();
       const lat = params.lat !== undefined && params.lat !== null && params.lat !== '' ? Number(params.lat) : null;
       const lng = params.lng !== undefined && params.lng !== null && params.lng !== '' ? Number(params.lng) : null;
@@ -402,16 +516,16 @@ async function handleAction(db, action, params) {
       // 1. PIN verification if kiosk lock is enabled
       if (settings.enable_kiosk_lock === 'true') {
         if (!kioskPin) {
-          return { success: false, requireAuth: true, message: 'กรุณากรอกรหัสผ่าน Kiosk PIN เพื่อเปิดหน้าจอเคาน์เตอร์' };
+          return { success: false, requireAuth: true, message: `กรุณากรอกรหัสผ่าน Kiosk PIN สำหรับ ${targetBranchName}` };
         }
-        const isDefaultPin = (kioskPin === String(settings.kiosk_pin || '123456'));
+        const isDefaultPin = (kioskPin === String(targetPin) || kioskPin === String(settings.kiosk_pin || '123456'));
         let isUserMatch = false;
         if (!isDefaultPin) {
           const userMatch = await db.prepare('SELECT id FROM users WHERE password = ?').bind(kioskPin).first().catch(() => null);
           if (userMatch) isUserMatch = true;
         }
         if (!isDefaultPin && !isUserMatch) {
-          return { success: false, requireAuth: true, message: 'รหัส Kiosk PIN ไม่ถูกต้อง' };
+          return { success: false, requireAuth: true, message: `รหัส Kiosk PIN ของ ${targetBranchName} ไม่ถูกต้อง` };
         }
       }
 
@@ -425,16 +539,16 @@ async function handleAction(db, action, params) {
             message: 'ไม่สามารถระบุตำแหน่งพิกัด GPS ของอุปกรณ์ Kiosk ได้ กรุณาเปิด Location Service'
           };
         }
-        if (settings.office_lat && settings.office_lng) {
-          distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
-          const maxRadius = settings.geofence_radius_meters || 200;
+        if (targetLat && targetLng) {
+          distanceMeters = calculateDistanceMeters(lat, lng, targetLat, targetLng);
+          const maxRadius = targetRadius || 200;
           if (distanceMeters > maxRadius) {
             return {
               success: false,
               isOutOfRange: true,
               distanceMeters: Math.round(distanceMeters),
               maxRadius: maxRadius,
-              message: `เครื่อง Kiosk อยู่นอกรัศมีสาขา (${Math.round(distanceMeters)} ม. จากบริษัท เกินรัศมีอนุญาต ${maxRadius} ม.)`
+              message: `เครื่อง Kiosk อยู่นอกรัศมี ${targetBranchName} (${Math.round(distanceMeters)} ม. เกินรัศมีอนุญาต ${maxRadius} ม.)`
             };
           }
         }
@@ -452,12 +566,23 @@ async function handleAction(db, action, params) {
         currentTime: curTimeStr,
         clockedTodayCount: clockedCountRow?.count || 0,
         distanceMeters: distanceMeters !== null ? Math.round(distanceMeters) : null,
-        officeName: settings.office_name
+        branchId: branchRow ? branchRow.branch_id : branchId,
+        branchName: targetBranchName,
+        officeName: targetOfficeName
       };
     }
 
-    // 2.1 Verify Kiosk PIN and GPS Position
+    // 2.1 Verify Kiosk PIN and GPS Position (per Branch)
     case 'verifyKioskAuth': {
+      const branchId = String(params.branchId || params.branch_id || 'B01').trim();
+      const branchRow = await db.prepare("SELECT * FROM branches WHERE branch_id = ?").bind(branchId).first().catch(() => null);
+
+      const targetPin = (branchRow && branchRow.kiosk_pin) ? branchRow.kiosk_pin : (settings.kiosk_pin || '123456');
+      const targetLat = (branchRow && branchRow.lat) ? branchRow.lat : settings.office_lat;
+      const targetLng = (branchRow && branchRow.lng) ? branchRow.lng : settings.office_lng;
+      const targetRadius = (branchRow && branchRow.radius_meters) ? branchRow.radius_meters : (settings.geofence_radius_meters || 200);
+      const targetBranchName = branchRow ? branchRow.branch_name : 'สำนักงานใหญ่';
+
       const kioskPin = String(params.kioskPin || '').trim();
       const lat = params.lat !== undefined && params.lat !== null && params.lat !== '' ? Number(params.lat) : null;
       const lng = params.lng !== undefined && params.lng !== null && params.lng !== '' ? Number(params.lng) : null;
@@ -466,14 +591,14 @@ async function handleAction(db, action, params) {
         if (!kioskPin) {
           return { success: false, message: 'กรุณากรอกรหัส Kiosk PIN' };
         }
-        const isDefaultPin = (kioskPin === String(settings.kiosk_pin || '123456'));
+        const isDefaultPin = (kioskPin === String(targetPin) || kioskPin === String(settings.kiosk_pin || '123456'));
         let isUserMatch = false;
         if (!isDefaultPin) {
           const userMatch = await db.prepare('SELECT id FROM users WHERE password = ?').bind(kioskPin).first().catch(() => null);
           if (userMatch) isUserMatch = true;
         }
         if (!isDefaultPin && !isUserMatch) {
-          return { success: false, message: 'รหัส Kiosk PIN ไม่ถูกต้อง' };
+          return { success: false, message: `รหัส Kiosk PIN ของ ${targetBranchName} ไม่ถูกต้อง` };
         }
       }
 
@@ -482,16 +607,16 @@ async function handleAction(db, action, params) {
         if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
           return { success: false, requireGps: true, message: 'กรุณาเปิดสิทธิ์เข้าถึงพิกัด GPS บนอุปกรณ์ Kiosk' };
         }
-        if (settings.office_lat && settings.office_lng) {
-          distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
-          const maxRadius = settings.geofence_radius_meters || 200;
+        if (targetLat && targetLng) {
+          distanceMeters = calculateDistanceMeters(lat, lng, targetLat, targetLng);
+          const maxRadius = targetRadius || 200;
           if (distanceMeters > maxRadius) {
             return {
               success: false,
               isOutOfRange: true,
               distanceMeters: Math.round(distanceMeters),
               maxRadius: maxRadius,
-              message: `อุปกรณ์ Kiosk อยู่นอกพื้นที่สาขา (${Math.round(distanceMeters)} ม. เกินรัศมี ${maxRadius} ม.)`
+              message: `อุปกรณ์ Kiosk อยู่นอกพื้นที่ ${targetBranchName} (${Math.round(distanceMeters)} ม. เกินรัศมี ${maxRadius} ม.)`
             };
           }
         }
@@ -499,7 +624,9 @@ async function handleAction(db, action, params) {
 
       return {
         success: true,
-        message: 'ยืนยันตัวตนหน้าจอ Kiosk สำเร็จ',
+        branchId: branchRow ? branchRow.branch_id : branchId,
+        branchName: targetBranchName,
+        message: `ยืนยันตัวตนหน้าจอ Kiosk (${targetBranchName}) สำเร็จ`,
         distanceMeters: distanceMeters !== null ? Math.round(distanceMeters) : null
       };
     }
@@ -766,6 +893,9 @@ async function handleAction(db, action, params) {
 
       if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
 
+      // Load branch configuration for this employee
+      const branchCfg = await getEmployeeBranchConfig(db, empId, lat, lng, settings);
+
       // Check Time Window Lock
       const winErr = validateTimeWindow(settings, 'IN', timeStr);
       if (winErr) return { success: false, message: winErr };
@@ -810,39 +940,41 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'คุณได้บันทึกเวลาเข้างานของวันนี้ไปแล้ว (' + existing.clock_in + ')' };
       }
 
-      // Check distance
+      // Check distance against branch
       let distanceMeters = null;
-      if (lat && lng && settings.office_lat && settings.office_lng) {
-        distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
-        if (distanceMeters > settings.geofence_radius_meters && settings.allow_outside_clockin !== 'true') {
+      if (lat && lng && branchCfg.lat && branchCfg.lng) {
+        distanceMeters = calculateDistanceMeters(lat, lng, branchCfg.lat, branchCfg.lng);
+        if (distanceMeters > branchCfg.radiusMeters && settings.allow_outside_clockin !== 'true') {
           return {
             success: false,
-            message: `อยู่นอกพื้นที่สำนักงาน (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${settings.geofence_radius_meters} ม.) ไม่สามารถลงเวลาได้`
+            message: `อยู่นอกพื้นที่ ${branchCfg.branchName} (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${branchCfg.radiusMeters} ม.) ไม่สามารถลงเวลาได้`
           };
         }
       }
 
-      // Calculate Late against work_start_time (09:30) with grace_period_morning_minutes (0)
+      // Calculate Late against branch's workStartTime with graceMinutes
       const isSunday = (dayOfWeekNumber === 0);
-      const diffMinutes = getMinutesDiff(settings.work_start_time, timeStr.substring(0, 5));
-      const lateMinutes = isSunday ? 0 : Math.max(0, diffMinutes - (settings.grace_period_morning_minutes || 0));
+      const diffMinutes = getMinutesDiff(branchCfg.workStartTime, timeStr.substring(0, 5));
+      const lateMinutes = isSunday ? 0 : Math.max(0, diffMinutes - (branchCfg.graceMinutes || 0));
       const status = isSunday ? 'SUNDAY_WORK' : (lateMinutes > 0 ? 'LATE' : 'NORMAL');
 
       if (existing) {
         await db.prepare(`
-          UPDATE time_logs SET clock_in = ?, in_lat = ?, in_lng = ?, in_photo_url = ?, late_minutes = ?, status = ?, remark = ?
+          UPDATE time_logs SET clock_in = ?, in_lat = ?, in_lng = ?, in_photo_url = ?, late_minutes = ?, status = ?, remark = ?, branch_id = ?, branch_name = ?
           WHERE id = ?
-        `).bind(timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, remark || '', existing.id).run();
+        `).bind(timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, remark || '', branchCfg.branchId, branchCfg.branchName, existing.id).run();
       } else {
         await db.prepare(`
-          INSERT INTO time_logs (emp_id, date, clock_in, in_lat, in_lng, in_photo_url, late_minutes, status, remark)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(empId, date, timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, remark || '').run();
+          INSERT INTO time_logs (emp_id, date, clock_in, in_lat, in_lng, in_photo_url, late_minutes, status, remark, branch_id, branch_name)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(empId, date, timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, remark || '', branchCfg.branchId, branchCfg.branchName).run();
       }
 
       return {
         success: true,
-        message: 'บันทึกเวลาเข้างานสำเร็จ',
+        message: `บันทึกเวลาเข้างานสำเร็จ (${branchCfg.branchName})`,
+        branchId: branchCfg.branchId,
+        branchName: branchCfg.branchName,
         clockInTime: timeStr,
         lateMinutes,
         status,
@@ -857,6 +989,9 @@ async function handleAction(db, action, params) {
       const timeStr = curTimeStr;
 
       if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
+
+      // Load branch configuration
+      const branchCfg = await getEmployeeBranchConfig(db, empId, lat, lng, settings);
 
       // Check Time Window Lock
       const winErr = validateTimeWindow(settings, 'BREAK_OUT', timeStr);
@@ -907,14 +1042,14 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'คุณได้บันทึกเลิกงานของวันนี้ไปแล้ว' };
       }
 
-      // Check distance
+      // Check distance against branch
       let distanceMeters = null;
-      if (lat && lng && settings.office_lat && settings.office_lng) {
-        distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
-        if (distanceMeters > settings.geofence_radius_meters && settings.allow_outside_clockin !== 'true') {
+      if (lat && lng && branchCfg.lat && branchCfg.lng) {
+        distanceMeters = calculateDistanceMeters(lat, lng, branchCfg.lat, branchCfg.lng);
+        if (distanceMeters > branchCfg.radiusMeters && settings.allow_outside_clockin !== 'true') {
           return {
             success: false,
-            message: `อยู่นอกพื้นที่สำนักงาน (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${settings.geofence_radius_meters} ม.) ไม่สามารถลงเวลาได้`
+            message: `อยู่นอกพื้นที่ ${branchCfg.branchName} (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${branchCfg.radiusMeters} ม.) ไม่สามารถลงเวลาได้`
           };
         }
       }
@@ -927,7 +1062,7 @@ async function handleAction(db, action, params) {
 
       return {
         success: true,
-        message: 'บันทึกเวลาออกไปพักสำเร็จ (Break OUT)',
+        message: `บันทึกเวลาออกไปพักสำเร็จ (Break OUT - ${branchCfg.branchName})`,
         breakOutTime: timeStr,
         distanceMeters
       };
@@ -940,6 +1075,9 @@ async function handleAction(db, action, params) {
       const timeStr = curTimeStr;
 
       if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
+
+      // Load branch configuration
+      const branchCfg = await getEmployeeBranchConfig(db, empId, lat, lng, settings);
 
       // Check Time Window Lock
       const winErr = validateTimeWindow(settings, 'BREAK_IN', timeStr);
@@ -993,14 +1131,14 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'คุณได้บันทึกเลิกงานของวันนี้ไปแล้ว' };
       }
 
-      // Check distance
+      // Check distance against branch
       let distanceMeters = null;
-      if (lat && lng && settings.office_lat && settings.office_lng) {
-        distanceMeters = calculateDistanceMeters(lat, lng, settings.office_lat, settings.office_lng);
-        if (distanceMeters > settings.geofence_radius_meters && settings.allow_outside_clockin !== 'true') {
+      if (lat && lng && branchCfg.lat && branchCfg.lng) {
+        distanceMeters = calculateDistanceMeters(lat, lng, branchCfg.lat, branchCfg.lng);
+        if (distanceMeters > branchCfg.radiusMeters && settings.allow_outside_clockin !== 'true') {
           return {
             success: false,
-            message: `อยู่นอกพื้นที่สำนักงาน (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${settings.geofence_radius_meters} ม.) ไม่สามารถลงเวลาได้`
+            message: `อยู่นอกพื้นที่ ${branchCfg.branchName} (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${branchCfg.radiusMeters} ม.) ไม่สามารถลงเวลาได้`
           };
         }
       }
@@ -1020,7 +1158,7 @@ async function handleAction(db, action, params) {
 
       return {
         success: true,
-        message: 'บันทึกเวลากลับเข้าทำงานสำเร็จ (Break IN)',
+        message: `บันทึกเวลากลับเข้าทำงานสำเร็จ (Break IN - ${branchCfg.branchName})`,
         breakInTime: timeStr,
         breakMinutes: actualBreakMinutes,
         overbreakMinutes: overBreakMinutes,
@@ -1028,7 +1166,7 @@ async function handleAction(db, action, params) {
       };
     }
 
-    // 7. Clock Out (Single Scan-out handling normal work and automatic OT from 19:00)
+    // 7. Clock Out (Single Scan-out handling normal work and automatic OT from branch otStartTime)
     case 'clockOut': {
       const { empId, lat, lng, photoUrl, qrToken, remark } = params;
       const date = params.date || today;
@@ -1084,13 +1222,46 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'คุณกำลังอยู่ในช่วงพัก (ยังไม่ได้บันทึกกลับเข้าทำงาน Break IN) กรุณาบันทึกเข้าทำงานหลังพักก่อนลงเวลาออกงาน' };
       }
 
+      // Determine branch configuration: if recorded at clock-in, use that branch's settings
+      let effectiveBranchCfg = await getEmployeeBranchConfig(db, empId, lat, lng, settings);
+      if (existing.branch_id) {
+        const recordedBranch = await db.prepare("SELECT * FROM branches WHERE branch_id = ?").bind(existing.branch_id).first().catch(() => null);
+        if (recordedBranch) {
+          effectiveBranchCfg = {
+            branchId: recordedBranch.branch_id,
+            branchName: recordedBranch.branch_name,
+            lat: recordedBranch.lat || effectiveBranchCfg.lat,
+            lng: recordedBranch.lng || effectiveBranchCfg.lng,
+            radiusMeters: recordedBranch.radius_meters || effectiveBranchCfg.radiusMeters,
+            workStartTime: recordedBranch.work_start_time || effectiveBranchCfg.workStartTime,
+            workEndTime: recordedBranch.work_end_time || effectiveBranchCfg.workEndTime,
+            lunchStartTime: recordedBranch.lunch_start_time || effectiveBranchCfg.lunchStartTime,
+            lunchEndTime: recordedBranch.lunch_end_time || effectiveBranchCfg.lunchEndTime,
+            graceMinutes: recordedBranch.grace_minutes != null ? Number(recordedBranch.grace_minutes) : effectiveBranchCfg.graceMinutes,
+            otStartTime: recordedBranch.ot_start_time || recordedBranch.work_end_time || effectiveBranchCfg.otStartTime
+          };
+        }
+      }
+
+      // Check distance against effective branch
+      let distanceMeters = null;
+      if (lat && lng && effectiveBranchCfg.lat && effectiveBranchCfg.lng) {
+        distanceMeters = calculateDistanceMeters(lat, lng, effectiveBranchCfg.lat, effectiveBranchCfg.lng);
+        if (distanceMeters > effectiveBranchCfg.radiusMeters && settings.allow_outside_clockin !== 'true') {
+          return {
+            success: false,
+            message: `อยู่นอกพื้นที่ ${effectiveBranchCfg.branchName} (${distanceMeters} เมตร จากจุดที่กำหนด รัศมีอนุญาตคือ ${effectiveBranchCfg.radiusMeters} ม.) ไม่สามารถลงเวลาได้`
+          };
+        }
+      }
+
       const isSunday = (dayOfWeekNumber === 0);
       const inMinutes = timeToMinutes(existing.clock_in);
       const outMinutes = timeToMinutes(timeStr);
-      const workEndMinutes = timeToMinutes(settings.work_end_time); // 19:00 (1140)
-      const otStartMinutes = timeToMinutes(settings.ot_start_time);   // 19:00 (1140)
-      const lunchStart = timeToMinutes(settings.lunch_start_time);    // 13:00 (780)
-      const lunchEnd = timeToMinutes(settings.lunch_end_time);        // 14:00 (840)
+      const workEndMinutes = timeToMinutes(effectiveBranchCfg.workEndTime);
+      const otStartMinutes = timeToMinutes(effectiveBranchCfg.otStartTime);
+      const lunchStart = timeToMinutes(effectiveBranchCfg.lunchStartTime);
+      const lunchEnd = timeToMinutes(effectiveBranchCfg.lunchEndTime);
 
       let normalMinutes = 0;
       let calculatedOtHours = 0;
@@ -1115,12 +1286,12 @@ async function handleAction(db, action, params) {
         normalMinutes = 0;
       } else {
         // Normal workday (Mon - Sat)
-        // Normal work cut at workEndMinutes (19:00)
+        // Normal work cut at workEndMinutes (branch-specific)
         const cappedEnd = Math.min(outMinutes, workEndMinutes);
         normalMinutes = Math.max(0, cappedEnd - inMinutes);
         normalMinutes = Math.max(0, normalMinutes - breakDeduction);
 
-        // Automatic OT: If Clock Out is after ot_start_time (19:00)
+        // Automatic OT: If Clock Out is after otStartMinutes (branch-specific)
         if (outMinutes > otStartMinutes) {
           const rawOtMinutes = outMinutes - otStartMinutes;
           if (settings.ot_rounding_mode === 'HALF_HOUR') {
@@ -1159,7 +1330,9 @@ async function handleAction(db, action, params) {
 
       return {
         success: true,
-        message: 'บันทึกเวลาออกงานสำเร็จ',
+        message: `บันทึกเวลาออกงานสำเร็จ (${effectiveBranchCfg.branchName})`,
+        branchId: effectiveBranchCfg.branchId,
+        branchName: effectiveBranchCfg.branchName,
         clockOutTime: timeStr,
         workHours: totalWorkHours,
         otHours: calculatedOtHours,

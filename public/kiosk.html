@@ -82,6 +82,7 @@
         <h1 class="text-lg md:text-2xl font-extrabold tracking-tight text-white flex items-center space-x-2">
           <span>PTN Time Attendant</span>
           <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-semibold border border-sky-400/30">KIOSK MODE</span>
+          <span id="kioskBranchBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-400/30">สำนักงานใหญ่</span>
         </h1>
         <p id="kioskOfficeName" class="text-xs md:text-sm text-slate-400 font-medium">บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด</p>
       </div>
@@ -136,7 +137,7 @@
       </div>
 
       <div class="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-        <span>กะงาน: <b class="text-slate-200">09:30 - 19:00</b></span>
+        <span>กะงานสาขา: <b id="kioskShiftText" class="text-slate-200">08:30 - 17:30</b></span>
         <span>ลงเวลาแล้ววันนี้: <b id="kioskClockedCount" class="text-emerald-400 font-bold text-sm">0</b> คน</span>
       </div>
 
@@ -183,6 +184,10 @@
       <span class="sm:hidden">ความปลอดภัย 2 ชั้น</span>
     </div>
     <div class="flex items-center space-x-2 md:space-x-3">
+      <button onclick="switchKioskBranch()" title="เลือก/สลับสาขาเคาน์เตอร์" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs font-semibold border border-sky-500/30 transition flex items-center space-x-1">
+        <i class="fa-solid fa-store"></i>
+        <span id="footerBranchLabel">สาขา: สำนักงานใหญ่</span>
+      </button>
       <button onclick="lockKioskScreen()" title="ล็อกหน้าจอนี้" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-amber-500/30 transition flex items-center space-x-1">
         <i class="fa-solid fa-lock"></i>
         <span class="hidden md:inline">ล็อก Kiosk</span>
@@ -209,7 +214,18 @@
       </div>
       
       <h3 class="text-lg md:text-xl font-extrabold text-white mb-1">ปลดล็อกหน้าจอ Kiosk</h3>
-      <p class="text-xs text-slate-400 mb-4">กรุณาใส่รหัสผ่าน Kiosk PIN 6 หลัก เพื่อเปิดใช้งานหน้าจอที่เคาน์เตอร์สาขา</p>
+      <p class="text-xs text-slate-400 mb-3">กรุณาเลือกสาขาและใส่รหัสผ่าน Kiosk PIN 6 หลัก</p>
+
+      <!-- Branch Selection for this Kiosk Terminal -->
+      <div class="mb-3 text-left">
+        <label class="text-[11px] font-medium text-slate-400 block mb-1">🏢 สาขาของเคาน์เตอร์นี้:</label>
+        <select id="kioskBranchSelect" onchange="onKioskBranchSelectChanged(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-medium">
+          <option value="B01">B01 - สำนักงานใหญ่ (08:30 - 17:30)</option>
+          <option value="B02">B02 - สาขาที่ 2 (หน้าร้าน A) (09:30 - 19:00)</option>
+          <option value="B03">B03 - สาขาที่ 3 (หน้าร้าน B) (10:00 - 20:00)</option>
+          <option value="B04">B04 - สาขาที่ 4 (คลังสินค้า/สำรอง) (09:00 - 18:00)</option>
+        </select>
+      </div>
 
       <!-- GPS Status Check Badge in Auth Modal -->
       <div id="authGpsStatusBadge" class="mb-4 text-[11px] py-1 px-3 rounded-full bg-slate-800 text-slate-300 inline-flex items-center space-x-1.5 border border-slate-700">
@@ -270,9 +286,87 @@
     let kioskLng = null;
     let isGpsResolving = false;
     let lastGpsSuccessTime = 0;
+    let currentKioskBranchId = 'B01';
+    let kioskBranches = [];
 
     const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
     const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+    function initKioskBranch() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const bFromUrl = urlParams.get('branch');
+      if (bFromUrl) {
+        currentKioskBranchId = bFromUrl;
+        localStorage.setItem('ptn_kiosk_branch', bFromUrl);
+      } else {
+        currentKioskBranchId = localStorage.getItem('ptn_kiosk_branch') || 'B01';
+      }
+      const sel = document.getElementById('kioskBranchSelect');
+      if (sel) sel.value = currentKioskBranchId;
+      updateBranchUI();
+    }
+
+    function onKioskBranchSelectChanged(val) {
+      if (val !== currentKioskBranchId) {
+        currentKioskBranchId = val;
+        localStorage.setItem('ptn_kiosk_branch', val);
+        localStorage.removeItem('ptn_kiosk_pin'); // Reset PIN for new branch
+        clearKeypadInput();
+        updateBranchUI();
+      }
+    }
+
+    function switchKioskBranch() {
+      showKioskAuthModal();
+    }
+
+    function updateBranchUI(branchName, shiftHours) {
+      const sel = document.getElementById('kioskBranchSelect');
+      if (sel && sel.value !== currentKioskBranchId) {
+        sel.value = currentKioskBranchId;
+      }
+      let name = branchName;
+      if (!name) {
+        if (sel && sel.selectedIndex >= 0) {
+          name = sel.options[sel.selectedIndex].text.split(' - ')[1]?.split(' (')[0] || 'สำนักงานใหญ่';
+        } else {
+          name = currentKioskBranchId === 'B01' ? 'สำนักงานใหญ่' : `สาขา ${currentKioskBranchId}`;
+        }
+      }
+      const badge = document.getElementById('kioskBranchBadge');
+      if (badge) badge.textContent = name;
+      const fLabel = document.getElementById('footerBranchLabel');
+      if (fLabel) fLabel.textContent = `สาขา: ${name}`;
+      if (shiftHours) {
+        const sText = document.getElementById('kioskShiftText');
+        if (sText) sText.textContent = shiftHours;
+      }
+    }
+
+    async function loadKioskBranches() {
+      try {
+        const res = await fetch('/api?action=getInitialData');
+        const data = await res.json();
+        if (data.success && data.branches && data.branches.length > 0) {
+          kioskBranches = data.branches;
+          const sel = document.getElementById('kioskBranchSelect');
+          if (sel) {
+            sel.innerHTML = '';
+            data.branches.forEach(b => {
+              const opt = document.createElement('option');
+              opt.value = b.branch_id;
+              opt.textContent = `${b.branch_id} - ${b.branch_name} (${b.work_start_time} - ${b.work_end_time})`;
+              sel.appendChild(opt);
+            });
+            sel.value = currentKioskBranchId;
+          }
+          const curr = data.branches.find(b => b.branch_id === currentKioskBranchId);
+          if (curr) {
+            updateBranchUI(curr.branch_name, `${curr.work_start_time} - ${curr.work_end_time}`);
+          }
+        }
+      } catch (e) {}
+    }
 
     function updateClock() {
       const now = new Date();
@@ -348,6 +442,8 @@
     function showKioskAuthModal() {
       currentEnteredPin = '';
       updatePinDots();
+      const sel = document.getElementById('kioskBranchSelect');
+      if (sel) sel.value = currentKioskBranchId;
       document.getElementById('authErrorMessage').classList.add('hidden');
       document.getElementById('kioskAuthModal').classList.remove('hidden');
       requestKioskGps();
@@ -404,6 +500,7 @@
       try {
         const query = new URLSearchParams({
           action: 'verifyKioskAuth',
+          branchId: currentKioskBranchId,
           kioskPin: pin,
           lat: kioskLat !== null ? String(kioskLat) : '',
           lng: kioskLng !== null ? String(kioskLng) : ''
@@ -415,6 +512,7 @@
         if (data.success) {
           // Save valid PIN in device localStorage
           localStorage.setItem('ptn_kiosk_pin', pin);
+          if (data.branchName) updateBranchUI(data.branchName);
           hideKioskAuthModal();
           showQrCardUI();
           fetchKioskToken();
@@ -484,6 +582,7 @@
       try {
         const query = new URLSearchParams({
           action: 'getKioskQrToken',
+          branchId: currentKioskBranchId,
           kioskPin: savedPin,
           lat: kioskLat !== null ? String(kioskLat) : '',
           lng: kioskLng !== null ? String(kioskLng) : ''
@@ -498,6 +597,9 @@
           secondsRemaining = data.secondsLeft || 20;
           document.getElementById('currentTokenLabel').textContent = data.token;
           document.getElementById('kioskClockedCount').textContent = data.clockedTodayCount || 0;
+          if (data.branchName) {
+            updateBranchUI(data.branchName);
+          }
           if (data.officeName) {
             document.getElementById('kioskOfficeName').textContent = data.officeName;
           }
@@ -508,7 +610,7 @@
           badge.classList.remove('hidden');
           badge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold inline-flex items-center space-x-1';
           const distLabel = data.distanceMeters !== null ? ` (ห่าง ${data.distanceMeters} ม.)` : '';
-          document.getElementById('kioskGpsBadgeText').textContent = `GPS สาขา: ปกติ${distLabel}`;
+          document.getElementById('kioskGpsBadgeText').textContent = `GPS ${data.branchName || 'สาขา'}: ปกติ${distLabel}`;
 
         } else {
           // Authentication or GPS failure
@@ -584,8 +686,10 @@
 
     // Boot
     window.addEventListener('DOMContentLoaded', async () => {
+      initKioskBranch();
       updateClock();
       setInterval(updateClock, 1000);
+      loadKioskBranches();
 
       // Check if PIN is already authenticated in this terminal
       const savedPin = localStorage.getItem('ptn_kiosk_pin');

@@ -9,6 +9,7 @@ const API_URL = '/api';
 // Global State
 let currentEmployee = null;
 let employeeList = [];
+let branchList = [];
 let appSettings = {
   office_lat: 13.7278956,
   office_lng: 100.5241234,
@@ -212,6 +213,9 @@ async function loadInitialData() {
         } catch(e) {}
       }
       employeeList = data.employees || [];
+      if (data.branches) {
+        branchList = data.branches;
+      }
       populateEmployeeDropdown();
       updateShiftDisplay();
       applyFeatureToggles();
@@ -223,8 +227,39 @@ async function loadInitialData() {
 
 function updateShiftDisplay() {
   const shiftEl = document.getElementById('shiftTickerText');
+  const lunchEl = document.getElementById('shiftLunchText');
+  const branchBadge = document.getElementById('shiftBranchBadge');
+
+  let targetBranch = null;
+  let isRoaming = false;
+  if (currentEmployee) {
+    if (currentEmployee.allowAllBranches === true || currentEmployee.allow_all_branches === 'true') {
+      isRoaming = true;
+    } else {
+      const bId = currentEmployee.branchId || currentEmployee.branch_id || 'B01';
+      targetBranch = branchList.find(b => b.branch_id === bId);
+    }
+  }
+
+  const startTime = targetBranch ? targetBranch.work_start_time : appSettings.work_start_time;
+  const endTime = targetBranch ? targetBranch.work_end_time : appSettings.work_end_time;
+  const lunchStart = targetBranch ? targetBranch.lunch_start_time : appSettings.lunch_start_time;
+  const lunchEnd = targetBranch ? targetBranch.lunch_end_time : appSettings.lunch_end_time;
+  const branchName = isRoaming ? 'ทุกสาขา (Roaming)' : (targetBranch ? targetBranch.branch_name : (branchList[0]?.branch_name || 'สำนักงานใหญ่'));
+
   if (shiftEl) {
-    shiftEl.textContent = `${appSettings.work_start_time} - ${appSettings.work_end_time}`;
+    shiftEl.textContent = `${startTime} - ${endTime} น.`;
+  }
+  if (lunchEl) {
+    lunchEl.textContent = `🍱 พัก ${lunchStart} - ${lunchEnd} น.`;
+  }
+  if (branchBadge) {
+    branchBadge.textContent = branchName;
+    if (isRoaming) {
+      branchBadge.className = 'text-[11px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full border border-amber-200';
+    } else {
+      branchBadge.className = 'text-[11px] bg-sky-100 text-sky-800 font-semibold px-2 py-0.5 rounded-full border border-sky-200';
+    }
   }
 }
 
@@ -315,8 +350,7 @@ function applyFeatureToggles() {
 
   const clockSub = document.getElementById('liveClockSubtext');
   if (clockSub) {
-    const cutDay = Number(appSettings.cutoff_day) || 25;
-    clockSub.textContent = `ตัดวิกทุกวันที่ ${cutDay}`;
+    clockSub.textContent = 'ระบบพร้อมลงเวลา';
   }
 
   const histCutoff = document.getElementById('historyCutoffLabel');
@@ -468,6 +502,9 @@ function updateHeaderEmployeeView() {
       if (stepStatusIcon) stepStatusIcon.innerHTML = '👉';
     }
   }
+
+  // Refresh dynamic branch/shift display
+  updateShiftDisplay();
 }
 
 // ==============================================================================
