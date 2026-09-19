@@ -45,16 +45,21 @@ input, select, textarea {
 }
 
 .cam-video-mirrored {
-  transform: scaleX(-1);
+  transform: scaleX(-1) translateZ(0);
+  -webkit-transform: scaleX(-1) translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .cam-video-normal {
-  transform: scaleX(1);
+  transform: scaleX(1) translateZ(0);
+  -webkit-transform: scaleX(1) translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .face-guide-oval {
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.48);
-  border: 2.5px dashed rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.42);
   border-radius: 50%;
 }
 

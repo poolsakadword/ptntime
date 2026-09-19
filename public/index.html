@@ -546,16 +546,22 @@
       </div>
 
       <!-- Viewport with Face Oval Guide -->
-      <div class="relative flex-1 flex items-center justify-center overflow-hidden bg-black">
-        <video id="fsVideoPreview" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover cam-video-mirrored"></video>
+      <div class="relative flex-1 flex items-center justify-center overflow-hidden bg-black cursor-pointer" id="camViewportContainer">
+        <!-- Camera Loading Spinner / Placeholder -->
+        <div id="camLoadingSpinner" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 space-y-3 pointer-events-none z-0">
+          <div class="w-10 h-10 border-3 border-white/20 border-t-white rounded-full animate-spin"></div>
+          <span class="text-xs md:text-sm font-medium text-slate-300 tracking-wide">กำลังเชื่อมต่อกล้อง...</span>
+        </div>
+
+        <video id="fsVideoPreview" autoplay playsinline webkit-playsinline muted class="absolute inset-0 w-full h-full object-cover cam-video-mirrored"></video>
         
-        <!-- Subtle Oval Face Guide with AI Detection Cues -->
-        <div id="camFaceOval" class="pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-2 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300">
-          <span id="camGuideTopHint" class="text-white text-xs font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-3.5 py-1.5 rounded-full backdrop-blur-md transition-all duration-200">
-            🔍 กำลังตรวจจับใบหน้า...
+        <!-- Enlarged Oval Face Guide with AI Detection Cues -->
+        <div id="camFaceOval" class="pointer-events-none relative z-10 w-[295px] h-[400px] sm:w-[335px] sm:h-[450px] md:w-[375px] md:h-[490px] rounded-[50%] border-2.5 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300">
+          <span id="camGuideTopHint" class="text-white text-xs md:text-sm font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md">
+            🔍 ส่องใบหน้าให้อยู่ในกรอบ...
           </span>
-          <span id="camGuideBottomHint" class="text-white/80 text-[11px] font-bold drop-shadow bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm">
-            วางใบหน้าให้เต็มกรอบวงรี
+          <span id="camGuideBottomHint" class="text-white/90 text-xs font-bold drop-shadow bg-black/60 border border-white/20 px-4 py-1 rounded-full backdrop-blur-sm">
+            วางใบหน้าให้พอดีกับกรอบ
           </span>
         </div>
 

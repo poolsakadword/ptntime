@@ -752,6 +752,8 @@ function setFaceDetectionUIState(found, isFallback = false) {
   const shutterBtn = document.getElementById('btnShutterTrigger');
   const shutterHint = document.getElementById('camShutterHintText');
 
+  const OVAL_SIZE = 'w-[295px] h-[400px] sm:w-[335px] sm:h-[450px] md:w-[375px] md:h-[490px]';
+
   if (found) {
     if (shutterBtn) {
       shutterBtn.disabled = false;
@@ -761,10 +763,10 @@ function setFaceDetectionUIState(found, isFallback = false) {
 
     if (isFallback) {
       if (oval) {
-        oval.className = 'pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-2 border-dashed border-sky-400 flex flex-col items-center justify-between py-6 transition-all duration-300';
+        oval.className = `pointer-events-none relative z-10 ${OVAL_SIZE} rounded-[50%] border-3 border-dashed border-sky-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300`;
       }
       if (topHint) {
-        topHint.className = 'text-white text-xs font-bold drop-shadow bg-sky-600/90 border border-sky-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md';
+        topHint.className = 'text-white text-xs md:text-sm font-bold drop-shadow bg-sky-600/90 border border-sky-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md';
         topHint.innerHTML = '📸 ปลดล็อกชัตเตอร์ (โหมดสำรอง)';
       }
       if (shutterHint) {
@@ -773,10 +775,10 @@ function setFaceDetectionUIState(found, isFallback = false) {
       }
     } else {
       if (oval) {
-        oval.className = 'pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-4 border-solid border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.85)] flex flex-col items-center justify-between py-6 transition-all duration-300 animate-pulse';
+        oval.className = `pointer-events-none relative z-10 ${OVAL_SIZE} rounded-[50%] border-4 border-solid border-emerald-400 shadow-[0_0_35px_rgba(52,211,153,0.85)] face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300 animate-pulse`;
       }
       if (topHint) {
-        topHint.className = 'text-white text-xs font-bold drop-shadow bg-emerald-600/90 border border-emerald-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-lg';
+        topHint.className = 'text-white text-xs md:text-sm font-bold drop-shadow bg-emerald-600/90 border border-emerald-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-lg';
         topHint.innerHTML = '✅ ตรวจพบใบหน้าเรียบร้อย';
       }
       if (shutterHint) {
@@ -786,10 +788,10 @@ function setFaceDetectionUIState(found, isFallback = false) {
     }
   } else {
     if (oval) {
-      oval.className = 'pointer-events-none relative z-10 w-[250px] h-[320px] md:w-[290px] md:h-[370px] rounded-[50%] border-2 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300';
+      oval.className = `pointer-events-none relative z-10 ${OVAL_SIZE} rounded-[50%] border-2.5 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300`;
     }
     if (topHint) {
-      topHint.className = 'text-white text-xs font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-3.5 py-1.5 rounded-full backdrop-blur-md transition-all duration-200';
+      topHint.className = 'text-white text-xs md:text-sm font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md';
       topHint.innerHTML = '🔍 ส่องใบหน้าให้อยู่ในกรอบ...';
     }
     if (shutterBtn) {
@@ -817,7 +819,16 @@ function startFaceDetectionLoop() {
   if (!video) return;
 
   const runDetection = async () => {
-    if (!fsCameraStream || video.paused || video.ended) {
+    if (!fsCameraStream || video.ended) {
+      faceDetectionTimer = setTimeout(runDetection, 250);
+      return;
+    }
+
+    if (video.paused) {
+      try {
+        await video.play();
+        document.getElementById('camLoadingSpinner')?.classList.add('hidden');
+      } catch(e) {}
       faceDetectionTimer = setTimeout(runDetection, 250);
       return;
     }
@@ -949,6 +960,23 @@ async function openFullscreenCamera(type, qrToken) {
   isFaceDetectionFallbackActive = false;
 
   modal?.classList.remove('hidden');
+
+  // Add click/tap to resume video playback if mobile browser delayed autoplay
+  const viewport = document.getElementById('camViewportContainer');
+  if (viewport && !viewport._hasPlayListener) {
+    viewport._hasPlayListener = true;
+    const resumePlay = () => {
+      const vid = document.getElementById('fsVideoPreview');
+      if (vid && vid.paused && fsCameraStream) {
+        vid.play().then(() => {
+          document.getElementById('camLoadingSpinner')?.classList.add('hidden');
+        }).catch(() => {});
+      }
+    };
+    viewport.addEventListener('click', resumePlay);
+    viewport.addEventListener('touchstart', resumePlay, { passive: true });
+  }
+
   await initFullscreenCameraStream();
 
   // Setup Detection or Direct Unlock based on settings
@@ -968,7 +996,10 @@ async function openFullscreenCamera(type, qrToken) {
 
 async function initFullscreenCameraStream() {
   const video = document.getElementById('fsVideoPreview');
+  const spinner = document.getElementById('camLoadingSpinner');
   if (!video) return;
+
+  if (spinner) spinner.classList.remove('hidden');
 
   try {
     if (fsCameraStream) {
@@ -980,22 +1011,59 @@ async function initFullscreenCameraStream() {
     try { video.pause(); } catch(e) {}
     video.srcObject = null;
 
-    const constraints = {
+    // Multi-tier constraints fallback for broad device/browser compatibility
+    const constraintsTier1 = {
       video: {
-        facingMode: currentCameraFacing,
+        facingMode: currentCameraFacing ? { ideal: currentCameraFacing } : 'user',
         width: { ideal: 1280 },
         height: { ideal: 720 }
       },
       audio: false
     };
 
-    fsCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = fsCameraStream;
+    let stream = null;
     try {
-      await video.play();
-    } catch(playErr) {
-      console.warn('Video play note:', playErr);
+      stream = await navigator.mediaDevices.getUserMedia(constraintsTier1);
+    } catch (e1) {
+      console.warn('Camera constraints Tier 1 note:', e1);
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: currentCameraFacing ? { ideal: currentCameraFacing } : 'user' },
+          audio: false
+        });
+      } catch (e2) {
+        console.warn('Camera constraints Tier 2 note:', e2);
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
     }
+
+    fsCameraStream = stream;
+
+    // Critical DOM properties for iOS Safari / Android WebKit to render video stream inline
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('muted', 'true');
+    video.setAttribute('autoplay', 'true');
+
+    video.srcObject = fsCameraStream;
+
+    // Trigger video playback and hide loading spinner
+    const startPlayback = async () => {
+      try {
+        await video.play();
+        if (spinner) spinner.classList.add('hidden');
+      } catch (playErr) {
+        console.warn('Video playback deferred by browser:', playErr);
+      }
+    };
+
+    video.onloadedmetadata = startPlayback;
+    video.oncanplay = startPlayback;
+    video.onloadeddata = startPlayback;
+    startPlayback();
 
     if (currentCameraFacing === 'user') {
       video.classList.add('cam-video-mirrored');
@@ -1006,11 +1074,12 @@ async function initFullscreenCameraStream() {
     }
   } catch (err) {
     console.error('Camera access error:', err);
+    if (spinner) spinner.classList.add('hidden');
     closeFullscreenCamera();
     Swal.fire({
       icon: 'warning',
       title: 'ไม่สามารถเปิดกล้องได้',
-      text: 'กรุณาอนุญาตให้เบราว์เซอร์เข้าถึงกล้องหน้าเพื่อถ่ายรูปเซลฟี่ยืนยันตัวตน'
+      text: 'กรุณาอนุญาตให้เบราว์เซอร์เข้าถึงกล้องหน้า และตรวจสอบว่าไม่มีแอปอื่นเปิดใช้งานกล้องอยู่'
     });
   }
 }
@@ -1025,6 +1094,9 @@ function closeFullscreenCamera() {
 
   const modal = document.getElementById('modalCameraFullscreen');
   modal?.classList.add('hidden');
+
+  const spinner = document.getElementById('camLoadingSpinner');
+  if (spinner) spinner.classList.add('hidden');
 
   const video = document.getElementById('fsVideoPreview');
   if (video) {
@@ -1265,15 +1337,21 @@ function openQrScannerModal(type) {
       { facingMode: "environment" },
       { fps: 10, qrbox: { width: 220, height: 220 } },
       (decodedText) => {
-        // Success callback
         html5QrScannerInstance.stop().then(() => {
           closeQrScannerModal();
           if (pendingScanType === 'UNLOCK') {
             submitScanMasterQrUnlock(decodedText);
           } else {
-            // Seamlessly open Fullscreen Camera to take selfie!
-            openFullscreenCamera(pendingScanType, decodedText);
+            // Small pause ensures phone camera hardware releases back camera before opening front camera
+            setTimeout(() => {
+              openFullscreenCamera(pendingScanType, decodedText);
+            }, 250);
           }
+        }).catch(() => {
+          closeQrScannerModal();
+          setTimeout(() => {
+            openFullscreenCamera(pendingScanType, decodedText);
+          }, 250);
         });
       },
       (error) => {
