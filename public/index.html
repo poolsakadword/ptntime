@@ -751,9 +751,36 @@
       </div>
     </div>
 
+    <!-- MAINTENANCE MODE SCREEN (Shown when system_maintenance_mode is true) -->
+    <div id="maintenanceScreen" class="hidden fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white">
+      <div class="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 text-slate-800 shadow-2xl space-y-6 animate-fade-in border border-slate-100">
+        <div class="w-20 h-20 mx-auto rounded-3xl bg-rose-50 text-rose-600 flex items-center justify-center text-4xl shadow-inner border border-rose-200">
+          🛠️
+        </div>
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-bold">
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            อยู่ระหว่างปรับปรุงระบบ
+          </div>
+          <h2 class="text-xl md:text-2xl font-black text-slate-900">ระบบปิดปรับปรุงชั่วคราว</h2>
+          <p id="maintenanceMessageDisplay" class="text-slate-600 text-sm md:text-base font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left">
+            ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก
+          </p>
+        </div>
+        <div class="space-y-2.5 pt-2">
+          <button type="button" onclick="location.reload()" class="w-full py-3 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold rounded-2xl shadow-md transition flex items-center justify-center gap-2 text-sm">
+            <span>🔄</span> โหลดหน้าเว็บใหม่อีกครั้ง
+          </button>
+          <button type="button" onclick="promptAdminMaintenanceBypass()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold rounded-2xl text-xs transition flex items-center justify-center gap-2">
+            <span>🔑</span> ล็อกอินผู้ดูแลระบบ (Admin / Supervisor)
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=7.8"></script>
 </body>
 </html>

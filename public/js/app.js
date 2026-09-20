@@ -44,7 +44,9 @@ let appSettings = {
   leave_type_sick_no_cert: 'true',
   leave_type_business: 'false',
   leave_type_annual: 'false',
-  leave_type_without_pay: 'false'
+  leave_type_without_pay: 'false',
+  system_maintenance_mode: 'false',
+  system_maintenance_message: 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก'
 };
 let currentLocation = null;
 let currentDistanceMeters = null;
@@ -136,6 +138,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   updateShiftDisplay();
   applyFeatureToggles();
   renderLeaveTypeOptions();
+  checkMaintenanceMode();
   if (appSettings.break_tracking_mode === 'BREAK_PUNCH') {
     document.getElementById('containerStandardPunch')?.classList.add('hidden');
     document.getElementById('containerBreakPunch')?.classList.remove('hidden');
@@ -231,6 +234,7 @@ async function loadInitialData() {
       populateEmployeeDropdown();
       updateHeaderEmployeeView();
       applyFeatureToggles();
+      checkMaintenanceMode();
 
       // Recalculate GPS location for this employee's branch
       if (currentLocation) {
@@ -240,6 +244,151 @@ async function loadInitialData() {
   } catch (e) {
     console.warn('Backend API connection note:', e);
   }
+}
+
+// ==============================================================================
+// MAINTENANCE MODE CONTROLLERS
+// ==============================================================================
+function checkMaintenanceMode() {
+  const isMaint = appSettings && (appSettings.system_maintenance_mode === 'true' || appSettings.system_maintenance_mode === true);
+  const isBypassed = sessionStorage.getItem('ptn_admin_maintenance_bypass') === 'true';
+  const maintScreen = document.getElementById('maintenanceScreen');
+  const msgEl = document.getElementById('maintenanceMessageDisplay');
+
+  if (msgEl && appSettings && appSettings.system_maintenance_message) {
+    msgEl.textContent = appSettings.system_maintenance_message;
+  }
+
+  if (isMaint && !isBypassed) {
+    if (maintScreen) maintScreen.classList.remove('hidden');
+    removeAdminMaintenanceBanner();
+  } else {
+    if (maintScreen) maintScreen.classList.add('hidden');
+    if (isMaint && isBypassed) {
+      showAdminMaintenanceBanner();
+    } else {
+      removeAdminMaintenanceBanner();
+    }
+  }
+}
+
+function showAdminMaintenanceBanner() {
+  let banner = document.getElementById('adminMaintenanceBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'adminMaintenanceBanner';
+    banner.className = 'w-full bg-rose-600 text-white text-xs font-bold py-2 px-4 flex items-center justify-between shadow-md z-40 sticky top-0';
+    banner.innerHTML = `
+      <div class="flex items-center gap-2">
+        <span class="animate-pulse">⚠️</span>
+        <span>โหมดปิดปรับปรุงระบบทำงานอยู่ (พนักงานทั่วไปจะไม่สามารถใช้งานได้)</span>
+      </div>
+      <button onclick="exitAdminMaintenanceBypass()" class="px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-[11px] font-semibold transition active:scale-95">
+        ออกจากโหมดผู้ดูแล
+      </button>
+    `;
+    const header = document.querySelector('header');
+    if (header && header.parentNode) {
+      header.parentNode.insertBefore(banner, header);
+    } else {
+      document.body.prepend(banner);
+    }
+  }
+}
+
+function removeAdminMaintenanceBanner() {
+  const banner = document.getElementById('adminMaintenanceBanner');
+  if (banner) banner.remove();
+}
+
+function exitAdminMaintenanceBypass() {
+  sessionStorage.removeItem('ptn_admin_maintenance_bypass');
+  sessionStorage.removeItem('ptn_admin_user');
+  checkMaintenanceMode();
+}
+
+async function promptAdminMaintenanceBypass() {
+  const { value: formValues } = await Swal.fire({
+    title: '🔑 ล็อกอินผู้ดูแลระบบ (Admin / Supervisor)',
+    html: `
+      <div class="space-y-3 text-left">
+        <div>
+          <label class="text-xs font-bold text-slate-700">ชื่อผู้ใช้งาน (Username):</label>
+          <input id="swalAdminUser" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none mt-1" value="admin">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-700">รหัสผ่าน (Password):</label>
+          <input id="swalAdminPass" type="password" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none mt-1" placeholder="รหัสผ่านผู้ดูแลระบบ">
+        </div>
+      </div>
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'เข้าสู่ระบบ',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#0284c7',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const u = document.getElementById('swalAdminUser').value.trim();
+      const p = document.getElementById('swalAdminPass').value.trim();
+      if (!u || !p) {
+        Swal.showValidationMessage('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+        return false;
+      }
+      return { u, p };
+    }
+  });
+
+  if (!formValues) return;
+
+  try {
+    Swal.fire({ title: 'กำลังตรวจสอบสิทธิ์...', didOpen: () => Swal.showLoading() });
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'supervisorLogin',
+        username: formValues.u,
+        password: formValues.p
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      sessionStorage.setItem('ptn_admin_maintenance_bypass', 'true');
+      sessionStorage.setItem('ptn_admin_user', data.user ? data.user.username : formValues.u);
+      checkMaintenanceMode();
+      Swal.fire({
+        icon: 'success',
+        title: 'ยืนยันสิทธิ์สำเร็จ!',
+        text: 'คุณสามารถเข้าใช้งานและทดสอบระบบได้ตามปกติในระหว่างปิดปรับปรุง',
+        timer: 1800,
+        showConfirmButton: false
+      });
+    } else {
+      Swal.fire('เข้าสู่ระบบไม่สำเร็จ', data.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+function handleMaintenanceResponse(data) {
+  if (data && data.maintenance) {
+    if (data.settings) {
+      appSettings = { ...appSettings, ...data.settings };
+      try {
+        localStorage.setItem('ptn_app_settings', JSON.stringify(appSettings));
+      } catch(e) {}
+    }
+    checkMaintenanceMode();
+    Swal.fire({
+      icon: 'warning',
+      title: 'ระบบปิดปรับปรุงชั่วคราว',
+      text: data.message || 'อยู่ระหว่างปิดปรับปรุงระบบ'
+    });
+    return true;
+  }
+  return false;
 }
 
 function getCurrentEmployeeTargetBranch() {
@@ -1752,6 +1901,7 @@ async function submitClockWithPhoto(type, qrToken, photoUrl) {
       loadTodayStatus();
       loadAdvanceEligibility();
     } else {
+      if (handleMaintenanceResponse(data)) return;
       Swal.fire('ไม่สามารถลงเวลาได้', data.message, 'error');
     }
   } catch(e) {
@@ -1779,6 +1929,7 @@ async function loadTodayStatus() {
         try {
           localStorage.setItem('ptn_app_settings', JSON.stringify(appSettings));
         } catch(e) {}
+        checkMaintenanceMode();
       }
 
       const log = data.log;
@@ -2210,6 +2361,7 @@ async function submitAdvanceRequest() {
       loadAdvanceEligibility();
       switchSubTab('status');
     } else {
+      if (handleMaintenanceResponse(data)) return;
       Swal.fire('ไม่สามารถยื่นขอเบิกเงินได้', data.message, 'error');
     }
   } catch(e) {
@@ -2385,6 +2537,7 @@ async function submitLeaveRequest() {
       if (fileInput) fileInput.value = '';
       switchSubTab('status');
     } else {
+      if (handleMaintenanceResponse(data)) return;
       Swal.fire('ไม่สามารถส่งคำขอได้', data.message, 'error');
     }
   } catch(e) {
@@ -2429,6 +2582,7 @@ async function submitOtRequest() {
       document.getElementById('otReason').value = '';
       switchSubTab('status');
     } else {
+      if (handleMaintenanceResponse(data)) return;
       Swal.fire('ไม่สามารถส่งคำขอได้', data.message, 'error');
     }
   } catch(e) {
@@ -2576,6 +2730,7 @@ async function cancelMyRequest(type, id) {
       loadAdvanceEligibility();
       if (typeof loadEmployeeHistory === 'function') loadEmployeeHistory();
     } else {
+      if (handleMaintenanceResponse(data)) return;
       Swal.fire('เกิดข้อผิดพลาด', data.message || 'ไม่สามารถยกเลิกคำขอได้', 'error');
     }
   } catch(e) {

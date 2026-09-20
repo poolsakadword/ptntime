@@ -330,7 +330,9 @@ async function getSettings(db) {
     window_out_end: '23:59',
     enable_kiosk_lock: 'true',
     kiosk_pin: '123456',
-    kiosk_require_geofence: 'true'
+    kiosk_require_geofence: 'true',
+    system_maintenance_mode: 'false',
+    system_maintenance_message: 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก'
   };
 
   const map = { ...defaults };
@@ -437,6 +439,28 @@ export async function onRequest(context) {
 
 async function handleAction(db, action, params) {
   const settings = await getSettings(db);
+
+  // Check Maintenance Mode (Blocks employee actions during maintenance)
+  if (settings.system_maintenance_mode === 'true') {
+    const supervisorActions = [
+      'getInitialData',
+      'supervisorLogin',
+      'getSupervisorDashboard',
+      'handleApproval',
+      'saveSettings',
+      'resetDeviceLock',
+      'getMasterUnlockToken',
+      'getBranches'
+    ];
+    if (!supervisorActions.includes(action)) {
+      return {
+        success: false,
+        maintenance: true,
+        message: settings.system_maintenance_message || 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก'
+      };
+    }
+  }
+
   const nowUtc = new Date();
   const bangkokTime = new Date(nowUtc.getTime() + (7 * 3600 * 1000));
   const today = bangkokTime.toISOString().substring(0, 10);
