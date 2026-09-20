@@ -1643,6 +1643,17 @@ async function handleAction(db, action, params) {
     // 14. Handle Approval (Leave, OT, Advance)
     case 'handleApproval': {
       const { type, id, decision, approverId, rejectionReason } = params;
+      if (decision === 'DELETE') {
+        if (type === 'leave') {
+          await db.prepare('DELETE FROM leave_requests WHERE id = ?').bind(id).run();
+        } else if (type === 'ot') {
+          await db.prepare('DELETE FROM ot_requests WHERE id = ?').bind(id).run();
+        } else if (type === 'advance') {
+          await db.prepare('DELETE FROM advance_requests WHERE id = ?').bind(id).run();
+        }
+        return { success: true, message: `ลบคำขอเรียบร้อยแล้ว` };
+      }
+
       const status = decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
       const now = new Date().toISOString();
 
@@ -1667,6 +1678,31 @@ async function handleAction(db, action, params) {
       }
 
       return { success: true, message: `ดำเนินการ ${decision === 'APPROVE' ? 'อนุมัติ' : 'ปฏิเสธ'} เรียบร้อยแล้ว` };
+    }
+
+    // 14.1 Cancel My Request (Employee self-service cancellation for PENDING requests)
+    case 'cancelMyRequest': {
+      const { empId, type, id } = params;
+      if (!empId || !type || !id) {
+        return { success: false, message: 'ข้อมูลไม่ครบถ้วน' };
+      }
+
+      let res;
+      if (type === 'leave') {
+        res = await db.prepare('DELETE FROM leave_requests WHERE id = ? AND emp_id = ? AND status = "PENDING"').bind(id, empId).run();
+      } else if (type === 'ot') {
+        res = await db.prepare('DELETE FROM ot_requests WHERE id = ? AND emp_id = ? AND status = "PENDING"').bind(id, empId).run();
+      } else if (type === 'advance') {
+        res = await db.prepare('DELETE FROM advance_requests WHERE id = ? AND emp_id = ? AND status = "PENDING"').bind(id, empId).run();
+      } else {
+        return { success: false, message: 'ประเภทคำขอไม่ถูกต้อง' };
+      }
+
+      if (res && res.meta && res.meta.changes === 0) {
+        return { success: false, message: 'ไม่สามารถยกเลิกคำขอนี้ได้ (อาจได้รับการอนุมัติแล้วหรือไม่มีอยู่ในระบบ)' };
+      }
+
+      return { success: true, message: 'ยกเลิกคำขอเรียบร้อยแล้ว' };
     }
 
     // 15. Save Settings

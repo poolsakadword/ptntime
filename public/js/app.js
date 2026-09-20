@@ -2464,11 +2464,19 @@ async function loadMyRequests() {
       advances.forEach(ad => {
         const badgeColor = ad.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (ad.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-900 border-amber-200');
         const badgeText = ad.status === 'APPROVED' ? '✓ อนุมัติแล้ว' : (ad.status === 'REJECTED' ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
+        const cancelBtn = ad.status === 'PENDING' ? `
+          <button onclick="cancelMyRequest('advance', ${ad.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-1 transition">
+            <i class="fa-solid fa-trash-can text-[11px]"></i> ยกเลิกคำขอ
+          </button>
+        ` : '';
         html += `
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
               <span class="font-extrabold text-slate-800 text-sm">💵 ขอเบิกเงิน: ${ad.amount} บาท</span>
-              <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
+                ${cancelBtn}
+              </div>
             </div>
             <div class="text-slate-600 text-xs font-medium">วันที่ขอ: ${ad.request_date} (วันทำงาน ${ad.days_worked} วัน)</div>
             ${ad.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${ad.reason}</div>` : ''}
@@ -2479,11 +2487,19 @@ async function loadMyRequests() {
       leaves.forEach(lv => {
         const badgeColor = lv.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (lv.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-900 border-amber-200');
         const badgeText = lv.status === 'APPROVED' ? '✓ อนุมัติแล้ว' : (lv.status === 'REJECTED' ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
+        const cancelBtn = lv.status === 'PENDING' ? `
+          <button onclick="cancelMyRequest('leave', ${lv.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-1 transition">
+            <i class="fa-solid fa-trash-can text-[11px]"></i> ยกเลิกคำขอ
+          </button>
+        ` : '';
         html += `
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
               <span class="font-extrabold text-slate-800 text-sm">🏖️ ขอลางาน: ${LEAVE_TYPE_LABELS[lv.leave_type] || lv.leave_type}</span>
-              <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
+                ${cancelBtn}
+              </div>
             </div>
             <div class="text-slate-600 text-xs font-medium">วันที่: ${lv.start_date} ถึง ${lv.end_date} (${lv.days_count} วัน)</div>
             ${lv.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${lv.reason}</div>` : ''}
@@ -2494,11 +2510,19 @@ async function loadMyRequests() {
       ots.forEach(ot => {
         const badgeColor = ot.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (ot.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-900 border-amber-200');
         const badgeText = ot.status === 'APPROVED' ? '✓ อนุมัติแล้ว' : (ot.status === 'REJECTED' ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
+        const cancelBtn = ot.status === 'PENDING' ? `
+          <button onclick="cancelMyRequest('ot', ${ot.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-1 transition">
+            <i class="fa-solid fa-trash-can text-[11px]"></i> ยกเลิกคำขอ
+          </button>
+        ` : '';
         html += `
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
               <span class="font-extrabold text-slate-800 text-sm">⏱️ ขอทำ OT (${ot.ot_type}x)</span>
-              <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
+                ${cancelBtn}
+              </div>
             </div>
             <div class="text-slate-600 text-xs font-medium">วันที่: ${ot.date} — ขอ: ${ot.planned_hours} ชม. (จริง: ${ot.actual_hours || 0} ชม.)</div>
             ${ot.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${ot.reason}</div>` : ''}
@@ -2510,6 +2534,52 @@ async function loadMyRequests() {
     }
   } catch(e) {
     if (container) container.innerHTML = '<div class="text-center py-4 text-rose-500">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+async function cancelMyRequest(type, id) {
+  if (!currentEmployee) return;
+  const typeText = type === 'advance' ? 'เบิกเงินล่วงหน้า' : (type === 'leave' ? 'ลางาน' : 'ทำ OT');
+  const confirmResult = await Swal.fire({
+    title: `ยกเลิกคำขอ${typeText}?`,
+    text: 'คุณต้องการยกเลิกคำขอนี้ใช่หรือไม่ รายการจะถูกลบออกจากระบบทันที',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#e11d48',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'ใช่, ยกเลิกคำขอ',
+    cancelButtonText: 'ไม่'
+  });
+
+  if (!confirmResult.isConfirmed) return;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'cancelMyRequest',
+        empId: currentEmployee.empId,
+        type,
+        id
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      Swal.fire({
+        icon: 'success',
+        title: data.message || 'ยกเลิกคำขอเรียบร้อยแล้ว',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      loadMyRequests();
+      loadAdvanceEligibility();
+      if (typeof loadEmployeeHistory === 'function') loadEmployeeHistory();
+    } else {
+      Swal.fire('เกิดข้อผิดพลาด', data.message || 'ไม่สามารถยกเลิกคำขอได้', 'error');
+    }
+  } catch(e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
   }
 }
 
@@ -2605,6 +2675,9 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
           <button onclick="approveReject('advance', ${ad.id}, 'REJECT')" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
             ✕ ไม่อนุมัติ
           </button>
+          <button onclick="approveReject('advance', ${ad.id}, 'DELETE')" class="py-2 px-3 bg-slate-100 hover:bg-rose-100 active:scale-95 text-slate-500 hover:text-rose-600 rounded-xl font-bold text-xs border border-slate-200 transition" title="ลบคำขอนี้ออกจากระบบ">
+            <i class="fa-solid fa-trash-can"></i> ลบ
+          </button>
         </div>
       </div>
     `;
@@ -2634,6 +2707,9 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
           <button onclick="approveReject('leave', ${lv.id}, 'REJECT')" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
             ✕ ไม่อนุมัติ
           </button>
+          <button onclick="approveReject('leave', ${lv.id}, 'DELETE')" class="py-2 px-3 bg-slate-100 hover:bg-rose-100 active:scale-95 text-slate-500 hover:text-rose-600 rounded-xl font-bold text-xs border border-slate-200 transition" title="ลบคำขอนี้ออกจากระบบ">
+            <i class="fa-solid fa-trash-can"></i> ลบ
+          </button>
         </div>
       </div>
     `;
@@ -2656,6 +2732,9 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
           </button>
           <button onclick="approveReject('ot', ${ot.id}, 'REJECT')" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
             ✕ ไม่อนุมัติ
+          </button>
+          <button onclick="approveReject('ot', ${ot.id}, 'DELETE')" class="py-2 px-3 bg-slate-100 hover:bg-rose-100 active:scale-95 text-slate-500 hover:text-rose-600 rounded-xl font-bold text-xs border border-slate-200 transition" title="ลบคำขอนี้ออกจากระบบ">
+            <i class="fa-solid fa-trash-can"></i> ลบ
           </button>
         </div>
       </div>
@@ -2721,6 +2800,19 @@ function renderSupervisorTodayLogs(logs) {
 }
 
 async function approveReject(type, id, decision) {
+  const actionText = decision === 'APPROVE' ? 'อนุมัติ' : (decision === 'DELETE' ? 'ลบคำขอ' : 'ไม่อนุมัติ');
+  const confirmRes = await Swal.fire({
+    title: `ยืนยัน${actionText}?`,
+    text: decision === 'DELETE' ? 'คำขอนี้จะถูกลบออกจากระบบอย่างถาวร' : `คุณต้องการ${actionText}คำขอนี้ใช่หรือไม่`,
+    icon: decision === 'DELETE' ? 'warning' : 'question',
+    showCancelButton: true,
+    confirmButtonColor: decision === 'DELETE' ? '#e11d48' : (decision === 'APPROVE' ? '#059669' : '#e11d48'),
+    cancelButtonColor: '#64748b',
+    confirmButtonText: `ใช่, ${actionText}`,
+    cancelButtonText: 'ยกเลิก'
+  });
+  if (!confirmRes.isConfirmed) return;
+
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
@@ -2742,6 +2834,8 @@ async function approveReject(type, id, decision) {
         showConfirmButton: false
       });
       loadSupervisorDashboard();
+    } else {
+      Swal.fire('เกิดข้อผิดพลาด', data.message || 'ดำเนินการไม่สำเร็จ', 'error');
     }
   } catch(e) {
     Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
