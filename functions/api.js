@@ -666,22 +666,27 @@ async function handleAction(db, action, params) {
       if (!emp) return { success: false, message: 'ไม่พบรหัสพนักงานนี้ในระบบ' };
       if (emp.status === 'Resigned') return { success: false, message: 'พนักงานรหัสนี้พ้นสภาพการเป็นพนักงานแล้ว (ลาออก)' };
 
-      if (pinOrPhone) {
-        const last4 = (emp.citizen_id || '').slice(-4);
-        const fullCitizen = (emp.citizen_id || '').replace(/[^0-9]/g, '');
-        const phone = (emp.phone || '').replace(/[^0-9]/g, '');
-        const cleanInput = pinOrPhone.replace(/[^0-9]/g, '');
+      if (!pinOrPhone) {
+        return { success: false, message: 'กรุณากรอกรหัสยืนยันตัวตน (เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์)' };
+      }
 
-        const matched =
-          cleanInput === '1234' ||
-          cleanInput === last4 ||
-          cleanInput === fullCitizen ||
-          cleanInput === phone ||
-          pinOrPhone === 'admin';
+      const cleanInput = pinOrPhone.replace(/[^0-9]/g, '');
+      if (cleanInput === '1234') {
+        return { success: false, message: 'รหัส 1234 ถูกยกเลิกแล้ว กรุณากรอกเลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์' };
+      }
 
-        if (!matched) {
-          return { success: false, message: 'รหัสยืนยันตัวตน (เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์) ไม่ถูกต้อง' };
-        }
+      const last4 = (emp.citizen_id || '').slice(-4);
+      const fullCitizen = (emp.citizen_id || '').replace(/[^0-9]/g, '');
+      const phone = (emp.phone || '').replace(/[^0-9]/g, '');
+
+      const matched =
+        (cleanInput && cleanInput === last4) ||
+        (cleanInput && cleanInput === fullCitizen) ||
+        (cleanInput && cleanInput === phone) ||
+        pinOrPhone === 'admin';
+
+      if (!matched) {
+        return { success: false, message: 'รหัสยืนยันตัวตน (เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์) ไม่ถูกต้อง' };
       }
 
       return {
@@ -1838,6 +1843,29 @@ async function handleAction(db, action, params) {
 
       const releaseModeSetting = await db.prepare('SELECT value FROM attendance_settings WHERE key = "payslip_release_mode"').first().catch(() => null);
       const releaseMode = releaseModeSetting?.value || 'CLOSED_PERIODS_ONLY';
+
+      // 1.1 Validate PIN (Disallow '1234', require last 4 digits of citizen ID or phone)
+      const pin = params.pin ? String(params.pin).trim() : null;
+      if (pin) {
+        const cleanPin = pin.replace(/[^0-9]/g, '');
+        if (cleanPin === '1234') {
+          return { success: false, message: 'รหัส 1234 ถูกยกเลิกแล้ว กรุณากรอกเลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์' };
+        }
+        const empRow = await db.prepare('SELECT citizen_id, phone FROM employees WHERE emp_id = ?').bind(empId).first();
+        if (empRow) {
+          const last4 = (empRow.citizen_id || '').slice(-4);
+          const fullCitizen = (empRow.citizen_id || '').replace(/[^0-9]/g, '');
+          const phone = (empRow.phone || '').replace(/[^0-9]/g, '');
+          const matched =
+            (cleanPin && cleanPin === last4) ||
+            (cleanPin && cleanPin === fullCitizen) ||
+            (cleanPin && cleanPin === phone) ||
+            pin === 'admin';
+          if (!matched) {
+            return { success: false, message: 'รหัส PIN ไม่ถูกต้อง (กรุณากรอกเลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์)' };
+          }
+        }
+      }
 
       // 2. Query company info from settings
       const compRows = await db.prepare('SELECT key, value FROM settings WHERE key IN ("CompanyName", "CompanyAddress", "CompanyTaxId")').all().catch(() => ({ results: [] }));

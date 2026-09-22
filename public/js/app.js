@@ -814,11 +814,21 @@ async function confirmEmployeeLogin() {
   const sel = document.getElementById('empSelectDropdown');
   const pinInput = document.getElementById('empPinInput');
   const empId = sel?.value;
-  const pin = pinInput?.value.trim() || '1234';
+  const pin = pinInput ? pinInput.value.trim() : '';
   const deviceId = getOrCreateDeviceId();
 
   if (!empId) {
     Swal.fire('กรุณาเลือกพนักงาน', '', 'warning');
+    return;
+  }
+
+  if (!pin) {
+    Swal.fire('กรุณากรอกรหัสยืนยันตัวตน', 'ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์', 'warning');
+    return;
+  }
+
+  if (pin === '1234') {
+    Swal.fire('รหัสไม่ถูกต้อง', 'รหัส 1234 ถูกยกเลิกแล้ว กรุณากรอกเลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์', 'error');
     return;
   }
 
@@ -3927,7 +3937,16 @@ async function verifyAndUnlockPayslip() {
     Swal.fire({
       icon: 'warning',
       title: 'กรุณากรอกรหัส PIN',
-      text: 'ใช้รหัส 4 ตัวท้ายบัตรประชาชน หรือ PIN ของพนักงาน'
+      text: 'ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์'
+    });
+    return;
+  }
+
+  if (pin === '1234') {
+    Swal.fire({
+      icon: 'error',
+      title: 'รหัสไม่ถูกต้อง',
+      text: 'รหัส 1234 ถูกยกเลิกแล้ว กรุณาใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์'
     });
     return;
   }
