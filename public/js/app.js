@@ -45,6 +45,8 @@ let appSettings = {
   leave_type_business: 'false',
   leave_type_annual: 'false',
   leave_type_without_pay: 'false',
+  enable_payslip: 'true',
+  payslip_release_mode: 'CLOSED_PERIODS_ONLY',
   system_maintenance_mode: 'false',
   system_maintenance_message: 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก'
 };
@@ -58,6 +60,8 @@ let pendingScanType = 'IN'; // 'IN', 'OUT', or 'UNLOCK'
 let pendingClockData = null; // { type, qrToken } for two-step clock-in/out
 let isDeviceLocked = false;
 let masterQrInterval = null;
+let isPayslipUnlocked = false;
+let currentPayslipData = null;
 
 const LEAVE_TYPES_MASTER = [
   { key: 'leave_type_sick_with_cert', value: 'SICK_WITH_CERT', label: 'ลาป่วยมีใบรับรองแพทย์' },
@@ -155,6 +159,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   checkNotificationBanner();
   updateNotifBadge();
   checkActiveBreakOnWake();
+  checkBroadcastNotifications().catch(() => {});
+  setInterval(checkBroadcastNotifications, 30000);
   if (currentEmployee) {
     loadMyRequests().catch(() => {});
   }
@@ -568,6 +574,22 @@ function applyFeatureToggles() {
     } else {
       histCutoff.textContent = `รอบตัดวิก ${cutDay + 1} ถึง ${cutDay} ประจำเดือน`;
     }
+  }
+
+  // Payslip Feature Toggle
+  const navPayslip = document.getElementById('navBtnPayslip');
+  const payslipEnabled = (appSettings.enable_payslip !== 'false');
+  if (navPayslip) navPayslip.classList.toggle('hidden', !payslipEnabled);
+
+  const payslipDisabledNotice = document.getElementById('payslipDisabledNotice');
+  const payslipPinGate = document.getElementById('payslipPinGate');
+  const payslipDetailContainer = document.getElementById('payslipDetailContainer');
+  if (!payslipEnabled) {
+    if (payslipDisabledNotice) payslipDisabledNotice.classList.remove('hidden');
+    if (payslipPinGate) payslipPinGate.classList.add('hidden');
+    if (payslipDetailContainer) payslipDetailContainer.classList.add('hidden');
+  } else {
+    if (payslipDisabledNotice) payslipDisabledNotice.classList.add('hidden');
   }
 
   renderLeaveTypeOptions();
@@ -3206,7 +3228,7 @@ async function saveAttendanceSettings() {
 // 13. TAB NAVIGATION
 // ==============================================================================
 function switchTab(tab) {
-  const tabs = ['clock', 'history', 'requests'];
+  const tabs = ['clock', 'history', 'requests', 'payslip'];
   tabs.forEach(t => {
     const section = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
     const navBtn = document.getElementById('navBtn' + t.charAt(0).toUpperCase() + t.slice(1));
@@ -3236,6 +3258,8 @@ function switchTab(tab) {
     } else {
       switchSubTab('status');
     }
+  } else if (tab === 'payslip') {
+    initPayslipView();
   }
 }
 
@@ -3840,6 +3864,493 @@ function applyAppFontSize(size) {
     } else {
       btnLg.className = 'px-1.5 py-0.5 rounded bg-sky-600 text-white font-black shadow-sm';
     }
+  }
+}
+
+// ==============================================================================
+// 16. E-PAYSLIP CONTROLLER (สลิปเงินเดือนออนไลน์ & PIN LOCK)
+// ==============================================================================
+
+function initPayslipView() {
+  const payslipEnabled = (appSettings.enable_payslip !== 'false');
+  const disabledNotice = document.getElementById('payslipDisabledNotice');
+  const pinGate = document.getElementById('payslipPinGate');
+  const detailContainer = document.getElementById('payslipDetailContainer');
+  const pinInput = document.getElementById('payslipPinInput');
+
+  // Hide new badge once user navigates to payslip tab
+  const badge = document.getElementById('badgePayslipNew');
+  if (badge) badge.classList.add('hidden');
+
+  if (!payslipEnabled) {
+    disabledNotice?.classList.remove('hidden');
+    pinGate?.classList.add('hidden');
+    detailContainer?.classList.add('hidden');
+    return;
+  }
+
+  disabledNotice?.classList.add('hidden');
+
+  if (!currentEmployee) {
+    pinGate?.classList.remove('hidden');
+    detailContainer?.classList.add('hidden');
+    openEmployeePickerModal();
+    return;
+  }
+
+  if (!isPayslipUnlocked) {
+    pinGate?.classList.remove('hidden');
+    detailContainer?.classList.add('hidden');
+    if (pinInput) {
+      pinInput.value = '';
+      setTimeout(() => pinInput.focus(), 200);
+    }
+  } else {
+    pinGate?.classList.add('hidden');
+    detailContainer?.classList.remove('hidden');
+    if (!currentPayslipData) {
+      loadEmployeePayslips();
+    }
+  }
+}
+
+async function verifyAndUnlockPayslip() {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+
+  const pinInput = document.getElementById('payslipPinInput');
+  const pin = pinInput ? pinInput.value.trim() : '';
+
+  if (!pin) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'กรุณากรอกรหัส PIN',
+      text: 'ใช้รหัส 4 ตัวท้ายบัตรประชาชน หรือ PIN ของพนักงาน'
+    });
+    return;
+  }
+
+  await loadEmployeePayslips(null, pin);
+}
+
+async function loadEmployeePayslips(period = null, pin = null) {
+  if (!currentEmployee) return;
+
+  const pinGate = document.getElementById('payslipPinGate');
+  const detailContainer = document.getElementById('payslipDetailContainer');
+  const periodSelect = document.getElementById('payslipPeriodSelect');
+
+  Swal.fire({
+    title: 'กำลังโหลดข้อมูลสลิปเงินเดือน...',
+    didOpen: () => Swal.showLoading(),
+    allowOutsideClick: false
+  });
+
+  try {
+    let url = `${API_URL}?action=getMyPayslips&empId=${encodeURIComponent(currentEmployee.empId)}`;
+    if (period) url += `&period=${encodeURIComponent(period)}`;
+    if (pin) url += `&pin=${encodeURIComponent(pin)}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.success) {
+      Swal.close();
+      isPayslipUnlocked = true;
+      pinGate?.classList.add('hidden');
+      detailContainer?.classList.remove('hidden');
+
+      // Populate Period Dropdown
+      if (periodSelect && data.periods && data.periods.length > 0) {
+        periodSelect.innerHTML = '';
+        data.periods.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = `งวด ${p}`;
+          if (data.payslip && data.payslip.period === p) {
+            opt.selected = true;
+          }
+          periodSelect.appendChild(opt);
+        });
+      }
+
+      if (data.payslip) {
+        currentPayslipData = data.payslip;
+        renderPayslipVoucher(data.payslip, data.companyInfo);
+      } else {
+        Swal.fire({
+          icon: 'info',
+          title: 'ไม่พบข้อมูลสลิปเงินเดือน',
+          text: 'ยังไม่มีข้อมูลสลิปเงินเดือนที่สรุปแล้วสำหรับงวดนี้'
+        });
+      }
+    } else {
+      if (handleMaintenanceResponse(data)) return;
+      Swal.fire({
+        icon: 'error',
+        title: 'ไม่สามารถเปิดดูสลิปได้',
+        text: data.message || 'รหัส PIN ไม่ถูกต้อง หรือระบบปิดให้บริการ'
+      });
+    }
+  } catch (e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+function renderPayslipVoucher(slip, companyInfo) {
+  if (!slip) return;
+
+  const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Company and Employee Header
+  const compEl = document.getElementById('slipCompanyDisplay');
+  if (compEl) compEl.textContent = companyInfo?.name || 'บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์';
+
+  const periodBadge = document.getElementById('slipPeriodBadge');
+  if (periodBadge) periodBadge.textContent = slip.period ? `งวด ${slip.period}` : '-';
+
+  const empIdEl = document.getElementById('slipEmpIdDisplay');
+  if (empIdEl) empIdEl.textContent = slip.empId || (currentEmployee ? currentEmployee.empId : '-');
+
+  const empNameEl = document.getElementById('slipEmpNameDisplay');
+  if (empNameEl) empNameEl.textContent = slip.fullName || (currentEmployee ? currentEmployee.fullName : '-');
+
+  const deptEl = document.getElementById('slipDeptDisplay');
+  if (deptEl) deptEl.textContent = slip.department || (currentEmployee ? currentEmployee.department : 'พนักงาน');
+
+  const statusBadge = document.getElementById('slipPeriodStatusBadge');
+  if (statusBadge) {
+    if (slip.isClosed) {
+      statusBadge.textContent = '✓ ปิดงวดแล้ว';
+      statusBadge.className = 'inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-400/40';
+    } else {
+      statusBadge.textContent = '⏳ ฉบับร่าง';
+      statusBadge.className = 'inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/30 text-amber-200 border border-amber-400/40';
+    }
+  }
+
+  // Net Pay Hero Card
+  const netPayEl = document.getElementById('slipNetPayDisplay');
+  if (netPayEl) netPayEl.textContent = `฿ ${fmt(slip.netPay)}`;
+
+  const bankEl = document.getElementById('slipBankDisplay');
+  if (bankEl) bankEl.textContent = slip.bankName || 'ธนาคารกสิกรไทย';
+
+  const accEl = document.getElementById('slipAccountDisplay');
+  if (accEl) accEl.textContent = slip.bankAccountMasked || '***-*-*----';
+
+  // Earnings
+  const totalEarnEl = document.getElementById('slipTotalEarningsDisplay');
+  if (totalEarnEl) totalEarnEl.textContent = `฿ ${fmt(slip.grossPay)}`;
+
+  const baseSalaryEl = document.getElementById('slipBaseSalaryDisplay');
+  if (baseSalaryEl) baseSalaryEl.textContent = fmt(slip.baseSalary);
+
+  const otLabelEl = document.getElementById('slipOtLabel');
+  if (otLabelEl) otLabelEl.textContent = `ค่าล่วงเวลา (OT ${slip.otHours || 0} ชม.)`;
+
+  const otPayEl = document.getElementById('slipOtPayDisplay');
+  if (otPayEl) otPayEl.textContent = fmt(slip.otPay);
+
+  const allowEl = document.getElementById('slipAllowanceDisplay');
+  if (allowEl) allowEl.textContent = fmt(slip.allowance);
+
+  const bonusEl = document.getElementById('slipBonusDisplay');
+  if (bonusEl) bonusEl.textContent = fmt(slip.bonus);
+
+  // Deductions
+  const totalDeductEl = document.getElementById('slipTotalDeductionsDisplay');
+  if (totalDeductEl) totalDeductEl.textContent = `- ฿ ${fmt(slip.totalDeductions)}`;
+
+  const ssoEl = document.getElementById('slipSsoDisplay');
+  if (ssoEl) ssoEl.textContent = fmt(slip.sso);
+
+  const pfEl = document.getElementById('slipPfDisplay');
+  if (pfEl) pfEl.textContent = fmt(slip.pf);
+
+  const taxEl = document.getElementById('slipTaxDisplay');
+  if (taxEl) taxEl.textContent = fmt(slip.tax);
+
+  const advEl = document.getElementById('slipAdvanceDisplay');
+  if (advEl) advEl.textContent = fmt(slip.advanceDeduct);
+
+  const lateEl = document.getElementById('slipLateDisplay');
+  if (lateEl) lateEl.textContent = fmt(slip.lateDeduct);
+
+  const leaveDedEl = document.getElementById('slipLeaveDedDisplay');
+  if (leaveDedEl) leaveDedEl.textContent = fmt(slip.leaveDeduct);
+
+  const otherDedEl = document.getElementById('slipOtherDisplay');
+  if (otherDedEl) otherDedEl.textContent = fmt(slip.otherDeduct);
+
+  // Attendance Stats
+  const absEl = document.getElementById('slipAbsentDays');
+  if (absEl) absEl.textContent = `${slip.absentDays || 0} วัน`;
+
+  const leaveEl = document.getElementById('slipLeaveDays');
+  if (leaveEl) leaveEl.textContent = `${slip.leaveDays || 0} วัน`;
+
+  const sickEl = document.getElementById('slipSickDays');
+  if (sickEl) sickEl.textContent = `${slip.sickLeaveDays || 0} วัน`;
+
+  const unpaidSickEl = document.getElementById('slipUnpaidSickDays');
+  if (unpaidSickEl) unpaidSickEl.textContent = `${slip.unpaidSickLeaveDays || 0} วัน`;
+}
+
+function onPayslipPeriodChange(val) {
+  if (val) {
+    loadEmployeePayslips(val);
+  }
+}
+
+function lockPayslip() {
+  isPayslipUnlocked = false;
+  currentPayslipData = null;
+  const pinInput = document.getElementById('payslipPinInput');
+  if (pinInput) pinInput.value = '';
+  initPayslipView();
+
+  Swal.fire({
+    icon: 'info',
+    title: 'ล็อกหน้าจอแล้ว',
+    text: 'ล็อกการแสดงสลิปเงินเดือนเรียบร้อยแล้ว',
+    timer: 1200,
+    showConfirmButton: false
+  });
+}
+
+function printPayslipDocument() {
+  window.print();
+}
+
+// ==============================================================================
+// 17. SUPER ADMIN / SUPERVISOR PAYSLIP SETTINGS & BROADCAST NOTIFICATIONS
+// ==============================================================================
+
+function openSupervisorModal() {
+  const modal = document.getElementById('modalSupervisorSettings');
+  const gateForm = document.getElementById('supGateForm');
+  const panel = document.getElementById('supSettingsPanel');
+
+  if (supervisorSession) {
+    gateForm?.classList.add('hidden');
+    panel?.classList.remove('hidden');
+    populateSupervisorPayslipForm();
+  } else {
+    gateForm?.classList.remove('hidden');
+    panel?.classList.add('hidden');
+    const pInput = document.getElementById('supPasswordInput');
+    if (pInput) {
+      pInput.value = '';
+      setTimeout(() => pInput.focus(), 200);
+    }
+  }
+
+  modal?.classList.remove('hidden');
+}
+
+function closeSupervisorModal() {
+  document.getElementById('modalSupervisorSettings')?.classList.add('hidden');
+}
+
+async function submitSupervisorAuth() {
+  const uInput = document.getElementById('supUsernameInput');
+  const pInput = document.getElementById('supPasswordInput');
+  const username = uInput ? uInput.value.trim() : 'admin';
+  const password = pInput ? pInput.value.trim() : '';
+
+  if (!password) {
+    Swal.fire('กรุณากรอกรหัสผ่านผู้ดูแลระบบ', '', 'warning');
+    return;
+  }
+
+  Swal.fire({
+    title: 'กำลังตรวจสอบสิทธิ์...',
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'supervisorLogin',
+        username,
+        password
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      supervisorSession = data.user || { username };
+      Swal.close();
+      document.getElementById('supGateForm')?.classList.add('hidden');
+      document.getElementById('supSettingsPanel')?.classList.remove('hidden');
+      populateSupervisorPayslipForm();
+    } else {
+      Swal.fire('เข้าสู่ระบบไม่สำเร็จ', data.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+    }
+  } catch (e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+function populateSupervisorPayslipForm() {
+  const toggle = document.getElementById('toggleAdminPayslip');
+  if (toggle) toggle.checked = (appSettings.enable_payslip !== 'false');
+
+  const modeSel = document.getElementById('selectPayslipReleaseMode');
+  if (modeSel) modeSel.value = appSettings.payslip_release_mode || 'CLOSED_PERIODS_ONLY';
+
+  const periodInput = document.getElementById('broadcastPeriodInput');
+  if (periodInput && !periodInput.value) {
+    periodInput.value = new Date().toISOString().substring(0, 7);
+  }
+}
+
+async function saveSupervisorPayslipSettings() {
+  const toggle = document.getElementById('toggleAdminPayslip');
+  const modeSel = document.getElementById('selectPayslipReleaseMode');
+
+  const enableVal = toggle && toggle.checked ? 'true' : 'false';
+  const modeVal = modeSel ? modeSel.value : 'CLOSED_PERIODS_ONLY';
+
+  Swal.fire({
+    title: 'กำลังบันทึกการตั้งค่า...',
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'saveSettings',
+        settings: {
+          enable_payslip: enableVal,
+          payslip_release_mode: modeVal
+        }
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      appSettings.enable_payslip = enableVal;
+      appSettings.payslip_release_mode = modeVal;
+      try {
+        localStorage.setItem('ptn_app_settings', JSON.stringify(appSettings));
+      } catch (e) {}
+
+      applyFeatureToggles();
+      closeSupervisorModal();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกการตั้งค่าสำเร็จ!',
+        text: `ฟังก์ชันสลิปเงินเดือน: ${enableVal === 'true' ? 'เปิดใช้งาน' : 'ปิดใช้งาน'} (${modeVal === 'CLOSED_PERIODS_ONLY' ? 'เฉพาะงวดที่ปิดแล้ว' : 'ทุกงวดที่คำนวณ'})`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } else {
+      Swal.fire('เกิดข้อผิดพลาด', data.message || 'บันทึกไม่สำเร็จ', 'error');
+    }
+  } catch (e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+async function triggerBroadcastPayslip() {
+  const periodInput = document.getElementById('broadcastPeriodInput');
+  const period = periodInput ? periodInput.value.trim() : '';
+
+  if (!period) {
+    Swal.fire('กรุณาระบุงวดเงินเดือน', 'เช่น 2026-09 หรือ กันยายน 2569', 'warning');
+    return;
+  }
+
+  const confirmRes = await Swal.fire({
+    title: '📢 ส่งแจ้งเตือนสลิปเงินเดือน?',
+    text: `ระบบจะส่งข้อความแจ้งเตือนไปยังพนักงานทุกคนว่า "สลิปเงินเดือนงวด ${period} ออกแล้ว"`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ยืนยันส่งทันที',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#4f46e5'
+  });
+
+  if (!confirmRes.isConfirmed) return;
+
+  Swal.fire({
+    title: 'กำลังส่งแจ้งเตือน...',
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'broadcastPayslipNotification',
+        period,
+        username: supervisorSession?.username || 'Admin'
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      // Trigger local push notification on this device as well
+      sendPushOrLocalNotification(
+        `💰 สลิปเงินเดือนงวด ${period} ออกแล้ว!`,
+        'พนักงานสามารถตรวจสอบยอดเงินเดือนสุทธิและรายการหักได้แล้วในแท็บ สลิปเงิน',
+        'payslip_broadcast'
+      );
+
+      const badge = document.getElementById('badgePayslipNew');
+      if (badge) badge.classList.remove('hidden');
+
+      Swal.fire({
+        icon: 'success',
+        title: 'ส่งแจ้งเตือนสำเร็จ!',
+        text: data.message || `ส่งแจ้งเตือนสลิปงวด ${period} เรียบร้อยแล้ว`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } else {
+      Swal.fire('เกิดข้อผิดพลาด', data.message || 'ส่งแจ้งเตือนไม่สำเร็จ', 'error');
+    }
+  } catch (e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+async function checkBroadcastNotifications() {
+  try {
+    const res = await fetch(`${API_URL}?action=getBroadcastNotifications`);
+    const data = await res.json();
+
+    if (data.success && data.notifications && data.notifications.length > 0) {
+      const lastSeenId = parseInt(localStorage.getItem('ptn_last_broadcast_id') || '0', 10);
+      const latest = data.notifications[0];
+
+      if (latest && latest.id > lastSeenId) {
+        localStorage.setItem('ptn_last_broadcast_id', String(latest.id));
+
+        // Show Red badge on payslip tab
+        const badge = document.getElementById('badgePayslipNew');
+        if (badge) badge.classList.remove('hidden');
+
+        // Fire notification
+        sendPushOrLocalNotification(
+          latest.title || '💰 แจ้งเตือนสลิปเงินเดือน',
+          latest.body || 'มีสลิปเงินเดือนงวดใหม่ออกแล้ว ตรวจสอบได้ที่แท็บ สลิปเงิน',
+          `broadcast_${latest.id}`
+        );
+      }
+    }
+  } catch (e) {
+    // Non-blocking sync error
   }
 }
 

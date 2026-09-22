@@ -1819,6 +1819,219 @@ async function handleAction(db, action, params) {
       };
     }
 
+    // 17. GET EMPLOYEE PAYSLIP (e-Payslip)
+    case 'getMyPayslips': {
+      const empId = params.empId ? String(params.empId).trim() : null;
+      if (!empId) {
+        return { success: false, message: 'กรุณาระบุรหัสพนักงาน' };
+      }
+
+      // 1. Check feature toggle in attendance_settings
+      const payslipSetting = await db.prepare('SELECT value FROM attendance_settings WHERE key = "enable_payslip"').first().catch(() => null);
+      if (payslipSetting && payslipSetting.value === 'false') {
+        return {
+          success: false,
+          disabled: true,
+          message: 'ฟังก์ชันสลิปเงินเดือนถูกปิดใช้งานชั่วคราวโดยผู้ดูแลระบบ'
+        };
+      }
+
+      const releaseModeSetting = await db.prepare('SELECT value FROM attendance_settings WHERE key = "payslip_release_mode"').first().catch(() => null);
+      const releaseMode = releaseModeSetting?.value || 'CLOSED_PERIODS_ONLY';
+
+      // 2. Query company info from settings
+      const compRows = await db.prepare('SELECT key, value FROM settings WHERE key IN ("CompanyName", "CompanyAddress", "CompanyTaxId")').all().catch(() => ({ results: [] }));
+      const compMap = {};
+      for (const r of (compRows.results || [])) compMap[r.key] = r.value;
+      const companyInfo = {
+        name: compMap.CompanyName || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด',
+        address: compMap.CompanyAddress || '',
+        taxId: compMap.CompanyTaxId || ''
+      };
+
+      // 3. Query all periods where this employee has calculations in payroll_calcs
+      const calcsQuery = await db.prepare(`
+        SELECT p.*, e.citizen_id, e.birth_date, e.join_date, e.photo_url, e.nickname
+        FROM payroll_calcs p
+        LEFT JOIN employees e ON p.emp_id = e.emp_id
+        WHERE p.emp_id = ?
+        ORDER BY p.period DESC
+      `).bind(empId).all().catch(() => ({ results: [] }));
+
+      const allCalcs = calcsQuery.results || [];
+      if (allCalcs.length === 0) {
+        return {
+          success: true,
+          empId,
+          companyInfo,
+          periods: [],
+          payslip: null,
+          message: 'ยังไม่มีประวัติสลิปเงินเดือนที่คำนวณในระบบ'
+        };
+      }
+
+      // Check closed status for each period
+      const closedSettings = await db.prepare('SELECT key, value FROM settings WHERE key LIKE "Period_Closed_%" OR key LIKE "Period_Status_%"').all().catch(() => ({ results: [] }));
+      const closedMap = {};
+      for (const r of (closedSettings.results || [])) {
+        if (r.key.startsWith('Period_Closed_')) {
+          const periodKey = r.key.replace('Period_Closed_', '');
+          closedMap[periodKey] = true;
+        } else if (r.key.startsWith('Period_Status_') && r.value && r.value.startsWith('CLOSED')) {
+          const periodKey = r.key.replace('Period_Status_', '');
+          closedMap[periodKey] = true;
+        }
+      }
+
+      // Filter periods based on releaseMode
+      const availablePeriods = [];
+      for (const c of allCalcs) {
+        const isClosed = closedMap[c.period] || false;
+        if (releaseMode === 'CLOSED_PERIODS_ONLY' && !isClosed) {
+          // If only closed periods allowed and this period is not closed, skip
+          continue;
+        }
+        availablePeriods.push(c.period);
+      }
+
+      if (availablePeriods.length === 0) {
+        return {
+          success: true,
+          empId,
+          companyInfo,
+          periods: [],
+          payslip: null,
+          message: 'ยังไม่มีสลิปเงินเดือนที่สรุปและปิดงวดแล้ว'
+        };
+      }
+
+      // Select target period: params.period or the latest available period
+      const targetPeriod = params.period ? String(params.period).trim() : availablePeriods[0];
+      const targetCalc = allCalcs.find(c => c.period === targetPeriod) || allCalcs.find(c => c.period === availablePeriods[0]);
+
+      // Also get monthly_inputs breakdown (days absent, leave, sick, late deduction, etc.)
+      const inputRow = await db.prepare('SELECT * FROM monthly_inputs WHERE period = ? AND emp_id = ?').bind(targetCalc.period, empId).first().catch(() => null);
+
+      // Mask bank account for privacy (e.g. ***-*-*458-2)
+      const rawBankAcc = targetCalc.bank_account || '';
+      let maskedBankAcc = '';
+      if (rawBankAcc.length >= 6) {
+        maskedBankAcc = '***-*-*' + rawBankAcc.slice(-4);
+      } else if (rawBankAcc) {
+        maskedBankAcc = '***' + rawBankAcc.slice(-2);
+      }
+
+      const payslipData = {
+        period: targetCalc.period,
+        empId: targetCalc.emp_id,
+        fullName: targetCalc.full_name,
+        nickname: targetCalc.nickname || '',
+        department: targetCalc.department || '-',
+        position: targetCalc.position || '-',
+        bankName: targetCalc.bank_name || '-',
+        bankAccount: maskedBankAcc,
+        rawBankAccount: rawBankAcc,
+        
+        // Earnings
+        baseSalary: Number(targetCalc.base_salary) || 0,
+        otHours: Number(targetCalc.ot_hours) || 0,
+        otRate: Number(targetCalc.ot_rate) || 0,
+        otPay: Number(targetCalc.ot_pay) || 0,
+        allowance: Number(targetCalc.allowance) || 0,
+        bonus: Number(targetCalc.bonus) || 0,
+        totalEarnings: (Number(targetCalc.base_salary) || 0) + (Number(targetCalc.ot_pay) || 0) + (Number(targetCalc.allowance) || 0) + (Number(targetCalc.bonus) || 0),
+        
+        // Deductions
+        leaveDeduction: Number(targetCalc.leave_deduction) || 0,
+        sso: Number(targetCalc.sso) || 0,
+        pf: Number(targetCalc.pf) || 0,
+        tax: Number(targetCalc.tax) || 0,
+        advanceDeduct: Number(targetCalc.advance_deduct) || 0,
+        otherDeduct: Number(targetCalc.other_deduct) || 0,
+        lateDeduct: Number(inputRow?.late_deduct) || 0,
+        totalDeductions: (Number(targetCalc.total_deductions) || 0) + (Number(targetCalc.leave_deduction) || 0),
+        
+        // Net
+        grossPay: Number(targetCalc.gross_pay) || 0,
+        netPay: Number(targetCalc.net_pay) || 0,
+        
+        // Attendance stats in this period
+        absentDays: Number(inputRow?.absent_days) || 0,
+        leaveDays: Number(inputRow?.leave_days) || 0,
+        sickLeaveDays: Number(inputRow?.sick_leave_days) || 0,
+        unpaidSickLeaveDays: Number(inputRow?.unpaid_sick_leave_days) || 0,
+        
+        isClosed: closedMap[targetCalc.period] || false
+      };
+
+      return {
+        success: true,
+        empId,
+        companyInfo,
+        periods: availablePeriods,
+        payslip: payslipData
+      };
+    }
+
+    // 18. BROADCAST PAYSLIP RELEASE NOTIFICATION
+    case 'broadcastPayslipNotification': {
+      const caller = params.username || 'Admin';
+      const period = params.period ? String(params.period).trim() : 'ล่าสุด';
+      const title = params.title || `💰 สลิปเงินเดือนงวด ${period} ออกแล้ว!`;
+      const body = params.body || `พนักงานสามารถตรวจสอบยอดเงินเดือนสุทธิและรายการหักได้แล้วในแท็บ สลิปเงินเดือน`;
+
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS broadcast_notifications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          body TEXT NOT NULL,
+          tag TEXT DEFAULT 'payslip',
+          target_emp_id TEXT DEFAULT 'ALL',
+          period TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run().catch(() => {});
+
+      await db.prepare(`
+        INSERT INTO broadcast_notifications (title, body, tag, target_emp_id, period)
+        VALUES (?, ?, 'payslip', 'ALL', ?)
+      `).bind(title, body, period).run();
+
+      return {
+        success: true,
+        period,
+        title,
+        body,
+        message: `ส่งแจ้งเตือนสลิปเงินเดือนงวด ${period} ไปยังพนักงานทุกคนเรียบร้อยแล้ว`
+      };
+    }
+
+    // 19. GET LATEST BROADCAST NOTIFICATIONS (FOR CLIENT SYNC)
+    case 'getBroadcastNotifications': {
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS broadcast_notifications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          body TEXT NOT NULL,
+          tag TEXT DEFAULT 'general',
+          target_emp_id TEXT DEFAULT 'ALL',
+          period TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run().catch(() => {});
+
+      const rows = await db.prepare(`
+        SELECT * FROM broadcast_notifications
+        ORDER BY id DESC
+        LIMIT 20
+      `).all().catch(() => ({ results: [] }));
+
+      return {
+        success: true,
+        notifications: rows.results || []
+      };
+    }
+
     default:
       return { success: false, message: 'Unknown action: ' + action };
   }

@@ -289,19 +289,24 @@
           </div>
         </div>
 
-        <!-- 6. Quick Access Shortcuts (บริการตนเอง: ประวัติ / เบิกเงิน / ลางาน) -->
-        <div class="grid grid-cols-3 gap-2.5 pt-1">
-          <button type="button" onclick="switchTab('history')" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-2xl">📅</div>
-            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">ประวัติเวลา</div>
+        <!-- 6. Quick Access Shortcuts (บริการตนเอง: ประวัติ / เบิกเงิน / ลางาน / สลิปเงินเดือน) -->
+        <div class="grid grid-cols-4 gap-2 pt-1">
+          <button type="button" onclick="switchTab('history')" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-xl sm:text-2xl">📅</div>
+            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">ประวัติเวลา</div>
           </button>
-          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-2xl">💵</div>
-            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">ขอเบิกเงิน</div>
+          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-xl sm:text-2xl">💵</div>
+            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">ขอเบิกเงิน</div>
           </button>
-          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-2xl">🏖️</div>
-            <div class="text-xs md:text-sm font-medium text-slate-700 mt-1">แจ้งลางาน</div>
+          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-xl sm:text-2xl">🏖️</div>
+            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">แจ้งลางาน</div>
+          </button>
+          <button type="button" id="quickBtnPayslip" onclick="switchTab('payslip')" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95 relative">
+            <div class="text-xl sm:text-2xl">💰</div>
+            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">สลิปเงิน</div>
+            <span id="quickPayslipBadge" class="hidden absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
           </button>
         </div>
 
@@ -493,10 +498,210 @@
         </div>
       </section>
 
+      <!-- ========================================================================= -->
+      <!-- TAB 4: PAYSLIP (สลิปเงินเดือนออนไลน์ e-Payslip) -->
+      <!-- ========================================================================= -->
+      <section id="tabPayslip" class="space-y-4 hidden">
+
+        <!-- Disabled notice (when enable_payslip is false) -->
+        <div id="payslipDisabledNotice" class="hidden bg-amber-50 border border-amber-200 rounded-3xl p-6 text-center space-y-3">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-3xl">
+            🔒
+          </div>
+          <h3 class="text-base font-bold text-slate-800">ฟังก์ชันสลิปเงินเดือนปิดให้บริการชั่วคราว</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            ผู้ดูแลระบบกำลังอยู่ในช่วงประมวลผลเงินเดือน หรือปิดการแสดงสลิปชั่วคราว กรุณาตรวจสอบอีกครั้งภายหลัง
+          </p>
+        </div>
+
+        <!-- Payslip PIN Gate -->
+        <div id="payslipPinGate" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 text-center">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center text-3xl shadow-inner">
+            🔐
+          </div>
+          <div>
+            <h3 class="text-base md:text-lg font-bold text-slate-800">ยืนยันตัวตนเพื่อดูสลิปเงินเดือน</h3>
+            <p class="text-xs text-slate-500 mt-0.5">กรุณาระบุรหัส PIN เพื่อความปลอดภัยของข้อมูลการเงินส่วนบุคคล</p>
+          </div>
+
+          <div class="max-w-xs mx-auto space-y-3">
+            <input type="password" id="payslipPinInput" maxlength="8" placeholder="••••" class="w-full text-center text-3xl tracking-widest font-mono p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+            <p class="text-[11px] text-slate-400">ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือ PIN พนักงาน</p>
+            <button type="button" onclick="verifyAndUnlockPayslip()" class="w-full py-3.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 active:scale-95 text-white font-bold rounded-2xl shadow-md text-sm transition">
+              🔓 ปลดล็อกดูสลิปเงินเดือน
+            </button>
+          </div>
+        </div>
+
+        <!-- Payslip Content (Shown after PIN unlock) -->
+        <div id="payslipDetailContainer" class="space-y-4 hidden">
+          
+          <!-- Period Selector Bar & Print Button -->
+          <div class="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm gap-2">
+            <div class="flex items-center gap-2 flex-1">
+              <span class="text-xs font-bold text-slate-700 flex-shrink-0">📅 งวด:</span>
+              <select id="payslipPeriodSelect" onchange="onPayslipPeriodChange(this.value)" class="text-xs font-bold text-sky-800 bg-sky-50 border border-sky-200 rounded-xl px-2.5 py-1.5 outline-none flex-1 max-w-[170px]">
+                <option value="">กำลังโหลดงวด...</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="printPayslipDocument()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition active:scale-95 flex items-center gap-1" title="พิมพ์หรือบันทึก PDF">
+                <span>🖨️</span>
+                <span class="hidden sm:inline">พิมพ์/PDF</span>
+              </button>
+              <button type="button" onclick="lockPayslip()" class="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition" title="ล็อกหน้าจอ">
+                🔒
+              </button>
+            </div>
+          </div>
+
+          <!-- Payslip Printable Voucher Container -->
+          <div id="payslipPrintArea" class="space-y-4 bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm">
+
+            <!-- Employee & Company Card -->
+            <div class="bg-gradient-to-r from-sky-700 via-sky-800 to-indigo-900 text-white rounded-2xl p-4 shadow-md">
+              <div class="flex items-center justify-between border-b border-white/20 pb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">💵</span>
+                  <div>
+                    <h2 class="text-sm md:text-base font-extrabold tracking-tight">ใบจ่ายเงินเดือน (e-Payslip)</h2>
+                    <p class="text-[11px] text-sky-200" id="slipCompanyDisplay">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</p>
+                  </div>
+                </div>
+                <span id="slipPeriodBadge" class="text-xs bg-white/20 border border-white/30 px-2.5 py-1 rounded-full font-bold">-</span>
+              </div>
+
+              <div class="mt-3 flex items-center justify-between text-xs">
+                <div>
+                  <div class="text-[11px] text-sky-200">รหัส: <strong id="slipEmpIdDisplay" class="text-white font-mono font-bold">-</strong></div>
+                  <div class="text-sm font-bold text-white mt-0.5" id="slipEmpNameDisplay">-</div>
+                  <div class="text-[11px] text-sky-100 opacity-90" id="slipDeptDisplay">-</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] text-sky-200">สถานะงวด</div>
+                  <div id="slipPeriodStatusBadge" class="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">
+                    ปิดงวดแล้ว
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Net Pay Highlight Card -->
+            <div class="bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700 rounded-2xl p-4 text-white shadow-lg text-center relative overflow-hidden">
+              <div class="text-xs font-bold text-emerald-100 tracking-wider uppercase">เงินรับสุทธิ (Net Pay)</div>
+              <div class="text-3xl md:text-4xl font-black font-mono tracking-tight my-1.5 drop-shadow" id="slipNetPayDisplay">฿ 0.00</div>
+              <div class="inline-flex items-center gap-1.5 text-[11px] bg-black/25 backdrop-blur-sm px-3.5 py-1 rounded-full text-emerald-100 mt-1">
+                <span>🏦 โอนเข้า:</span>
+                <span id="slipBankDisplay" class="font-bold">-</span>
+                <span id="slipAccountDisplay" class="font-mono font-bold">***-*-*----</span>
+              </div>
+            </div>
+
+            <!-- Earnings Breakdown Card -->
+            <div class="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-200 text-xs font-bold text-slate-800">
+                <span class="flex items-center gap-1.5 text-blue-600">
+                  <span>📈</span> รายการได้ (Earnings)
+                </span>
+                <span class="font-mono text-blue-700 font-bold" id="slipTotalEarningsDisplay">฿ 0.00</span>
+              </div>
+              <div class="divide-y divide-slate-200/60 text-xs text-slate-600">
+                <div class="py-1.5 flex justify-between">
+                  <span>เงินเดือนฐาน</span>
+                  <span class="font-mono font-bold text-slate-900" id="slipBaseSalaryDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span id="slipOtLabel">ค่าล่วงเวลา (OT)</span>
+                  <span class="font-mono font-bold text-slate-900" id="slipOtPayDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>เบี้ยขยัน</span>
+                  <span class="font-mono font-bold text-slate-900" id="slipAllowanceDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>โบนัส / เงินพิเศษ</span>
+                  <span class="font-mono font-bold text-slate-900" id="slipBonusDisplay">0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Deductions Breakdown Card -->
+            <div class="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-200 text-xs font-bold text-slate-800">
+                <span class="flex items-center gap-1.5 text-rose-600">
+                  <span>📉</span> รายการหัก (Deductions)
+                </span>
+                <span class="font-mono text-rose-700 font-bold" id="slipTotalDeductionsDisplay">- ฿ 0.00</span>
+              </div>
+              <div class="divide-y divide-slate-200/60 text-xs text-slate-600">
+                <div class="py-1.5 flex justify-between">
+                  <span>ประกันสังคม (SSO)</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipSsoDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>กองทุนสำรองเลี้ยงชีพ (PF)</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipPfDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>ภาษีหัก ณ ที่จ่าย</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipTaxDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>หักเงินเบิกล่วงหน้า (Advance)</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipAdvanceDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>หักมาสาย / ออกก่อนเวลา</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipLateDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>หักขาดงาน / ลาไม่ได้รับค่าจ้าง</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipLeaveDedDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between" id="slipOtherDedRow">
+                  <span>หักอื่นๆ</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipOtherDisplay">0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attendance Stats Badge in Period -->
+            <div class="bg-slate-100 rounded-2xl p-3 text-xs text-slate-600 flex items-center justify-around text-center">
+              <div>
+                <div class="text-[10px] text-slate-400">ขาดงาน</div>
+                <div class="font-bold text-slate-800" id="slipAbsentDays">0 วัน</div>
+              </div>
+              <div class="h-6 w-px bg-slate-300"></div>
+              <div>
+                <div class="text-[10px] text-slate-400">ลากิจ</div>
+                <div class="font-bold text-slate-800" id="slipLeaveDays">0 วัน</div>
+              </div>
+              <div class="h-6 w-px bg-slate-300"></div>
+              <div>
+                <div class="text-[10px] text-slate-400">ลาป่วยมีใบฯ</div>
+                <div class="font-bold text-slate-800" id="slipSickDays">0 วัน</div>
+              </div>
+              <div class="h-6 w-px bg-slate-300"></div>
+              <div>
+                <div class="text-[10px] text-slate-400">ลาป่วยไม่มีใบฯ</div>
+                <div class="font-bold text-slate-800" id="slipUnpaidSickDays">0 วัน</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Security Reminder -->
+          <div class="text-center text-[11px] text-slate-400 py-1">
+            🔒 เอกสารนี้เป็นข้อมูลลับเฉพาะบุคคล ออกโดยระบบอัตโนมัติ PTN Payroll
+          </div>
+        </div>
+
+      </section>
+
     </main>
 
-    <!-- Bottom Navigation Bar (Clean 3 Tabs for Employee Portal) -->
-    <nav class="fixed bottom-0 w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-3 px-4 z-40 shadow-2xl safe-bottom transition-all">
+    <!-- Bottom Navigation Bar (4 Tabs for Employee Portal) -->
+    <nav class="fixed bottom-0 w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-3 px-3 z-40 shadow-2xl safe-bottom transition-all">
       <button onclick="switchTab('clock')" id="navBtnClock" class="flex-1 flex flex-col items-center justify-center py-1 text-sky-600 transition">
         <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         <span class="text-xs md:text-sm font-extrabold mt-1">ลงเวลา</span>
@@ -510,6 +715,12 @@
       <button onclick="switchTab('requests')" id="navBtnRequests" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
         <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         <span class="text-xs md:text-sm font-semibold mt-1">ขอเบิก/ลา</span>
+      </button>
+
+      <button onclick="switchTab('payslip')" id="navBtnPayslip" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition relative">
+        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path></svg>
+        <span class="text-xs md:text-sm font-semibold mt-1">สลิปเงิน</span>
+        <span id="badgePayslipNew" class="hidden absolute top-1 right-3.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
       </button>
     </nav>
 
@@ -716,6 +927,104 @@
       </div>
     </div>
 
+    <!-- SUPERVISOR / ADMIN SETTINGS & PAYSLIP CONTROL MODAL -->
+    <div id="modalSupervisorSettings" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-md">
+      <div class="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        
+        <div class="flex items-center justify-between border-b pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl font-bold">
+              ⚙️
+            </div>
+            <div>
+              <h3 class="font-extrabold text-slate-800 text-base">ตั้งค่าระบบ (Super Admin)</h3>
+              <p class="text-[11px] text-slate-500">จัดการสิทธิ์และควบคุมสลิปเงินเดือน</p>
+            </div>
+          </div>
+          <button type="button" onclick="closeSupervisorModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 flex items-center justify-center">&times;</button>
+        </div>
+
+        <!-- Supervisor Login Gate -->
+        <div id="supGateForm" class="space-y-3">
+          <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 text-xs text-indigo-900">
+            🔒 เฉพาะผู้ดูแลระบบ (Admin / HR) เท่านั้น กรุณากรอกรหัสผ่านเพื่อเข้าสู่ระบบ
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อผู้ใช้</label>
+            <input type="text" id="supUsernameInput" value="admin" class="w-full text-xs p-3 border border-slate-300 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">รหัสผ่าน</label>
+            <input type="password" id="supPasswordInput" placeholder="กรอกรหัสผ่าน..." class="w-full text-xs p-3 border border-slate-300 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <button type="button" onclick="submitSupervisorAuth()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow transition">
+            เข้าสู่ระบบจัดการ
+          </button>
+        </div>
+
+        <!-- Supervisor Settings Panel (Shown after Auth) -->
+        <div id="supSettingsPanel" class="space-y-4 hidden">
+          
+          <!-- Payslip Feature Toggle Card -->
+          <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                  <span>💵</span> ฟังก์ชันสลิปเงินเดือน (e-Payslip)
+                </h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">เปิดให้พนักงานดูสลิปของตนเองผ่านแอป</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="toggleAdminPayslip" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div class="border-t border-emerald-200/60 pt-2.5 space-y-1.5">
+              <label class="block text-[11px] font-bold text-slate-700">เงื่อนไขการแสดงสลิป:</label>
+              <select id="selectPayslipReleaseMode" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="CLOSED_PERIODS_ONLY">🔒 แสดงเฉพาะงวดที่สรุปและปิดงวดแล้ว (แนะนำ)</option>
+                <option value="ALL_CALCULATED">🌐 แสดงทุกงวดที่มีการคำนวณในระบบ</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Broadcast Notification Section -->
+          <div class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 space-y-3">
+            <div>
+              <h4 class="text-xs font-extrabold text-indigo-950 flex items-center gap-1.5">
+                <span>📢</span> ส่งแจ้งเตือนสลิปออกแล้วให้พนักงาน
+              </h4>
+              <p class="text-[11px] text-indigo-700 mt-0.5">ส่ง Push Notification และแจ้งเตือนในแอปให้พนักงานทุกคน</p>
+            </div>
+
+            <div class="space-y-2">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">งวดเงินเดือนที่ต้องการแจ้งเตือน</label>
+                <input type="text" id="broadcastPeriodInput" placeholder="เช่น 2026-09 หรือ กันยายน 2569" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+              <button type="button" onclick="triggerBroadcastPayslip()" class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow transition flex items-center justify-center gap-1.5">
+                <span>🔔</span>
+                <span>ส่งแจ้งเตือนสลิปเงินเดือนทันที</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2 pt-2 border-t">
+            <button type="button" onclick="saveSupervisorPayslipSettings()" class="flex-1 py-3 bg-slate-900 hover:bg-black active:scale-95 text-white text-xs font-bold rounded-xl shadow transition">
+              💾 บันทึกการตั้งค่า
+            </button>
+            <button type="button" onclick="closeSupervisorModal()" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-bold rounded-xl transition">
+              ปิด
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
     <!-- NOTIFICATION DRAWER / MODAL -->
     <div id="modalNotifications" class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center hidden backdrop-blur-sm">
       <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
@@ -781,6 +1090,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=7.9"></script>
+  <script src="js/app.js?v=8.1"></script>
 </body>
 </html>
