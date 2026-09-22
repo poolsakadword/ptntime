@@ -332,17 +332,17 @@ async function getSettings(db) {
     kiosk_pin: '123456',
     kiosk_require_geofence: 'true',
     system_maintenance_mode: 'false',
-    system_maintenance_message: 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก'
+    system_maintenance_message: 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก',
+    enable_payslip: 'true',
+    payslip_release_mode: 'CLOSED_PERIODS_ONLY'
   };
 
   const map = { ...defaults };
   for (const r of rows.results || []) {
-    if (r.key in map) {
-      if (typeof defaults[r.key] === 'number') {
-        map[r.key] = Number(r.value);
-      } else {
-        map[r.key] = r.value;
-      }
+    if (r.key in defaults && typeof defaults[r.key] === 'number') {
+      map[r.key] = Number(r.value);
+    } else {
+      map[r.key] = r.value;
     }
   }
   return map;
