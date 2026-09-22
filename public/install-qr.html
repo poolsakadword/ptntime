@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code ติดตั้งแอป PTN Time (iOS & Android) — บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #f1f5f9;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-page {
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        width: 100% !important;
+        min-height: 100vh !important;
+        padding: 16mm 14mm !important;
+      }
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center py-6 px-3 sm:px-6 min-h-screen">
+
+  <!-- Action Bar (Hidden when printing) -->
+  <div class="no-print mb-6 w-full max-w-4xl bg-white p-3.5 rounded-2xl shadow-md border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-xl shadow-sm">
+        📲
+      </div>
+      <div>
+        <h2 class="text-sm sm:text-base font-extrabold text-slate-800">ป้าย QR Code ติดตั้งแอป PTN Time</h2>
+        <p class="text-xs text-slate-500">สำหรับตั้งโต๊ะสาขา ติดบอร์ดประชาสัมพันธ์ หรือแชร์ให้พนักงาน</p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button onclick="window.print()" class="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm flex items-center space-x-2 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+        <span>พิมพ์ป้าย A4 (Print)</span>
+      </button>
+
+      <button onclick="downloadAllQr()" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm flex items-center space-x-1.5 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        <span>ดาวน์โหลดรูปภาพ</span>
+      </button>
+
+      <a href="/guide.html" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold rounded-xl transition">
+        ดูคู่มือแบบละเอียด 📖
+      </a>
+
+      <a href="/" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold rounded-xl transition">
+        กลับหน้าหลัก ⏱️
+      </a>
+    </div>
+  </div>
+
+  <!-- A4 Document Paper Frame (210mm x 297mm) -->
+  <div class="print-page w-full max-w-[210mm] min-h-[297mm] bg-white border border-slate-300 shadow-2xl p-8 sm:p-12 flex flex-col justify-between items-center text-center relative rounded-2xl sm:rounded-sm">
+    
+    <!-- Top Header -->
+    <div class="w-full">
+      <div class="flex items-center justify-center space-x-3 mb-2">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-600 via-sky-700 to-indigo-800 text-white flex items-center justify-center text-3xl shadow-md font-bold">
+          ⏱️
+        </div>
+        <div class="text-left">
+          <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">PTN Time Attendant</h1>
+          <p class="text-xs sm:text-sm font-bold text-sky-700 mt-1">ระบบบันทึกเวลาทำงานและสวัสดิการพนักงานออนไลน์</p>
+        </div>
+      </div>
+      
+      <div class="inline-block px-4 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs sm:text-sm font-extrabold border border-slate-200 mt-2">
+        🏢 บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด
+      </div>
+
+      <div class="mt-4">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-800">
+          สแกน QR Code เพื่อติดตั้งแอปพลิเคชันลงบนมือถือ
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          ติดตั้งลงหน้าจอโฮมได้ทันที สะดวก รวดเร็ว ลงเวลาได้ทุกวันโดยไม่ต้องเปิดผ่านลิงก์
+        </p>
+      </div>
+
+      <div class="w-28 h-1 bg-gradient-to-r from-sky-500 to-indigo-600 mx-auto mt-4 rounded-full"></div>
+    </div>
+
+    <!-- 2 Column QR Codes (iOS vs Android) -->
+    <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-6 my-6">
+      
+      <!-- iOS Column -->
+      <div class="bg-gradient-to-b from-slate-50 to-white rounded-3xl p-6 border-2 border-slate-200 flex flex-col items-center justify-between shadow-sm relative group">
+        <div class="w-full">
+          <!-- OS Header -->
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-black text-white text-xs font-black shadow-sm mb-3">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 170 170"><path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.07-7.6-7.85-11.7-14.35-6.2-9.78-11.1-20.91-14.71-33.38-3.6-12.48-5.41-23.77-5.41-33.88 0-14.15 3.57-25.77 10.7-34.86 7.13-9.09 16.03-13.75 26.7-13.97 4.9 0 10.2 1.25 15.89 3.76 5.69 2.5 9.4 3.82 11.13 3.94 1.85-.12 5.86-1.5 12.02-4.14 6.16-2.63 11.37-3.83 15.65-3.59 12.06.64 21.6 5.16 28.61 13.56-10.45 6.3-15.6 15.11-15.46 26.43.14 8.91 3.57 16.29 10.3 22.14 6.72 5.85 14.81 9.17 24.26 9.97-2.18 6.74-4.81 13.62-7.89 20.64zM119.22 31.84c0-7.39 2.67-14.17 8.01-20.35 5.34-6.17 12.02-10.33 20.03-12.49.22 1.3.33 2.49.33 3.59 0 7.39-2.78 14.28-8.34 20.67-5.55 6.39-12.21 10.33-19.98 11.83-.05-1.09-.05-2.17-.05-3.25z"/></svg>
+            <span>สำหรับ iPhone / iPad (iOS)</span>
+          </div>
+
+          <!-- QR Box -->
+          <div class="p-4 bg-white rounded-2xl border-2 border-slate-200 shadow-md inline-block my-2">
+            <div id="qrCodeIos" class="flex items-center justify-center w-[170px] h-[170px]"></div>
+          </div>
+
+          <div class="text-[11px] font-mono-code text-slate-400 mt-1">
+            https://ptntime.pages.dev/guide.html?os=ios
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="w-full bg-slate-100/80 rounded-2xl p-4 text-left mt-4 border border-slate-200 text-slate-700 space-y-2">
+          <div class="text-xs font-black text-slate-900 flex items-center gap-1.5">
+            <span>🍏</span>
+            <span>3 ขั้นตอนติดตั้งบน iPhone:</span>
+          </div>
+          <ol class="text-[11px] space-y-1.5 list-decimal list-inside text-slate-600 font-medium">
+            <li>เปิด <strong>แอปกล้อง</strong> สแกน QR Code ด้านบน (เปิดด้วย <strong>Safari</strong>)</li>
+            <li>กดปุ่ม <strong>"แชร์" (Share ⬆️)</strong> ที่แถบเมนูด้านล่าง</li>
+            <li>เลื่อนลงแล้วเลือก <strong>"เพิ่มไปยังหน้าจอโฮม" (Add to Home Screen)</strong> ➔ กด <strong>"เพิ่ม" (Add)</strong></li>
+          </ol>
+          <div class="text-[10px] text-amber-800 bg-amber-50 p-2 rounded-xl border border-amber-200 font-semibold">
+            ⚠️ ต้องเปิดผ่าน <strong>Safari</strong> เท่านั้น (หากเปิดจาก LINE ให้กดจุด 3 จุด ➔ เปิดด้วย Safari)
+          </div>
+        </div>
+      </div>
+
+      <!-- Android Column -->
+      <div class="bg-gradient-to-b from-slate-50 to-white rounded-3xl p-6 border-2 border-slate-200 flex flex-col items-center justify-between shadow-sm relative group">
+        <div class="w-full">
+          <!-- OS Header -->
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-emerald-600 text-white text-xs font-black shadow-sm mb-3">
+            <span>🤖</span>
+            <span>สำหรับมือถือ Android (ทุกยี่ห้อ)</span>
+          </div>
+
+          <!-- QR Box -->
+          <div class="p-4 bg-white rounded-2xl border-2 border-slate-200 shadow-md inline-block my-2">
+            <div id="qrCodeAndroid" class="flex items-center justify-center w-[170px] h-[170px]"></div>
+          </div>
+
+          <div class="text-[11px] font-mono-code text-slate-400 mt-1">
+            https://ptntime.pages.dev/guide.html?os=android
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="w-full bg-slate-100/80 rounded-2xl p-4 text-left mt-4 border border-slate-200 text-slate-700 space-y-2">
+          <div class="text-xs font-black text-slate-900 flex items-center gap-1.5">
+            <span>🤖</span>
+            <span>3 ขั้นตอนติดตั้งบน Android:</span>
+          </div>
+          <ol class="text-[11px] space-y-1.5 list-decimal list-inside text-slate-600 font-medium">
+            <li>เปิด <strong>แอปกล้อง</strong> หรือ <strong>Google Chrome</strong> สแกน QR Code ด้านบน</li>
+            <li>แตะปุ่ม <strong>จุด 3 จุด (⋮)</strong> ที่มุมบนขวาของหน้าจอ</li>
+            <li>เลือก <strong>"ติดตั้งแอป" (Install)</strong> หรือ <strong>"เพิ่มลงในหน้าจอหลัก"</strong> ➔ กดยืนยัน</li>
+          </ol>
+          <div class="text-[10px] text-emerald-800 bg-emerald-50 p-2 rounded-xl border border-emerald-200 font-semibold">
+            ✨ รองรับทั้ง Samsung, Xiaomi, OPPO, Vivo, Realme, Huawei และมือถือ Android ทุกรุ่น
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Important Info & Features -->
+    <div class="w-full bg-sky-50/70 border border-sky-200 rounded-2xl p-4 text-xs text-sky-950 flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+      <div class="space-y-1">
+        <div class="font-extrabold flex items-center gap-1.5 text-sky-900">
+          <span>💡</span>
+          <span>ข้อดีของการติดตั้งเป็นแอป (Progressive Web App):</span>
+        </div>
+        <div class="text-[11px] text-slate-600 leading-relaxed">
+          • ไม่ต้องโหลดผ่าน Play Store / App Store • ขนาดไฟล์เบามาก (&lt; 5MB) ไม่หนักเครื่อง • ปลดล็อกลงเวลาง่ายดายใน 3 วินาที
+        </div>
+      </div>
+      <div class="flex-shrink-0 text-center sm:text-right">
+        <span class="inline-block px-3 py-1 bg-white text-sky-800 font-extrabold text-[11px] rounded-xl border border-sky-200 shadow-sm">
+          URL: ptntime.pages.dev
+        </span>
+      </div>
+    </div>
+
+    <!-- Document Footer -->
+    <div class="w-full text-center text-[11px] text-slate-400 border-t border-slate-100 pt-3 mt-4">
+      <p>ระบบบันทึกเวลาทำงาน PTN Time Attendant — บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด</p>
+      <p class="text-[10px] text-slate-400 mt-0.5">สอบถามข้อมูลเพิ่มเติมได้ที่ฝ่ายบุคคล (HR) หรือหัวหน้างานประจำสาขา</p>
+    </div>
+
+  </div>
+
+  <script>
+    // Initialize QR Codes using qrcode.js
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. iOS QR Code
+      new QRCode(document.getElementById("qrCodeIos"), {
+        text: "https://ptntime.pages.dev/guide.html?os=ios",
+        width: 170,
+        height: 170,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      // 2. Android QR Code
+      new QRCode(document.getElementById("qrCodeAndroid"), {
+        text: "https://ptntime.pages.dev/guide.html?os=android",
+        width: 170,
+        height: 170,
+        colorDark: "#047857",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    });
+
+    function downloadAllQr() {
+      // Download iOS QR
+      const iosImg = document.querySelector('#qrCodeIos img');
+      if (iosImg && iosImg.src) {
+        const a1 = document.createElement('a');
+        a1.href = iosImg.src;
+        a1.download = 'ptn-time-install-ios-qr.png';
+        a1.click();
+      }
+      // Download Android QR
+      setTimeout(() => {
+        const androidImg = document.querySelector('#qrCodeAndroid img');
+        if (androidImg && androidImg.src) {
+          const a2 = document.createElement('a');
+          a2.href = androidImg.src;
+          a2.download = 'ptn-time-install-android-qr.png';
+          a2.click();
+        }
+      }, 300);
+    }
+  </script>
+</body>
+</html>

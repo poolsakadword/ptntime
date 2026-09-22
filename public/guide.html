@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -111,6 +113,27 @@
         </div>
       </div>
 
+      <!-- QR Code Card for iOS -->
+      <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 text-white rounded-3xl p-5 border border-slate-700 shadow-md flex flex-col sm:flex-row items-center gap-5">
+        <div class="p-3 bg-white rounded-2xl shadow-inner flex-shrink-0">
+          <div id="guideQrIos" class="w-[140px] h-[140px] flex items-center justify-center"></div>
+        </div>
+        <div class="space-y-2 text-center sm:text-left flex-1">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-sky-300 text-xs font-bold border border-white/10">
+            <span>🍏</span> QR Code สำหรับ iPhone (iOS)
+          </div>
+          <h3 class="text-base font-extrabold text-white">สแกนด้วยกล้อง iPhone เพื่อติดตั้ง</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            เปิดกล้อง iPhone สแกน QR Code นี้ จะมีแถบสีเหลือง <strong>"เปิดใน Safari"</strong> ปรากฏขึ้นมา แตะเพื่อเริ่มขั้นตอนติดตั้งทันที
+          </p>
+          <div class="pt-1 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+            <a href="/install-qr.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold transition active:scale-95 shadow-sm">
+              <span>🖨️</span> พิมพ์ป้าย A4 ตั้งโต๊ะ
+            </a>
+          </div>
+        </div>
+      </div>
+
       <!-- Step 1 -->
       <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-2.5">
         <div class="flex items-center space-x-3">
@@ -192,6 +215,27 @@
         <span class="text-base flex-shrink-0">💡</span>
         <div>
           <span class="font-bold">คำแนะนำสำหรับ Android:</span> แนะนำให้เปิดด้วยเบราว์เซอร์ <strong>Google Chrome</strong> เพื่อความเสถียรและความแม่นยำของพิกัด GPS สูงสุด
+        </div>
+      </div>
+
+      <!-- QR Code Card for Android -->
+      <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white rounded-3xl p-5 border border-slate-700 shadow-md flex flex-col sm:flex-row items-center gap-5">
+        <div class="p-3 bg-white rounded-2xl shadow-inner flex-shrink-0">
+          <div id="guideQrAndroid" class="w-[140px] h-[140px] flex items-center justify-center"></div>
+        </div>
+        <div class="space-y-2 text-center sm:text-left flex-1">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">
+            <span>🤖</span> QR Code สำหรับมือถือ Android
+          </div>
+          <h3 class="text-base font-extrabold text-white">สแกนด้วยกล้อง หรือ Chrome เพื่อติดตั้ง</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            เปิดกล้อง หรือแอป Google Chrome สแกน QR Code นี้เพื่อเปิดหน้าเว็บและกดติดตั้งลงหน้าจอหลักได้ทันที
+          </p>
+          <div class="pt-1 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+            <a href="/install-qr.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition active:scale-95 shadow-sm">
+              <span>🖨️</span> พิมพ์ป้าย A4 ตั้งโต๊ะ
+            </a>
+          </div>
         </div>
       </div>
 
@@ -369,8 +413,43 @@
       }
     }
 
-    // Auto detect user OS
+    // Initialize QR Codes
     window.addEventListener('DOMContentLoaded', () => {
+      // 1. iOS QR
+      const elIos = document.getElementById("guideQrIos");
+      if (elIos && typeof QRCode !== 'undefined') {
+        new QRCode(elIos, {
+          text: "https://ptntime.pages.dev/guide.html?os=ios",
+          width: 140,
+          height: 140,
+          colorDark: "#0f172a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+
+      // 2. Android QR
+      const elAndroid = document.getElementById("guideQrAndroid");
+      if (elAndroid && typeof QRCode !== 'undefined') {
+        new QRCode(elAndroid, {
+          text: "https://ptntime.pages.dev/guide.html?os=android",
+          width: 140,
+          height: 140,
+          colorDark: "#047857",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+
+      // Check URL query param ?os=ios or ?os=android
+      const params = new URLSearchParams(window.location.search);
+      const osParam = params.get('os');
+      if (osParam === 'ios' || osParam === 'android') {
+        switchOs(osParam);
+        return;
+      }
+
+      // Auto detect user OS
       const ua = navigator.userAgent || navigator.vendor || window.opera;
       if (/android/i.test(ua)) {
         switchOs('android');
