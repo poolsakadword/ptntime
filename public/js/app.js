@@ -1055,7 +1055,6 @@ let faceDetectionTimer = null;
 let faceDetectionFallbackTimer = null;
 let isFaceDetected = false;
 let isFaceDetectionFallbackActive = false;
-let hasVerifiedFaceInSession = false; // Once verified in current camera session, remains unlocked!
 let faceConsecutiveLossCount = 0;
 let faceConsecutiveErrorCount = 0;
 let offscreenFaceCanvas = null;
@@ -1115,8 +1114,8 @@ function setFaceDetectionUIState(found, isFallback = false) {
 
   const OVAL_SIZE = 'w-[295px] h-[400px] sm:w-[335px] sm:h-[450px] md:w-[375px] md:h-[490px]';
 
-  // If found OR already verified in this session OR fallback is active -> ALWAYS KEEP SHUTTER UNLOCKED!
-  if (found || hasVerifiedFaceInSession || isFaceDetectionFallbackActive) {
+  // Strict Real-Time: Only unlock shutter if face is actually present OR if fallback is active
+  if (found || (isFallback && isFaceDetectionFallbackActive)) {
     if (shutterBtn) {
       shutterBtn.disabled = false;
       shutterBtn.classList.remove('opacity-40', 'cursor-not-allowed');
@@ -1129,7 +1128,7 @@ function setFaceDetectionUIState(found, isFallback = false) {
       }
       if (topHint) {
         topHint.className = 'text-white text-xs md:text-sm font-bold drop-shadow bg-sky-600/90 border border-sky-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md';
-        topHint.innerHTML = '📸 ปลดล็อกชัตเตอร์ (พร้อมถ่ายรูป)';
+        topHint.innerHTML = '📸 ปลดล็อกชัตเตอร์ (ระบบสำรอง)';
       }
       if (shutterHint) {
         shutterHint.className = 'text-xs text-sky-200 font-bold tracking-wider drop-shadow transition-colors';
@@ -1149,7 +1148,7 @@ function setFaceDetectionUIState(found, isFallback = false) {
       }
     }
   } else {
-    // Only show amber if NOT YET verified in this session
+    // Face absent: IMMEDIATELY lock shutter and turn oval amber
     if (oval) {
       oval.className = `pointer-events-none relative z-10 ${OVAL_SIZE} rounded-[50%] border-2.5 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300`;
     }
@@ -1173,6 +1172,64 @@ function enableFaceDetectionFallback() {
   if (isFaceDetected && !isFaceDetectionFallbackActive) return;
   isFaceDetectionFallbackActive = true;
   setFaceDetectionUIState(true, true);
+}
+
+// Reusable single-frame face detection helper (Fast 320x240 offscreen canvas)
+async function detectFaceInVideo(video) {
+  if (!video || video.readyState < 2) return false;
+  if (!faceDetectorEngine) {
+    await initFaceDetectionEngine();
+  }
+  if (!faceDetectorEngine) return false;
+
+  if (!offscreenFaceCanvas) {
+    offscreenFaceCanvas = document.createElement('canvas');
+    offscreenFaceCanvas.width = 320;
+    offscreenFaceCanvas.height = 240;
+    offscreenFaceCtx = offscreenFaceCanvas.getContext('2d', { willReadFrequently: true });
+  }
+
+  if (video.videoWidth > 0 && video.videoHeight > 0) {
+    offscreenFaceCtx.drawImage(video, 0, 0, 320, 240);
+  }
+
+  const minFaceDimension = 24; // 10% of 240, captures face accurately
+  let detected = false;
+
+  if (faceDetectorEngine.type === 'native') {
+    try {
+      const faces = await faceDetectorEngine.detector.detect(offscreenFaceCanvas);
+      if (faces && faces.length > 0) {
+        for (const f of faces) {
+          const box = f.boundingBox;
+          if (box && box.width >= minFaceDimension && box.height >= minFaceDimension) {
+            detected = true;
+            break;
+          }
+        }
+      }
+    } catch (nativeErr) {
+      console.warn('Native FaceDetector error:', nativeErr);
+      faceDetectorEngine = null;
+    }
+  } else if (faceDetectorEngine.type === 'mediapipe') {
+    try {
+      const result = faceDetectorEngine.detector.detect(offscreenFaceCanvas);
+      if (result && result.detections && result.detections.length > 0) {
+        for (const d of result.detections) {
+          const box = d.boundingBox;
+          if (box && box.width >= minFaceDimension && box.height >= minFaceDimension) {
+            detected = true;
+            break;
+          }
+        }
+      }
+    } catch (mpErr) {
+      console.warn('MediaPipe detection error:', mpErr);
+    }
+  }
+
+  return detected;
 }
 
 function startFaceDetectionLoop() {
@@ -1208,93 +1265,23 @@ function startFaceDetectionLoop() {
     }
 
     try {
-      if (!faceDetectorEngine) {
-        await initFaceDetectionEngine();
-      }
-
-      let detected = false;
-
-      // Safe offscreen canvas buffer for frame extraction
-      if (!offscreenFaceCanvas) {
-        offscreenFaceCanvas = document.createElement('canvas');
-        offscreenFaceCanvas.width = 320;
-        offscreenFaceCanvas.height = 240;
-        offscreenFaceCtx = offscreenFaceCanvas.getContext('2d', { willReadFrequently: true });
-      }
-
-      if (video.videoWidth > 0 && video.videoHeight > 0) {
-        offscreenFaceCtx.drawImage(video, 0, 0, 320, 240);
-      }
-
-      const minDimension = 240;
-      const minFaceDimension = minDimension * 0.10; // 24px on 320x240, easily detects real faces
-
-      if (faceDetectorEngine) {
-        if (faceDetectorEngine.type === 'native') {
-          try {
-            const faces = await faceDetectorEngine.detector.detect(offscreenFaceCanvas);
-            if (faces && faces.length > 0) {
-              for (const f of faces) {
-                const box = f.boundingBox;
-                if (box && box.width >= minFaceDimension && box.height >= minFaceDimension) {
-                  detected = true;
-                  break;
-                }
-              }
-            }
-          } catch (nativeErr) {
-            console.warn('Native FaceDetector error, switching to MediaPipe:', nativeErr);
-            faceDetectorEngine = null;
-            faceConsecutiveErrorCount++;
-          }
-        } else if (faceDetectorEngine.type === 'mediapipe') {
-          try {
-            const result = faceDetectorEngine.detector.detect(offscreenFaceCanvas);
-            if (result && result.detections && result.detections.length > 0) {
-              for (const d of result.detections) {
-                const box = d.boundingBox;
-                if (box && box.width >= minFaceDimension && box.height >= minFaceDimension) {
-                  detected = true;
-                  break;
-                }
-              }
-            }
-          } catch (mpErr) {
-            console.warn('MediaPipe detection error:', mpErr);
-            faceConsecutiveErrorCount++;
-          }
-        }
-      }
-
-      // Auto-fallback if engine encountered 3+ consecutive exceptions
-      if (faceConsecutiveErrorCount >= 3) {
-        enableFaceDetectionFallback();
-      }
+      const detected = await detectFaceInVideo(video);
 
       if (detected) {
         faceConsecutiveLossCount = 0;
         faceConsecutiveErrorCount = 0;
-        hasVerifiedFaceInSession = true; // Latch session verified!
         setFaceDetectionUIState(true, false);
       } else {
         faceConsecutiveLossCount++;
-        if (hasVerifiedFaceInSession) {
-          // Face was ALREADY verified: DO NOT switch to orange or disable shutter!
-          // Only if face is absent for more than 4 seconds (20 ticks), switch to gentle fallback
-          if (faceConsecutiveLossCount > 20) {
-            setFaceDetectionUIState(true, true);
-          }
-        } else {
-          // Not yet verified: only show amber if missed 2+ ticks
-          if (!isFaceDetectionFallbackActive && faceConsecutiveLossCount >= 2) {
-            setFaceDetectionUIState(false, false);
-          }
+        // Strict Real-Time: allow only 1 missed tick (~200ms for natural blink), then immediately lock
+        if (!isFaceDetectionFallbackActive && faceConsecutiveLossCount >= 2) {
+          setFaceDetectionUIState(false, false);
         }
       }
     } catch (e) {
       console.warn('Face detection cycle note:', e);
       faceConsecutiveErrorCount++;
-      if (faceConsecutiveErrorCount >= 3) {
+      if (faceConsecutiveErrorCount >= 5 && !faceDetectorEngine) {
         enableFaceDetectionFallback();
       }
     }
@@ -1370,6 +1357,8 @@ async function openFullscreenCamera(type, qrToken) {
   // Reset face state
   isFaceDetected = false;
   isFaceDetectionFallbackActive = false;
+  faceConsecutiveLossCount = 0;
+  faceConsecutiveErrorCount = 0;
 
   modal?.classList.remove('hidden');
 
@@ -1396,12 +1385,12 @@ async function openFullscreenCamera(type, qrToken) {
     setFaceDetectionUIState(true, false);
   } else {
     setFaceDetectionUIState(false, false);
-    // Graceful 5-second fallback timer if engine/network is slow
+    // Graceful fallback timer ONLY if AI engine completely failed to initialize after 8 seconds
     faceDetectionFallbackTimer = setTimeout(() => {
-      if (!isFaceDetected) {
+      if (!isFaceDetected && !faceDetectorEngine) {
         enableFaceDetectionFallback();
       }
-    }, 5000);
+    }, 8000);
     startFaceDetectionLoop();
   }
 }
@@ -1692,24 +1681,40 @@ function drawAttendanceWatermark(ctx, width, height, clockType) {
   ctx.restore();
 }
 
-function triggerShutterCapture() {
-  // Prevent capture if face detection is enabled and no face is detected
-  if (appSettings.enable_face_detection !== 'false' && !isFaceDetected) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'ยังไม่พบใบหน้าในกรอบ',
-      text: 'กรุณาขยับใบหน้าให้อยู่กึ่งกลางกรอบวงรีให้ชัดเจนก่อนกดถ่ายรูป',
-      timer: 1800,
-      showConfirmButton: false
-    });
-    return;
-  }
-
+async function triggerShutterCapture() {
   const video = document.getElementById('fsVideoPreview');
   const canvas = document.getElementById('fsPhotoCanvas');
   const flash = document.getElementById('camFlashOverlay');
 
   if (!video || !canvas || !activePendingClock) return;
+
+  // 0. Pre-Shutter Real-Time AI Verification: Strictly ensure face is present at the exact instant of shutter press!
+  if (appSettings.enable_face_detection !== 'false' && !isFaceDetectionFallbackActive) {
+    if (!isFaceDetected) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ยังไม่พบใบหน้าในกรอบ',
+        text: 'กรุณาขยับใบหน้าให้อยู่กึ่งกลางกรอบวงรีให้ชัดเจนก่อนกดถ่ายรูป',
+        timer: 1800,
+        showConfirmButton: false
+      });
+      return;
+    }
+
+    // Instant verification on the current live video frame
+    const liveFacePresent = await detectFaceInVideo(video);
+    if (!liveFacePresent) {
+      setFaceDetectionUIState(false, false);
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่พบใบหน้าขณะกดถ่ายรูป',
+        text: 'กรุณาหันหน้ามองกล้องให้อยู่ในกรอบวงรี แล้วลองกดถ่ายใหม่อีกครั้ง',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      return;
+    }
+  }
 
   // 1. Shutter Flash Effect & Haptic Vibration
   if (flash) {
