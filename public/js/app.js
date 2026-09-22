@@ -577,9 +577,24 @@ function applyFeatureToggles() {
   }
 
   // Payslip Feature Toggle
-  const navPayslip = document.getElementById('navBtnPayslip');
   const payslipEnabled = (appSettings.enable_payslip !== 'false');
-  if (navPayslip) navPayslip.classList.toggle('hidden', !payslipEnabled);
+  const navPayslip = document.getElementById('navBtnPayslip');
+  if (navPayslip) {
+    if (!payslipEnabled) {
+      navPayslip.classList.add('hidden');
+    } else {
+      navPayslip.classList.remove('hidden');
+    }
+  }
+
+  const quickPayslip = document.getElementById('quickBtnPayslip');
+  if (quickPayslip) {
+    if (!payslipEnabled) {
+      quickPayslip.classList.add('hidden');
+    } else {
+      quickPayslip.classList.remove('hidden');
+    }
+  }
 
   const payslipDisabledNotice = document.getElementById('payslipDisabledNotice');
   const payslipPinGate = document.getElementById('payslipPinGate');
@@ -3238,6 +3253,15 @@ async function saveAttendanceSettings() {
 // 13. TAB NAVIGATION
 // ==============================================================================
 function switchTab(tab) {
+  if (tab === 'payslip' && appSettings.enable_payslip === 'false') {
+    Swal.fire({
+      icon: 'info',
+      title: 'ฟังก์ชันสลิปเงินเดือนปิดใช้งาน',
+      text: 'ผู้ดูแลระบบปิดการใช้งานฟังก์ชันสลิปเงินเดือนชั่วคราว'
+    });
+    tab = 'clock';
+  }
+
   const tabs = ['clock', 'history', 'requests', 'payslip'];
   tabs.forEach(t => {
     const section = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
@@ -3258,7 +3282,6 @@ function switchTab(tab) {
   if (tab === 'history') {
     loadEmployeeHistory();
   } else if (tab === 'requests') {
-    applyFeatureToggles();
     if (appSettings.enable_advance_requests !== 'false') {
       switchSubTab('advance');
     } else if (appSettings.enable_leave_requests !== 'false') {
@@ -3271,6 +3294,8 @@ function switchTab(tab) {
   } else if (tab === 'payslip') {
     initPayslipView();
   }
+
+  applyFeatureToggles();
 }
 
 // ==============================================================================
