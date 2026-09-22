@@ -1518,6 +1518,133 @@ function closeFullscreenCamera() {
   isFaceDetectionFallbackActive = false;
 }
 
+function drawCanvasRoundRect(ctx, x, y, width, height, radius) {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, radius);
+    ctx.fill();
+    return;
+  }
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawAttendanceWatermark(ctx, width, height, clockType) {
+  const bannerH = 140;
+  const startY = height - bannerH;
+
+  // 1. Dark Gradient Background from transparent to 95% opacity
+  const grad = ctx.createLinearGradient(0, startY - 20, 0, height);
+  grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  grad.addColorStop(0.3, 'rgba(15, 23, 42, 0.80)');
+  grad.addColorStop(1, 'rgba(15, 23, 42, 0.96)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, startY - 20, width, bannerH + 20);
+
+  // 2. Action Badge Info
+  let badgeText = 'เข้างาน (IN)';
+  let badgeColor = '#10b981'; // Emerald
+  if (clockType === 'OUT') {
+    badgeText = 'ออกงาน (OUT)';
+    badgeColor = '#ef4444'; // Rose
+  } else if (clockType === 'BREAK_OUT') {
+    badgeText = 'พักเบรก (BREAK OUT)';
+    badgeColor = '#f59e0b'; // Amber
+  } else if (clockType === 'BREAK_IN') {
+    badgeText = 'กลับเข้างาน (BREAK IN)';
+    badgeColor = '#06b6d4'; // Cyan
+  }
+
+  // 3. Date & Time String
+  const now = new Date();
+  const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const day = now.getDate();
+  const mon = thMonths[now.getMonth()];
+  const yr = now.getFullYear() + 543;
+  const hr = String(now.getHours()).padStart(2, '0');
+  const min = String(now.getMinutes()).padStart(2, '0');
+  const sec = String(now.getSeconds()).padStart(2, '0');
+  const dateStr = `${day} ${mon} ${yr}`;
+  const timeStr = `${hr}:${min}:${sec} น.`;
+
+  // 4. Employee & Location Info
+  const empName = currentEmployee ? (currentEmployee.full_name || currentEmployee.empId) : 'พนักงาน';
+  const empId = currentEmployee ? currentEmployee.empId : '';
+  const empDisplay = empId ? `${empName} • ${empId}` : empName;
+
+  const targetBranch = (typeof getCurrentEmployeeTargetBranch === 'function') ? getCurrentEmployeeTargetBranch() : null;
+  const branchName = targetBranch ? (targetBranch.branch_name || targetBranch.branch_id || 'สำนักงานใหญ่') : 'สำนักงานใหญ่';
+
+  let distText = '';
+  if (currentDistanceMeters !== null && currentDistanceMeters !== undefined) {
+    distText = `ห่าง ${Math.round(currentDistanceMeters)} ม.`;
+  }
+  const branchDisplay = `🏢 สาขา: ${branchName}${distText ? ' (' + distText + ')' : ''}`;
+
+  let gpsDisplay = '📍 GPS: ไม่พบพิกัดดาวเทียม';
+  if (currentLocation && currentLocation.lat && currentLocation.lng) {
+    gpsDisplay = `📍 GPS: ${Number(currentLocation.lat).toFixed(6)}, ${Number(currentLocation.lng).toFixed(6)}`;
+  }
+
+  ctx.save();
+
+  // Draw Badge Pill
+  const fontSans = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.font = `bold 12px ${fontSans}`;
+  const badgeTextWidth = ctx.measureText(badgeText).width;
+  const badgeW = badgeTextWidth + 24;
+  const badgeH = 22;
+  const badgeX = 14;
+  const badgeY = startY + 6;
+
+  ctx.fillStyle = badgeColor;
+  drawCanvasRoundRect(ctx, badgeX, badgeY, badgeW, badgeH, 11);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(badgeText, badgeX + 12, badgeY + 15);
+
+  // Timestamp next to badge
+  ctx.font = `bold 12.5px ${fontSans}`;
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillText(`📅 ${dateStr} • ${timeStr}`, badgeX + badgeW + 10, badgeY + 16);
+
+  // Line 2: Employee Name
+  ctx.font = `bold 15px ${fontSans}`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(`👤 ${empDisplay}`, 16, startY + 52);
+
+  // Line 3: Branch & Distance
+  ctx.font = `12px ${fontSans}`;
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillText(branchDisplay, 16, startY + 74);
+
+  // Line 4: GPS Coordinates
+  ctx.font = 'bold 12.5px "Courier New", monospace';
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText(gpsDisplay, 16, startY + 97);
+
+  // Line 5: Verification text & Brand
+  ctx.font = `10.5px ${fontSans}`;
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('✓ ยืนยันพิกัดผ่านระบบ PTN Time Attendant', 16, startY + 118);
+
+  ctx.font = `bold 11px ${fontSans}`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.fillText('PTN TIME', width - 70, startY + 118);
+
+  ctx.restore();
+}
+
 function triggerShutterCapture() {
   // Prevent capture if face detection is enabled and no face is detected
   if (appSettings.enable_face_detection !== 'false' && !isFaceDetected) {
@@ -1547,7 +1674,7 @@ function triggerShutterCapture() {
   }
 
   // 2. Crop and Compress Frame from Video
-  const targetSize = 400; // 400x400 square crop
+  const targetSize = 480; // 480x480 square crop for crisp photo and watermark
   canvas.width = targetSize;
   canvas.height = targetSize;
   const ctx = canvas.getContext('2d');
@@ -1566,7 +1693,10 @@ function triggerShutterCapture() {
   ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
   ctx.restore();
 
-  const photoBase64 = canvas.toDataURL('image/jpeg', 0.75);
+  // Overlay GPS Watermark (Style 1: Modern Gradient Banner)
+  drawAttendanceWatermark(ctx, targetSize, targetSize, activePendingClock ? activePendingClock.type : 'IN');
+
+  const photoBase64 = canvas.toDataURL('image/jpeg', 0.80);
 
   const pendingData = Object.assign({}, activePendingClock);
   closeFullscreenCamera();
