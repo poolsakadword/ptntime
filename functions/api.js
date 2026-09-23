@@ -161,6 +161,7 @@ async function ensureTables(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `).run().catch(() => {});
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_ot_requests_emp_date ON ot_requests(emp_id, date)').run().catch(() => {});
 
   // 4. advance_requests (Salary Advance / เบิกเงินล่วงหน้า)
   await db.prepare(`
@@ -441,11 +442,15 @@ export async function onRequest(context) {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (err) {
+    const isBusy = /busy|locked|timeout|storage error|resource limit|abort/i.test(err.message || '');
     return new Response(JSON.stringify({
       success: false,
-      message: 'Server Error: ' + err.message
+      retryable: isBusy,
+      message: isBusy 
+        ? 'ระบบฐานข้อมูลกำลังประมวลผลพร้อมกัน กรุณารอสักครู่ (ระบบกำลังลองบันทึกใหม่อัตโนมัติ)' 
+        : ('Server Error: ' + err.message)
     }), {
-      status: 200,
+      status: isBusy ? 503 : 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
