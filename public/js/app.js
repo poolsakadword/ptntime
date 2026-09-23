@@ -775,23 +775,196 @@ function updateHeaderEmployeeView() {
 }
 
 // ==============================================================================
-// 3. EMPLOYEE PICKER / LOGIN (AUTO-REMEMBER)
+// 3. EMPLOYEE PICKER / LOGIN (AUTO-REMEMBER & INTERACTIVE SEARCH)
 // ==============================================================================
-function populateEmployeeDropdown() {
-  const sel = document.getElementById('empSelectDropdown');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">-- กรุณาเลือกพนักงาน --</option>';
-  employeeList.forEach(e => {
-    const opt = document.createElement('option');
-    opt.value = e.empId;
+let selectedPickerEmpId = null;
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderEmployeeCards(filterText = '') {
+  const container = document.getElementById('empCardsScrollArea');
+  if (!container) return;
+
+  const currentDevId = getOrCreateDeviceId();
+  const search = String(filterText || '').trim().toLowerCase();
+
+  const filtered = employeeList.filter(e => {
+    if (!search) return true;
+    const empId = String(e.empId || '').toLowerCase();
+    const name = String(e.fullName || '').toLowerCase();
+    const nick = String(e.nickname || '').toLowerCase();
+    const dept = String(e.department || '').toLowerCase();
+    return empId.includes(search) || name.includes(search) || nick.includes(search) || dept.includes(search);
+  });
+
+  if (employeeList.length === 0) {
+    container.innerHTML = `
+      <div class="py-6 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+        <span class="animate-spin text-2xl">⏳</span>
+        <span>กำลังโหลดรายชื่อพนักงานจากระบบ...</span>
+        <button type="button" onclick="loadInitialData()" class="mt-2 px-3 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-800 rounded-xl font-bold text-xs transition">
+          🔄 กดเพื่อโหลดรายชื่อใหม่อีกครั้ง
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="py-6 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-1">
+        <span class="text-xl">🔍</span>
+        <span>ไม่พบพนักงานที่ตรงกับ "${escapeHtml(filterText)}"</span>
+        <button type="button" onclick="clearEmployeeSearch()" class="mt-1 text-sky-600 font-bold hover:underline">
+          ล้างคำค้นหา
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(e => {
+    const isSelected = (selectedPickerEmpId === e.empId);
     const nick = e.nickname ? ` (${e.nickname})` : '';
     const bObj = branchList.find(b => b.branch_id === (e.branchId || e.branch_id));
-    const bTag = (e.allowAllBranches === true || e.allow_all_branches === 'true')
-      ? ' [ทุกสาขา]'
-      : (bObj ? ` [${bObj.branch_name}]` : '');
-    opt.textContent = `[${e.empId}] ${e.fullName}${nick} - ${e.department || 'พนักงาน'}${bTag}`;
-    sel.appendChild(opt);
+    const branchName = (e.allowAllBranches === true || e.allow_all_branches === 'true')
+      ? 'ทุกสาขา'
+      : (bObj ? bObj.branch_name : 'สำนักงานใหญ่');
+
+    // Device binding badge
+    let deviceBadge = '';
+    if (e.boundDevice && e.boundDevice.deviceId) {
+      if (e.boundDevice.deviceId === currentDevId) {
+        deviceBadge = `<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 font-semibold border border-sky-200">📱 เครื่องนี้</span>`;
+      } else {
+        deviceBadge = `<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold border border-amber-200">🔒 เครื่องอื่น</span>`;
+      }
+    } else {
+      deviceBadge = `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-semibold border border-emerald-200">พร้อมใช้งาน</span>`;
+    }
+
+    const cardClass = isSelected
+      ? 'bg-sky-50 border-2 border-sky-500 shadow-sm ring-2 ring-sky-200'
+      : 'bg-slate-50/80 hover:bg-slate-100/90 border border-slate-200';
+
+    html += `
+      <div onclick="selectEmployeeCard('${escapeHtml(e.empId)}')" class="p-2.5 rounded-2xl cursor-pointer transition-all active:scale-[0.98] flex items-center justify-between ${cardClass}">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${isSelected ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-700'}">
+            ${isSelected ? '✓' : (e.photoUrl ? `<img src="${e.photoUrl}" class="w-full h-full rounded-xl object-cover">` : e.empId.replace(/[^0-9]/g, ''))}
+          </div>
+          <div class="min-w-0">
+            <div class="text-xs md:text-sm font-bold text-slate-800 truncate flex items-center gap-1">
+              <span>[${escapeHtml(e.empId)}] ${escapeHtml(e.fullName)}${escapeHtml(nick)}</span>
+            </div>
+            <div class="text-[11px] text-slate-500 truncate flex items-center gap-1.5 mt-0.5">
+              <span>${escapeHtml(e.department || 'พนักงาน')}</span>
+              <span class="text-slate-300">•</span>
+              <span class="text-sky-700 font-medium">${escapeHtml(branchName)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex-shrink-0 ml-2">
+          ${deviceBadge}
+        </div>
+      </div>
+    `;
   });
+
+  container.innerHTML = html;
+}
+
+function selectEmployeeCard(empId) {
+  selectedPickerEmpId = empId;
+  const sel = document.getElementById('empSelectDropdown');
+  if (sel) sel.value = empId;
+
+  const found = employeeList.find(e => e.empId === empId);
+  const banner = document.getElementById('selectedEmpBanner');
+  const nameEl = document.getElementById('selectedEmpName');
+  const deptEl = document.getElementById('selectedEmpDept');
+  const avatarEl = document.getElementById('selectedEmpAvatar');
+  const pinSec = document.getElementById('pinEntrySection');
+
+  if (found) {
+    if (nameEl) nameEl.textContent = `[${found.empId}] ${found.fullName}${found.nickname ? ` (${found.nickname})` : ''}`;
+    if (deptEl) deptEl.textContent = `${found.department || 'พนักงาน'} • กรอกรหัสยืนยันด้านล่าง`;
+    if (avatarEl) avatarEl.textContent = '✓';
+    banner?.classList.remove('hidden');
+    pinSec?.classList.remove('hidden');
+    setTimeout(() => {
+      document.getElementById('empPinInput')?.focus();
+    }, 150);
+  } else {
+    banner?.classList.add('hidden');
+    pinSec?.classList.add('hidden');
+  }
+
+  // Re-render cards to show active selection highlight
+  const search = document.getElementById('empSearchInput')?.value || '';
+  renderEmployeeCards(search);
+}
+
+function resetSelectedEmployee() {
+  selectedPickerEmpId = null;
+  const sel = document.getElementById('empSelectDropdown');
+  if (sel) sel.value = '';
+  document.getElementById('selectedEmpBanner')?.classList.add('hidden');
+  document.getElementById('pinEntrySection')?.classList.add('hidden');
+  const pinInput = document.getElementById('empPinInput');
+  if (pinInput) pinInput.value = '';
+  const search = document.getElementById('empSearchInput')?.value || '';
+  renderEmployeeCards(search);
+}
+
+function filterEmployeePicker(val) {
+  const clearBtn = document.getElementById('btnClearEmpSearch');
+  if (clearBtn) {
+    clearBtn.classList.toggle('hidden', !val);
+  }
+  renderEmployeeCards(val);
+}
+
+function clearEmployeeSearch() {
+  const input = document.getElementById('empSearchInput');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+  const clearBtn = document.getElementById('btnClearEmpSearch');
+  if (clearBtn) clearBtn.classList.add('hidden');
+  renderEmployeeCards('');
+}
+
+function populateEmployeeDropdown() {
+  const sel = document.getElementById('empSelectDropdown');
+  if (sel) {
+    sel.innerHTML = '<option value="">-- กรุณาเลือกพนักงาน --</option>';
+    employeeList.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.empId;
+      const nick = e.nickname ? ` (${e.nickname})` : '';
+      const bObj = branchList.find(b => b.branch_id === (e.branchId || e.branch_id));
+      const bTag = (e.allowAllBranches === true || e.allow_all_branches === 'true')
+        ? ' [ทุกสาขา]'
+        : (bObj ? ` [${bObj.branch_name}]` : '');
+      opt.textContent = `[${e.empId}] ${e.fullName}${nick} - ${e.department || 'พนักงาน'}${bTag}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Always refresh card list
+  const search = document.getElementById('empSearchInput')?.value || '';
+  renderEmployeeCards(search);
 }
 
 function handleHeaderEmployeeCardClick() {
@@ -804,12 +977,29 @@ function handleHeaderEmployeeCardClick() {
 
 function openEmployeePickerModal() {
   document.getElementById('modalEmployeePicker')?.classList.remove('hidden');
-  loadInitialData(); // Real-time sync: fetch latest employee list from D1
-  const sel = document.getElementById('empSelectDropdown');
-  if (sel && currentEmployee) {
-    sel.value = currentEmployee.empId;
-    document.getElementById('pinEntrySection')?.classList.remove('hidden');
+
+  // Pre-select current employee if available
+  if (currentEmployee && currentEmployee.empId) {
+    selectedPickerEmpId = currentEmployee.empId;
   }
+
+  // Clear search on open
+  const searchInput = document.getElementById('empSearchInput');
+  if (searchInput) {
+    searchInput.value = '';
+    document.getElementById('btnClearEmpSearch')?.classList.add('hidden');
+  }
+
+  renderEmployeeCards('');
+
+  if (selectedPickerEmpId) {
+    selectEmployeeCard(selectedPickerEmpId);
+  } else {
+    resetSelectedEmployee();
+  }
+
+  // Sync latest employees from D1 in real-time
+  loadInitialData();
 }
 
 function closeEmployeePickerModal() {
@@ -817,18 +1007,17 @@ function closeEmployeePickerModal() {
 }
 
 function onSelectEmployeeDropdown(val) {
-  const pinSec = document.getElementById('pinEntrySection');
   if (val) {
-    pinSec?.classList.remove('hidden');
+    selectEmployeeCard(val);
   } else {
-    pinSec?.classList.add('hidden');
+    resetSelectedEmployee();
   }
 }
 
 async function confirmEmployeeLogin() {
   const sel = document.getElementById('empSelectDropdown');
   const pinInput = document.getElementById('empPinInput');
-  const empId = sel?.value;
+  const empId = sel?.value || selectedPickerEmpId;
   const pin = pinInput ? pinInput.value.trim() : '';
   const deviceId = getOrCreateDeviceId();
 

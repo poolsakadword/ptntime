@@ -64,7 +64,20 @@ async function getMasterUnlockToken(windowOffset = 0) {
   return 'PTN-UNLOCK-' + fullHash.substring(0, 12).toUpperCase();
 }
 
+let isTablesEnsured = false;
+
 async function ensureTables(db) {
+  if (isTablesEnsured) return;
+  try {
+    const check = await db.prepare("SELECT 1 FROM employees LIMIT 1").first();
+    if (check !== undefined) {
+      isTablesEnsured = true;
+      return;
+    }
+  } catch (e) {
+    // Schema not initialized yet, proceed to create tables below
+  }
+
   // 0. employee_devices (Device Lock)
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS employee_devices (
@@ -214,6 +227,7 @@ async function ensureTables(db) {
   await db.prepare("ALTER TABLE employees ADD COLUMN allow_all_branches TEXT DEFAULT 'false'").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_id TEXT").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_name TEXT").run().catch(() => {});
+  isTablesEnsured = true;
 }
 
 async function getEmployeeBranchConfig(db, empId, lat, lng, defaultSettings) {
@@ -471,14 +485,14 @@ async function handleAction(db, action, params) {
     case 'getInitialData': {
       const empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
       const branchRows = await db.prepare("SELECT * FROM branches ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
-      const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at, updated_at FROM employee_devices').all().catch(() => ({ results: [] }));
+      const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at FROM employee_devices').all().catch(() => ({ results: [] }));
       const deviceMap = {};
       for (const d of deviceRows.results || []) {
         deviceMap[d.emp_id] = {
           deviceId: d.device_id,
           deviceName: d.device_name,
           boundAt: d.bound_at,
-          updatedAt: d.updated_at
+          updatedAt: d.bound_at
         };
       }
 
