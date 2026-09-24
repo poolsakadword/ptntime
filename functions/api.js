@@ -1413,14 +1413,14 @@ async function handleAction(db, action, params) {
       const isEarlyDismissalFullPay = !!effectiveBranchCfg.earlyDismissalFullPay || isEmpUndertimeExempt;
       const finalIsFullPay = isEarlyDismissalFullPay ? 1 : 0;
       const earlyDismissalRemark = isEmpUndertimeExempt 
-        ? ' [สิทธิ์ประจำตำแหน่ง: จ่ายค่าแรงเต็มวัน ไม่หักเวลาขาด]' 
+        ? ' [สิทธิ์ประจำตำแหน่ง: จ่ายค่าแรงเต็มวัน ไม่หักเวลาออกก่อน]' 
         : (isEarlyDismissalFullPay ? ' [งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน]' : '');
 
       await db.prepare(`
         UPDATE time_logs 
         SET clock_out = ?, out_lat = ?, out_lng = ?, out_photo_url = ?, work_hours = ?, ot_hours = ?,
             is_full_pay = CASE WHEN ? = 1 THEN 1 ELSE COALESCE(is_full_pay, 0) END,
-            status = CASE WHEN ? = 1 THEN 'NORMAL' ELSE status END,
+            status = CASE WHEN ? = 1 AND COALESCE(late_minutes, 0) = 0 THEN 'NORMAL' ELSE status END,
             remark = COALESCE(remark, '') || ?
         WHERE id = ?
       `).bind(timeStr, lat || null, lng || null, photoUrl || null, totalWorkHours, calculatedOtHours, finalIsFullPay, finalIsFullPay, (remark ? ' ' + remark : '') + earlyDismissalRemark, existing.id).run();
