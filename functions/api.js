@@ -69,6 +69,7 @@ let isTablesEnsured = false;
 async function ensureTables(db) {
   if (isTablesEnsured) return;
   try {
+    await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
     const check = await db.prepare("SELECT 1 FROM employees LIMIT 1").first();
     if (check !== undefined) {
       isTablesEnsured = true;
@@ -489,7 +490,11 @@ async function handleAction(db, action, params) {
 
   switch (action) {
     case 'getInitialData': {
-      const empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
+      let empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => null);
+      if (!empRows) {
+        await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
+        empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
+      }
       const branchRows = await db.prepare("SELECT * FROM branches ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
       const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at FROM employee_devices').all().catch(() => ({ results: [] }));
       const deviceMap = {};
