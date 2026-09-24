@@ -1359,6 +1359,8 @@ async function handleAction(db, action, params) {
             calculatedOtHours = Math.round((rawOtMinutes / 60) * 100) / 100;
           }
         }
+      }
+
       // Check employee OT eligibility (if not eligible, force OT hours to 0)
       const empRow = await db.prepare('SELECT is_ot_eligible FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
       const isOtEligible = !(empRow && (empRow.is_ot_eligible === 'false' || empRow.is_ot_eligible === false));
