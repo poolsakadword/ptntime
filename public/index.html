@@ -1121,23 +1121,78 @@
           <button type="button" onclick="closeHistoryDetailModal()" class="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 text-xl font-bold flex items-center justify-center transition active:scale-95">&times;</button>
         </div>
 
-        <!-- 2 Selfie Photos Grid -->
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-slate-50 border border-emerald-200 rounded-2xl p-2.5 text-center">
-            <div class="text-xs sm:text-sm font-bold text-emerald-800 mb-1.5 flex items-center justify-center gap-1">
-              📷 รูปเข้างาน (<span id="hModalPhotoInTime">--:--</span>)
-            </div>
-            <div id="hModalPhotoInContainer" class="w-full h-28 sm:h-32 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-center text-slate-400 overflow-hidden cursor-pointer shadow-sm hover:opacity-90 transition">
-              <!-- img or placeholder -->
-            </div>
+        <!-- 4-PHOTO GRID 2x2 (CONCEPT 2) -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-700 px-0.5">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-camera text-sky-600"></i> ภาพถ่ายสแกนใบหน้า (4 จุดตรวจ)</span>
+            <span class="text-[11px] font-normal text-slate-400">แตะรูปเพื่อขยาย</span>
           </div>
-          <div class="bg-slate-50 border border-rose-200 rounded-2xl p-2.5 text-center">
-            <div class="text-xs sm:text-sm font-bold text-rose-800 mb-1.5 flex items-center justify-center gap-1">
-              📷 รูปออกงาน (<span id="hModalPhotoOutTime">--:--</span>)
+          <div class="grid grid-cols-2 gap-2.5">
+            
+            <!-- 1. รูปเข้างาน -->
+            <div class="relative bg-slate-100 rounded-2xl overflow-hidden aspect-[4/3] group shadow-sm border border-emerald-300">
+              <div id="hModalPhotoInContainer" class="w-full h-full flex items-center justify-center text-slate-400 cursor-pointer overflow-hidden">
+                <!-- img or placeholder -->
+              </div>
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white pointer-events-none">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold flex items-center gap-1 text-emerald-400"><i class="fa-solid fa-arrow-right-to-bracket"></i> เข้างาน</span>
+                  <span id="hModalPhotoInTime" class="font-chakra font-bold text-emerald-300">--:--</span>
+                </div>
+              </div>
+              <span id="hModalPhotoInBadge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-600/90 text-white shadow pointer-events-none">
+                ① เข้างาน
+              </span>
             </div>
-            <div id="hModalPhotoOutContainer" class="w-full h-28 sm:h-32 rounded-xl bg-rose-50 border border-rose-300 flex items-center justify-center text-slate-400 overflow-hidden cursor-pointer shadow-sm hover:opacity-90 transition">
-              <!-- img or placeholder -->
+
+            <!-- 2. รูปออกพัก -->
+            <div class="relative bg-slate-100 rounded-2xl overflow-hidden aspect-[4/3] group shadow-sm border border-amber-300">
+              <div id="hModalPhotoBreakOutContainer" class="w-full h-full flex items-center justify-center text-slate-400 cursor-pointer overflow-hidden">
+                <!-- img or placeholder -->
+              </div>
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white pointer-events-none">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold flex items-center gap-1 text-amber-400"><i class="fa-solid fa-mug-hot"></i> ออกพัก</span>
+                  <span id="hModalPhotoBreakOutTime" class="font-chakra font-bold text-amber-300">--:--</span>
+                </div>
+              </div>
+              <span id="hModalPhotoBreakOutBadge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-600/90 text-white shadow pointer-events-none">
+                ② ออกพัก
+              </span>
             </div>
+
+            <!-- 3. รูปกลับจากพัก -->
+            <div class="relative bg-slate-100 rounded-2xl overflow-hidden aspect-[4/3] group shadow-sm border border-blue-300">
+              <div id="hModalPhotoBreakInContainer" class="w-full h-full flex items-center justify-center text-slate-400 cursor-pointer overflow-hidden">
+                <!-- img or placeholder -->
+              </div>
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white pointer-events-none">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold flex items-center gap-1 text-blue-400"><i class="fa-solid fa-rotate-left"></i> เข้าจากพัก</span>
+                  <span id="hModalPhotoBreakInTime" class="font-chakra font-bold text-blue-300">--:--</span>
+                </div>
+              </div>
+              <span id="hModalPhotoBreakInBadge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-600/90 text-white shadow pointer-events-none">
+                ③ เข้าจากพัก
+              </span>
+            </div>
+
+            <!-- 4. รูปออกงาน -->
+            <div class="relative bg-slate-100 rounded-2xl overflow-hidden aspect-[4/3] group shadow-sm border border-rose-300">
+              <div id="hModalPhotoOutContainer" class="w-full h-full flex items-center justify-center text-slate-400 cursor-pointer overflow-hidden">
+                <!-- img or placeholder -->
+              </div>
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white pointer-events-none">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold flex items-center gap-1 text-rose-400"><i class="fa-solid fa-arrow-right-from-bracket"></i> เลิกงาน</span>
+                  <span id="hModalPhotoOutTime" class="font-chakra font-bold text-rose-300">--:--</span>
+                </div>
+              </div>
+              <span id="hModalPhotoOutBadge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-rose-600/90 text-white shadow pointer-events-none">
+                ④ เลิกงาน
+              </span>
+            </div>
+
           </div>
         </div>
 
@@ -1223,6 +1278,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=9.5"></script>
+  <script src="js/app.js?v=9.6"></script>
 </body>
 </html>

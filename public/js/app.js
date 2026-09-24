@@ -2897,12 +2897,18 @@ async function loadEmployeeHistory() {
             <div class="flex items-center space-x-3">
               <div class="flex items-center -space-x-2 flex-shrink-0">
                 ${l.in_photo_url ? `
-                  <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-11 h-11 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${l.date} (${l.clock_in})')" />
+                  <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${l.date} (${l.clock_in})')" />
+                ` : ''}
+                ${l.break_out_photo_url ? `
+                  <img src="${l.break_out_photo_url}" title="รูปถ่ายออกพัก (${l.break_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-amber-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกไปพัก ${l.date} (${l.break_out})')" />
+                ` : ''}
+                ${l.break_in_photo_url ? `
+                  <img src="${l.break_in_photo_url}" title="รูปถ่ายเข้าจากพัก (${l.break_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-blue-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_in_photo_url}', 'รูปถ่ายเซลฟี่ตอนกลับเข้างาน ${l.date} (${l.break_in})')" />
                 ` : ''}
                 ${l.out_photo_url ? `
-                  <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-11 h-11 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${l.date} (${l.clock_out})')" />
+                  <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${l.date} (${l.clock_out})')" />
                 ` : ''}
-                ${!l.in_photo_url && !l.out_photo_url ? `
+                ${!l.in_photo_url && !l.out_photo_url && !l.break_out_photo_url && !l.break_in_photo_url ? `
                   <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-sm">📅</div>
                 ` : ''}
               </div>
@@ -2969,29 +2975,68 @@ function openHistoryDetailModal(idx) {
   var dateEl = document.getElementById('hModalDate');
   if (dateEl) dateEl.textContent = l.date || '-';
 
-  // Photos
+  // Photos (4-Photo 2x2 Grid)
+  // 1. In Photo
   var pInCont = document.getElementById('hModalPhotoInContainer');
   var pInTime = document.getElementById('hModalPhotoInTime');
+  var pInBadge = document.getElementById('hModalPhotoInBadge');
   if (pInTime) pInTime.textContent = l.clock_in ? l.clock_in.substring(0, 5) : '--:--';
+  if (pInBadge) pInBadge.textContent = isLate ? ('① สาย ' + l.late_minutes + ' น.') : '① เข้างาน';
   if (pInCont) {
     if (l.in_photo_url) {
-      pInCont.innerHTML = '<img src="' + l.in_photo_url + '" class="w-full h-full object-cover" alt="รูปเข้างาน">';
-      pInCont.onclick = function() { previewCertPhoto(l.in_photo_url, 'รูปถ่ายเซลฟี่ตอนเข้างาน ' + l.date + ' (' + l.clock_in + ')'); };
+      pInCont.innerHTML = '<img src="' + l.in_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปเข้างาน">';
+      pInCont.onclick = function() { previewCertPhoto(l.in_photo_url, 'รูปถ่ายเซลฟี่ตอนเข้างาน ' + l.date + ' (' + (l.clock_in || '') + ')'); };
     } else {
-      pInCont.innerHTML = '<span class="text-xs sm:text-sm text-slate-400">ไม่มีรูปภาพ</span>';
+      pInCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">ไม่มีรูปภาพ</span>';
       pInCont.onclick = null;
     }
   }
 
+  // 2. Break Out Photo
+  var pBOutCont = document.getElementById('hModalPhotoBreakOutContainer');
+  var pBOutTime = document.getElementById('hModalPhotoBreakOutTime');
+  if (pBOutTime) pBOutTime.textContent = l.break_out ? l.break_out.substring(0, 5) : '--:--';
+  if (pBOutCont) {
+    if (l.break_out_photo_url) {
+      pBOutCont.innerHTML = '<img src="' + l.break_out_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปออกพัก">';
+      pBOutCont.onclick = function() { previewCertPhoto(l.break_out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกไปพัก ' + l.date + ' (' + (l.break_out || '') + ')'); };
+    } else {
+      pBOutCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">' + (l.break_out ? 'ไม่มีรูป' : 'ไม่ได้สแกน') + '</span>';
+      pBOutCont.onclick = null;
+    }
+  }
+
+  // 3. Break In Photo
+  var pBInCont = document.getElementById('hModalPhotoBreakInContainer');
+  var pBInTime = document.getElementById('hModalPhotoBreakInTime');
+  var pBInBadge = document.getElementById('hModalPhotoBreakInBadge');
+  if (pBInTime) pBInTime.textContent = l.break_in ? l.break_in.substring(0, 5) : '--:--';
+  if (pBInBadge) {
+    var bMin = l.break_minutes || 0;
+    pBInBadge.textContent = bMin > 0 ? ('③ พัก ' + bMin + ' น.') : '③ เข้าจากพัก';
+  }
+  if (pBInCont) {
+    if (l.break_in_photo_url) {
+      pBInCont.innerHTML = '<img src="' + l.break_in_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปกลับเข้างาน">';
+      pBInCont.onclick = function() { previewCertPhoto(l.break_in_photo_url, 'รูปถ่ายเซลฟี่ตอนกลับเข้างาน ' + l.date + ' (' + (l.break_in || '') + ')'); };
+    } else {
+      pBInCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">' + (l.break_in ? 'ไม่มีรูป' : 'ไม่ได้สแกน') + '</span>';
+      pBInCont.onclick = null;
+    }
+  }
+
+  // 4. Clock Out Photo
   var pOutCont = document.getElementById('hModalPhotoOutContainer');
   var pOutTime = document.getElementById('hModalPhotoOutTime');
+  var pOutBadge = document.getElementById('hModalPhotoOutBadge');
   if (pOutTime) pOutTime.textContent = l.clock_out ? l.clock_out.substring(0, 5) : '--:--';
+  if (pOutBadge) pOutBadge.textContent = isBranchEarly ? '④ งานเสร็จ' : '④ เลิกงาน';
   if (pOutCont) {
     if (l.out_photo_url) {
-      pOutCont.innerHTML = '<img src="' + l.out_photo_url + '" class="w-full h-full object-cover" alt="รูปออกงาน">';
-      pOutCont.onclick = function() { previewCertPhoto(l.out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกงาน ' + l.date + ' (' + l.clock_out + ')'); };
+      pOutCont.innerHTML = '<img src="' + l.out_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปออกงาน">';
+      pOutCont.onclick = function() { previewCertPhoto(l.out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกงาน ' + l.date + ' (' + (l.clock_out || '') + ')'); };
     } else {
-      pOutCont.innerHTML = '<span class="text-xs sm:text-sm text-slate-400">ไม่มีรูปภาพ</span>';
+      pOutCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">' + (l.clock_out ? 'ไม่มีรูป' : 'ยังไม่ลงเวลา') + '</span>';
       pOutCont.onclick = null;
     }
   }
