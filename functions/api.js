@@ -281,7 +281,7 @@ async function getEmployeeBranchConfig(db, empId, lat, lng, defaultSettings) {
       otStartTime: chosenBranch.ot_start_time || chosenBranch.work_end_time || defaultSettings.ot_start_time,
       kioskPin: chosenBranch.kiosk_pin || defaultSettings.kiosk_pin || '123456',
       isUndertimeExempt,
-      earlyDismissalFullPay: (chosenBranch.early_dismissal_full_pay === 1 || chosenBranch.early_dismissal_full_pay === '1' || chosenBranch.early_dismissal_full_pay === 'true' || chosenBranch.early_dismissal_full_pay === true) || isUndertimeExempt
+      earlyDismissalFullPay: (chosenBranch.early_dismissal_full_pay === 1 || chosenBranch.early_dismissal_full_pay === '1' || chosenBranch.early_dismissal_full_pay === 'true' || chosenBranch.early_dismissal_full_pay === true)
     };
   }
 
@@ -1297,8 +1297,8 @@ async function handleAction(db, action, params) {
         }
       }
 
-      // Check Time Window Lock (Skip OUT restriction if branch is in early dismissal full pay mode)
-      if (!effectiveBranchCfg.earlyDismissalFullPay) {
+      // Check Time Window Lock (Skip OUT restriction if branch is in early dismissal full pay mode or employee is undertime exempt)
+      if (!effectiveBranchCfg.earlyDismissalFullPay && !effectiveBranchCfg.isUndertimeExempt) {
         const winErr = validateTimeWindow(settings, 'OUT', timeStr);
         if (winErr) return { success: false, message: winErr };
       }
@@ -1444,9 +1444,7 @@ async function handleAction(db, action, params) {
       }
 
       let clockOutMsg = `บันทึกเวลาออกงานสำเร็จ (${effectiveBranchCfg.branchName})`;
-      if (isEmpUndertimeExempt) {
-        clockOutMsg += ` ✨ สิทธิ์ประจำตำแหน่ง: ได้รับค่าแรงเต็มวัน (ไม่หักเวลาขาด)`;
-      } else if (isEarlyDismissalFullPay) {
+      if (effectiveBranchCfg.earlyDismissalFullPay) {
         clockOutMsg += ` ✨ โหมดงานเสร็จ: ได้รับค่าแรงเต็มวัน`;
       }
       let hasApprovedLeaveToday = false;

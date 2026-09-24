@@ -2542,16 +2542,11 @@ async function loadTodayStatus() {
           if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเลิกงาน';
           if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สรุปเวลางาน (Clock OUT - 4/4)';
           if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
-            const isExempt = !!data.branchConfig.isUndertimeExempt;
             if (badge) {
               badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
-              badge.textContent = isExempt ? '✨ สิทธิ์เต็มวัน (ไม่หักเวลาขาด)' : '✨ งานเสร็จ (จ่ายเต็มวัน)';
+              badge.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
             }
-            if (heroSub) {
-              heroSub.textContent = isExempt 
-                ? '⚡ สิทธิ์ประจำตำแหน่ง (ได้รับค่าแรงเต็มวันเสมอ ไม่หักเงินเมื่อออกก่อน)' 
-                : '⚡ โหมดงานเสร็จประจำสาขา (ได้รับค่าแรงเต็มวัน ไม่หักเงิน)';
-            }
+            if (heroSub) heroSub.textContent = '⚡ โหมดงานเสร็จประจำสาขา (ได้รับค่าแรงเต็มวัน ไม่หักเงิน)';
           }
           if (heroIcon) heroIcon.textContent = '🚪';
           if (heroBtn) {
@@ -2573,17 +2568,13 @@ async function loadTodayStatus() {
           }
           if (heroTitle) heroTitle.textContent = 'ลงเวลาครบทุกขั้นตอนแล้ว';
           if (heroSub) heroSub.textContent = 'บันทึกเวลาทำงานของวันนี้เรียบร้อยแล้ว พักผ่อนได้เลยครับ';
-          const isExempt = (log.remark && log.remark.includes('สิทธิ์ประจำตำแหน่ง'));
-          if (isExempt || log.is_full_pay === 1 || (log.remark && log.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'))) {
+          const isBranchEarly = (log.remark && log.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
+          if (isBranchEarly) {
             if (badge) {
               badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
-              badge.textContent = isExempt ? '✨ สิทธิ์เต็มวัน (ไม่หักเวลาขาด)' : '✨ งานเสร็จ (เต็มวัน)';
+              badge.textContent = '✨ งานเสร็จ (เต็มวัน)';
             }
-            if (heroSub) {
-              heroSub.textContent = isExempt 
-                ? `เลิกงานเรียบร้อยแล้ว (ออกเวลา ${log.clock_out}) ได้รับค่าแรงเต็มวันตามสิทธิ์ประจำตำแหน่ง`
-                : `เลิกงานในโหมดงานเสร็จเรียบร้อยแล้ว (ออกเวลา ${log.clock_out}) ได้รับค่าแรงเต็มวัน`;
-            }
+            if (heroSub) heroSub.textContent = `เลิกงานในโหมดงานเสร็จเรียบร้อยแล้ว (ออกเวลา ${log.clock_out}) ได้รับค่าแรงเต็มวัน`;
           }
           if (heroIcon) heroIcon.textContent = '✅';
           if (heroBtn) {
@@ -2638,16 +2629,13 @@ async function loadTodayStatus() {
           }
           if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาออกงาน';
           if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สิ้นสุดการทำงาน (Clock OUT)';
-          if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
-            const isExempt = !!data.branchConfig.isUndertimeExempt;
+          if (data.branchConfig && data.branchConfig.earlyDismissalFullPay && !data.branchConfig.isUndertimeExempt) {
             if (badge) {
               badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
-              badge.textContent = isExempt ? '✨ สิทธิ์เต็มวัน (ไม่หักเวลาขาด)' : '✨ งานเสร็จ (จ่ายเต็มวัน)';
+              badge.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
             }
             if (heroSub) {
-              heroSub.textContent = isExempt 
-                ? '⚡ สิทธิ์ประจำตำแหน่ง (ได้รับค่าแรงเต็มวันเสมอ ไม่หักเงินเมื่อออกก่อน)' 
-                : '⚡ โหมดงานเสร็จประจำสาขา (ได้รับค่าแรงเต็มวัน ไม่หักเงิน)';
+              heroSub.textContent = '⚡ โหมดงานเสร็จประจำสาขา (ได้รับค่าแรงเต็มวัน ไม่หักเงิน)';
             }
           }
           if (heroIcon) heroIcon.textContent = '🚪';
@@ -2669,16 +2657,14 @@ async function loadTodayStatus() {
           }
           if (heroTitle) heroTitle.textContent = 'ลงเวลาครบถ้วนแล้ว';
           if (heroSub) heroSub.textContent = `บันทึกเวลาของวันนี้เรียบร้อยแล้ว (ออกงานเวลา ${log.clock_out})`;
-          const isExempt = (log.remark && log.remark.includes('สิทธิ์ประจำตำแหน่ง'));
-          if (isExempt || log.is_full_pay === 1 || (log.remark && log.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'))) {
+          const isBranchEarly = (log.remark && log.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
+          if (isBranchEarly) {
             if (badge) {
               badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
-              badge.textContent = isExempt ? '✨ สิทธิ์เต็มวัน (ไม่หักเวลาขาด)' : '✨ งานเสร็จ (เต็มวัน)';
+              badge.textContent = '✨ งานเสร็จ (เต็มวัน)';
             }
             if (heroSub) {
-              heroSub.textContent = isExempt 
-                ? `เลิกงานเรียบร้อยแล้ว (ออกเวลา ${log.clock_out}) ได้รับค่าแรงเต็มวันตามสิทธิ์ประจำตำแหน่ง`
-                : `เลิกงานในโหมดงานเสร็จเรียบร้อยแล้ว (ออกเวลา ${log.clock_out}) ได้รับค่าแรงเต็มวัน`;
+              heroSub.textContent = `เลิกงานในโหมดงานเสร็จเรียบร้อยแล้ว (ออกเวลา ${log.clock_out}) ได้รับค่าแรงเต็มวัน`;
             }
           }
           if (heroIcon) heroIcon.textContent = '✅';
@@ -2905,8 +2891,7 @@ async function loadEmployeeHistory() {
       let html = '';
       data.logs.forEach((l, idx) => {
         const isLate = (l.late_minutes || 0) > 0;
-        const isExempt = (l.remark && l.remark.includes('สิทธิ์ประจำตำแหน่ง'));
-        const isFullPay = l.is_full_pay === 1 || isExempt || (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
+        const isBranchEarly = (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
         html += `
           <div onclick="openHistoryDetailModal(${idx})" class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 hover:border-sky-300 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center justify-between group">
             <div class="flex items-center space-x-3">
@@ -2931,13 +2916,11 @@ async function loadEmployeeHistory() {
               </div>
             </div>
             <div class="text-right flex-shrink-0 pl-2">
-              ${isExempt
-                ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">✨ สิทธิ์เต็มวัน</span>`
-                : isFullPay
-                  ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">✨ งานเสร็จ (เต็มวัน)</span>`
-                  : isLate 
-                    ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-sm">สาย ${l.late_minutes} น.</span>`
-                    : `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">ปกติ</span>`
+              ${isBranchEarly
+                ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">✨ งานเสร็จ (เต็มวัน)</span>`
+                : isLate 
+                  ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-sm">สาย ${l.late_minutes} น.</span>`
+                  : `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">ปกติ</span>`
               }
               <div class="text-[11px] sm:text-xs text-slate-400 mt-1 flex items-center justify-end gap-1 font-medium group-hover:text-sky-600 transition">
                 <span>แตะดู</span> <i class="fa-solid fa-chevron-right text-[9px]"></i>
@@ -2961,16 +2944,12 @@ function openHistoryDetailModal(idx) {
   var l = logs[idx];
   if (!l) return;
 
-  var isExempt = (l.remark && l.remark.includes('สิทธิ์ประจำตำแหน่ง'));
-  var isFullPay = l.is_full_pay === 1 || isExempt || (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
+  var isBranchEarly = (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
   var isLate = (l.late_minutes || 0) > 0;
 
   var badgeEl = document.getElementById('hModalBadge');
   if (badgeEl) {
-    if (isExempt) {
-      badgeEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-800 border border-purple-300';
-      badgeEl.textContent = '✨ สิทธิ์เต็มวัน (ไม่หักเวลาขาด)';
-    } else if (isFullPay) {
+    if (isBranchEarly) {
       badgeEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-800 border border-purple-300';
       badgeEl.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
     } else if (isLate) {
@@ -3036,7 +3015,7 @@ function openHistoryDetailModal(idx) {
 
   var clockOutEl = document.getElementById('hModalClockOut');
   if (clockOutEl) {
-    clockOutEl.innerHTML = l.clock_out ? (l.clock_out + (isFullPay ? ' <span class="text-xs sm:text-sm font-bold text-purple-700">(งานเสร็จก่อนเวลา)</span>' : '')) : '<span class="text-slate-400 font-normal">ยังไม่ได้ลงเวลาออก</span>';
+    clockOutEl.innerHTML = l.clock_out ? (l.clock_out + (isBranchEarly ? ' <span class="text-xs sm:text-sm font-bold text-purple-700">(งานเสร็จก่อนเวลา)</span>' : '')) : '<span class="text-slate-400 font-normal">ยังไม่ได้ลงเวลาออก</span>';
   }
 
   var hoursEl = document.getElementById('hModalHours');
@@ -3050,11 +3029,7 @@ function openHistoryDetailModal(idx) {
   var wageTitle = document.getElementById('hModalWageTitle');
   var wageDesc = document.getElementById('hModalWageDesc');
   if (wageBox && wageTitle && wageDesc) {
-    if (isExempt) {
-      wageBox.className = 'border rounded-2xl p-3.5 space-y-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-900';
-      wageTitle.innerHTML = '✨ การคิดค่าจ้างของวันนี้: ได้รับค่าแรงเต็มวัน 100%';
-      wageDesc.innerHTML = 'สิทธิ์ประจำตำแหน่ง: ระบบยกเว้นการหักเงินชั่วโมงขาดให้อัตโนมัติ (Fixed Salary Exempt)';
-    } else if (isFullPay) {
+    if (isBranchEarly) {
       wageBox.className = 'border rounded-2xl p-3.5 space-y-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-900';
       wageTitle.innerHTML = '✨ การคิดค่าจ้างของวันนี้: ได้รับค่าแรงเต็มวัน 100%';
       wageDesc.innerHTML = 'ระบบยกเว้นการหักเงินชั่วโมงขาดให้อัตโนมัติ เนื่องจากสาขาเปิด <strong>โหมดงานเสร็จ-เลิกงานก่อน</strong>';
@@ -3069,13 +3044,14 @@ function openHistoryDetailModal(idx) {
     }
   }
 
-  // Remark box
+  // Remark box (hide internal exemption remarks from employee)
   var remarkBox = document.getElementById('hModalRemarkBox');
   var remarkText = document.getElementById('hModalRemarkText');
   if (remarkBox && remarkText) {
-    if (l.remark && l.remark.trim()) {
+    var displayRemark = (l.remark || '').replace(/\[สิทธิ์ประจำตำแหน่ง:[^\]]*\]/g, '').trim();
+    if (displayRemark) {
       remarkBox.classList.remove('hidden');
-      remarkText.textContent = l.remark;
+      remarkText.textContent = displayRemark;
     } else {
       remarkBox.classList.add('hidden');
     }
