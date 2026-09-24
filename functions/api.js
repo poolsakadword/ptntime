@@ -1022,21 +1022,39 @@ async function handleAction(db, action, params) {
       const lateMinutes = isSunday ? 0 : Math.max(0, diffMinutes - (branchCfg.graceMinutes || 0));
       const status = isSunday ? 'SUNDAY_WORK' : (lateMinutes > 0 ? 'LATE' : 'NORMAL');
 
+      // Auto-detect approved leave on this date
+      let hasApprovedLeaveToday = false;
+      try {
+        const approvedLeaveToday = await db.prepare(`
+          SELECT id, leave_type FROM leave_requests 
+          WHERE emp_id = ? AND status = 'APPROVED' AND ? >= start_date AND ? <= end_date
+        `).bind(empId, date, date).first();
+        if (approvedLeaveToday) hasApprovedLeaveToday = true;
+      } catch (e) {}
+
+      let clockInMsg = `บันทึกเวลาเข้างานสำเร็จ (${branchCfg.branchName})`;
+      let effectiveRemark = remark || '';
+      if (hasApprovedLeaveToday) {
+        clockInMsg += ` ⚡ มีใบลาอนุมัติไว้แต่วันนี้มาทำงานจริง (ระบบจะคำนวณเป็นเวลาทำงานปกติและยกเว้นการหักวันลาให้อัตโนมัติ)`;
+        effectiveRemark = (effectiveRemark ? effectiveRemark + ' ' : '') + '[ระบบตรวจจับอัตโนมัติ: มีใบลาแต่วันนี้มาทำงานจริง]';
+      }
+
       if (existing) {
         await db.prepare(`
           UPDATE time_logs SET clock_in = ?, in_lat = ?, in_lng = ?, in_photo_url = ?, late_minutes = ?, status = ?, remark = ?, branch_id = ?, branch_name = ?
           WHERE id = ?
-        `).bind(timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, remark || '', branchCfg.branchId, branchCfg.branchName, existing.id).run();
+        `).bind(timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, effectiveRemark, branchCfg.branchId, branchCfg.branchName, existing.id).run();
       } else {
         await db.prepare(`
           INSERT INTO time_logs (emp_id, date, clock_in, in_lat, in_lng, in_photo_url, late_minutes, status, remark, branch_id, branch_name)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(empId, date, timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, remark || '', branchCfg.branchId, branchCfg.branchName).run();
+        `).bind(empId, date, timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, effectiveRemark, branchCfg.branchId, branchCfg.branchName).run();
       }
 
       return {
         success: true,
-        message: `บันทึกเวลาเข้างานสำเร็จ (${branchCfg.branchName})`,
+        message: clockInMsg,
+        hasApprovedLeaveToday,
         branchId: branchCfg.branchId,
         branchName: branchCfg.branchName,
         clockInTime: timeStr,
@@ -1404,9 +1422,24 @@ async function handleAction(db, action, params) {
         }
       }
 
+      let clockOutMsg = `บันทึกเวลาออกงานสำเร็จ (${effectiveBranchCfg.branchName})`;
+      let hasApprovedLeaveToday = false;
+      try {
+        const approvedLeaveToday = await db.prepare(`
+          SELECT id, leave_type FROM leave_requests 
+          WHERE emp_id = ? AND status = 'APPROVED' AND ? >= start_date AND ? <= end_date
+        `).bind(empId, date, date).first();
+        if (approvedLeaveToday) hasApprovedLeaveToday = true;
+      } catch (e) {}
+
+      if (hasApprovedLeaveToday || (existing && existing.remark && existing.remark.includes('[ระบบตรวจจับอัตโนมัติ: มีใบลาแต่วันนี้มาทำงานจริง]'))) {
+        clockOutMsg += ` ⚡ ตรวจพบมาทำงานจริง (${totalWorkHours} ชม.) ระบบจะยกเว้นการหักวันลาในวันนี้ให้อัตโนมัติ`;
+      }
+
       return {
         success: true,
-        message: `บันทึกเวลาออกงานสำเร็จ (${effectiveBranchCfg.branchName})`,
+        message: clockOutMsg,
+        hasApprovedLeaveToday,
         branchId: effectiveBranchCfg.branchId,
         branchName: effectiveBranchCfg.branchName,
         clockOutTime: timeStr,
