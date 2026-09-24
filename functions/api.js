@@ -228,6 +228,7 @@ async function ensureTables(db) {
   await db.prepare("ALTER TABLE employees ADD COLUMN branch_id TEXT DEFAULT 'B01'").run().catch(() => {});
   await db.prepare("ALTER TABLE employees ADD COLUMN allow_all_branches TEXT DEFAULT 'false'").run().catch(() => {});
   await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
+  await db.prepare("ALTER TABLE employees ADD COLUMN is_undertime_exempt TEXT DEFAULT 'false'").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_id TEXT").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_name TEXT").run().catch(() => {});
   await db.prepare("ALTER TABLE branches ADD COLUMN early_dismissal_full_pay INTEGER DEFAULT 0").run().catch(() => {});
@@ -236,8 +237,9 @@ async function ensureTables(db) {
 }
 
 async function getEmployeeBranchConfig(db, empId, lat, lng, defaultSettings) {
-  const emp = await db.prepare('SELECT emp_id, branch_id, allow_all_branches FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
+  const emp = await db.prepare('SELECT emp_id, branch_id, allow_all_branches, is_undertime_exempt FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
   const allowAll = (emp && (emp.allow_all_branches === 'true' || emp.allow_all_branches === true));
+  const isUndertimeExempt = (emp && (emp.is_undertime_exempt === 'true' || emp.is_undertime_exempt === true || emp.is_undertime_exempt === 1 || emp.is_undertime_exempt === '1'));
   const assignedBranchId = emp?.branch_id || 'B01';
 
   const branchRows = await db.prepare("SELECT * FROM branches WHERE status != 'INACTIVE' ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
@@ -278,7 +280,8 @@ async function getEmployeeBranchConfig(db, empId, lat, lng, defaultSettings) {
       graceMinutes: (chosenBranch.grace_minutes !== undefined && chosenBranch.grace_minutes !== null) ? Number(chosenBranch.grace_minutes) : (Number(defaultSettings.grace_period_morning_minutes) || 0),
       otStartTime: chosenBranch.ot_start_time || chosenBranch.work_end_time || defaultSettings.ot_start_time,
       kioskPin: chosenBranch.kiosk_pin || defaultSettings.kiosk_pin || '123456',
-      earlyDismissalFullPay: (chosenBranch.early_dismissal_full_pay === 1 || chosenBranch.early_dismissal_full_pay === '1' || chosenBranch.early_dismissal_full_pay === 'true' || chosenBranch.early_dismissal_full_pay === true)
+      isUndertimeExempt,
+      earlyDismissalFullPay: (chosenBranch.early_dismissal_full_pay === 1 || chosenBranch.early_dismissal_full_pay === '1' || chosenBranch.early_dismissal_full_pay === 'true' || chosenBranch.early_dismissal_full_pay === true) || isUndertimeExempt
     };
   }
 
@@ -1398,17 +1401,20 @@ async function handleAction(db, action, params) {
         }
       }
 
-      // Check employee OT eligibility (if not eligible, force OT hours to 0)
-      const empRow = await db.prepare('SELECT is_ot_eligible FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
+      // Check employee OT eligibility & Undertime Exemption
+      const empRow = await db.prepare('SELECT is_ot_eligible, is_undertime_exempt FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
       const isOtEligible = !(empRow && (empRow.is_ot_eligible === 'false' || empRow.is_ot_eligible === false));
       if (!isOtEligible) {
         calculatedOtHours = 0;
       }
+      const isEmpUndertimeExempt = (empRow && (empRow.is_undertime_exempt === 'true' || empRow.is_undertime_exempt === true || empRow.is_undertime_exempt === 1 || empRow.is_undertime_exempt === '1'));
 
       const totalWorkHours = Math.round((normalMinutes / 60) * 100) / 100;
-      const isEarlyDismissalFullPay = !!effectiveBranchCfg.earlyDismissalFullPay;
+      const isEarlyDismissalFullPay = !!effectiveBranchCfg.earlyDismissalFullPay || isEmpUndertimeExempt;
       const finalIsFullPay = isEarlyDismissalFullPay ? 1 : 0;
-      const earlyDismissalRemark = isEarlyDismissalFullPay ? ' [งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน]' : '';
+      const earlyDismissalRemark = isEmpUndertimeExempt 
+        ? ' [สิทธิ์ประจำตำแหน่ง: จ่ายค่าแรงเต็มวัน ไม่หักเวลาขาด]' 
+        : (isEarlyDismissalFullPay ? ' [งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน]' : '');
 
       await db.prepare(`
         UPDATE time_logs 
@@ -1438,7 +1444,9 @@ async function handleAction(db, action, params) {
       }
 
       let clockOutMsg = `บันทึกเวลาออกงานสำเร็จ (${effectiveBranchCfg.branchName})`;
-      if (isEarlyDismissalFullPay) {
+      if (isEmpUndertimeExempt) {
+        clockOutMsg += ` ✨ สิทธิ์ประจำตำแหน่ง: ได้รับค่าแรงเต็มวัน (ไม่หักเวลาขาด)`;
+      } else if (isEarlyDismissalFullPay) {
         clockOutMsg += ` ✨ โหมดงานเสร็จ: ได้รับค่าแรงเต็มวัน`;
       }
       let hasApprovedLeaveToday = false;
