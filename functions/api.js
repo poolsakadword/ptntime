@@ -1262,9 +1262,43 @@ async function handleAction(db, action, params) {
 
       if (!empId) return { success: false, message: 'ไม่พบรหัสพนักงาน' };
 
-      // Check Time Window Lock
-      const winErr = validateTimeWindow(settings, 'OUT', timeStr);
-      if (winErr) return { success: false, message: winErr };
+      const existing = await db.prepare('SELECT * FROM time_logs WHERE emp_id = ? AND date = ?').bind(empId, date).first();
+      if (!existing || !existing.clock_in) {
+        return { success: false, message: 'ยังไม่พบบันทึกเวลาเข้างานของวันนี้ กรุณาบันทึกเข้างานก่อน' };
+      }
+
+      // In BREAK_PUNCH mode, prevent clocking out while still on break without punch back
+      if (existing.break_out && !existing.break_in) {
+        return { success: false, message: 'คุณกำลังอยู่ในช่วงพัก (ยังไม่ได้บันทึกกลับเข้าทำงาน Break IN) กรุณาบันทึกเข้าทำงานหลังพักก่อนลงเวลาออกงาน' };
+      }
+
+      // Determine branch configuration: if recorded at clock-in, use that branch's settings
+      let effectiveBranchCfg = await getEmployeeBranchConfig(db, empId, lat, lng, settings);
+      if (existing.branch_id) {
+        const recordedBranch = await db.prepare("SELECT * FROM branches WHERE branch_id = ?").bind(existing.branch_id).first().catch(() => null);
+        if (recordedBranch) {
+          effectiveBranchCfg = {
+            branchId: recordedBranch.branch_id,
+            branchName: recordedBranch.branch_name,
+            lat: recordedBranch.lat || effectiveBranchCfg.lat,
+            lng: recordedBranch.lng || effectiveBranchCfg.lng,
+            radiusMeters: recordedBranch.radius_meters || effectiveBranchCfg.radiusMeters,
+            workStartTime: recordedBranch.work_start_time || effectiveBranchCfg.workStartTime,
+            workEndTime: recordedBranch.work_end_time || effectiveBranchCfg.workEndTime,
+            lunchStartTime: recordedBranch.lunch_start_time || effectiveBranchCfg.lunchStartTime,
+            lunchEndTime: recordedBranch.lunch_end_time || effectiveBranchCfg.lunchEndTime,
+            graceMinutes: recordedBranch.grace_minutes != null ? Number(recordedBranch.grace_minutes) : effectiveBranchCfg.graceMinutes,
+            otStartTime: recordedBranch.ot_start_time || recordedBranch.work_end_time || effectiveBranchCfg.otStartTime,
+            earlyDismissalFullPay: (recordedBranch.early_dismissal_full_pay === 1 || recordedBranch.early_dismissal_full_pay === '1' || recordedBranch.early_dismissal_full_pay === 'true' || recordedBranch.early_dismissal_full_pay === true)
+          };
+        }
+      }
+
+      // Check Time Window Lock (Skip OUT restriction if branch is in early dismissal full pay mode)
+      if (!effectiveBranchCfg.earlyDismissalFullPay) {
+        const winErr = validateTimeWindow(settings, 'OUT', timeStr);
+        if (winErr) return { success: false, message: winErr };
+      }
 
       // Check Device Lock
       if (settings.enable_device_lock === 'true') {
@@ -1297,38 +1331,6 @@ async function handleAction(db, action, params) {
           return { success: false, message: 'ป้าย QR Code ไม่ถูกต้อง' };
         } else if (settings.qr_mode === 'HYBRID' && !isDynamicMatch && !isStaticMatch) {
           return { success: false, message: 'QR Code ไม่ถูกต้องหรือหมดอายุแล้ว' };
-        }
-      }
-
-      const existing = await db.prepare('SELECT * FROM time_logs WHERE emp_id = ? AND date = ?').bind(empId, date).first();
-      if (!existing || !existing.clock_in) {
-        return { success: false, message: 'ยังไม่พบบันทึกเวลาเข้างานของวันนี้ กรุณาบันทึกเข้างานก่อน' };
-      }
-
-      // In BREAK_PUNCH mode, prevent clocking out while still on break without punch back
-      if (existing.break_out && !existing.break_in) {
-        return { success: false, message: 'คุณกำลังอยู่ในช่วงพัก (ยังไม่ได้บันทึกกลับเข้าทำงาน Break IN) กรุณาบันทึกเข้าทำงานหลังพักก่อนลงเวลาออกงาน' };
-      }
-
-      // Determine branch configuration: if recorded at clock-in, use that branch's settings
-      let effectiveBranchCfg = await getEmployeeBranchConfig(db, empId, lat, lng, settings);
-      if (existing.branch_id) {
-        const recordedBranch = await db.prepare("SELECT * FROM branches WHERE branch_id = ?").bind(existing.branch_id).first().catch(() => null);
-        if (recordedBranch) {
-          effectiveBranchCfg = {
-            branchId: recordedBranch.branch_id,
-            branchName: recordedBranch.branch_name,
-            lat: recordedBranch.lat || effectiveBranchCfg.lat,
-            lng: recordedBranch.lng || effectiveBranchCfg.lng,
-            radiusMeters: recordedBranch.radius_meters || effectiveBranchCfg.radiusMeters,
-            workStartTime: recordedBranch.work_start_time || effectiveBranchCfg.workStartTime,
-            workEndTime: recordedBranch.work_end_time || effectiveBranchCfg.workEndTime,
-            lunchStartTime: recordedBranch.lunch_start_time || effectiveBranchCfg.lunchStartTime,
-            lunchEndTime: recordedBranch.lunch_end_time || effectiveBranchCfg.lunchEndTime,
-            graceMinutes: recordedBranch.grace_minutes != null ? Number(recordedBranch.grace_minutes) : effectiveBranchCfg.graceMinutes,
-            otStartTime: recordedBranch.ot_start_time || recordedBranch.work_end_time || effectiveBranchCfg.otStartTime,
-            earlyDismissalFullPay: (recordedBranch.early_dismissal_full_pay === 1 || recordedBranch.early_dismissal_full_pay === '1' || recordedBranch.early_dismissal_full_pay === 'true' || recordedBranch.early_dismissal_full_pay === true)
-          };
         }
       }
 

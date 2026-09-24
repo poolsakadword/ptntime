@@ -1970,6 +1970,9 @@ async function triggerShutterCapture() {
 
 // Time Window Lock Helper
 function isActionWithinTimeWindow(actionType) {
+  if (actionType === 'OUT' && window.currentBranchConfig && window.currentBranchConfig.earlyDismissalFullPay) {
+    return { allowed: true };
+  }
   if (!appSettings || appSettings.enable_time_window_restrictions !== 'true') {
     return { allowed: true };
   }
@@ -2441,6 +2444,8 @@ async function loadTodayStatus() {
         if (workSummaryEl) workSummaryEl.textContent = 'ปกติ 0 ชม.';
       }
 
+      window.currentBranchConfig = data.branchConfig || null;
+
       // =========================================================================
       // CONCEPT 3: HERO ONE-TAP ACTION LOGIC
       // =========================================================================
@@ -2623,6 +2628,13 @@ async function loadTodayStatus() {
           }
           if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาออกงาน';
           if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สิ้นสุดการทำงาน (Clock OUT)';
+          if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
+              badge.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
+            }
+            if (heroSub) heroSub.textContent = '⚡ โหมดงานเสร็จประจำสาขา (ได้รับค่าแรงเต็มวัน ไม่หักเงิน)';
+          }
           if (heroIcon) heroIcon.textContent = '🚪';
           if (heroBtn) {
             heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
@@ -2642,6 +2654,13 @@ async function loadTodayStatus() {
           }
           if (heroTitle) heroTitle.textContent = 'ลงเวลาครบถ้วนแล้ว';
           if (heroSub) heroSub.textContent = `บันทึกเวลาของวันนี้เรียบร้อยแล้ว (ออกงานเวลา ${log.clock_out})`;
+          if (log.is_full_pay === 1 || (log.remark && log.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'))) {
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+              badge.textContent = '✨ งานเสร็จ (เต็มวัน)';
+            }
+            if (heroSub) heroSub.textContent = `เลิกงานในโหมดงานเสร็จเรียบร้อยแล้ว (ออกเวลา ${log.clock_out}) ได้รับค่าแรงเต็มวัน`;
+          }
           if (heroIcon) heroIcon.textContent = '✅';
           if (heroBtn) {
             heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-lg flex flex-col items-center justify-center space-y-2.5 bg-slate-700 hover:bg-slate-800 cursor-default';
