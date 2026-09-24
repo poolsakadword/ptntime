@@ -2881,39 +2881,44 @@ async function loadEmployeeHistory() {
         return;
       }
 
+      window._currentHistoryLogs = data.logs || [];
       let html = '';
-      data.logs.forEach(l => {
-        const isLate = l.late_minutes > 0;
+      data.logs.forEach((l, idx) => {
+        const isLate = (l.late_minutes || 0) > 0;
+        const isFullPay = l.is_full_pay === 1 || (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
         html += `
-          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-xs">
+          <div onclick="openHistoryDetailModal(${idx})" class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 hover:border-sky-300 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center justify-between group">
             <div class="flex items-center space-x-3">
               <div class="flex items-center -space-x-2 flex-shrink-0">
                 ${l.in_photo_url ? `
-                  <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-10 h-10 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${l.date} (${l.clock_in})')" />
+                  <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-11 h-11 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${l.date} (${l.clock_in})')" />
                 ` : ''}
                 ${l.out_photo_url ? `
-                  <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-10 h-10 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${l.date} (${l.clock_out})')" />
+                  <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-11 h-11 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${l.date} (${l.clock_out})')" />
                 ` : ''}
                 ${!l.in_photo_url && !l.out_photo_url ? `
-                  <div class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-xs">📅</div>
+                  <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-sm">📅</div>
                 ` : ''}
               </div>
               <div class="space-y-0.5">
-                <div class="font-bold text-slate-900 text-sm">${l.date}</div>
-                <div class="flex items-center space-x-2 text-xs text-slate-600">
-                  <span>เข้า: <b class="text-emerald-700">${l.clock_in || '--'}</b></span>
-                  <span>ออก: <b class="text-rose-700">${l.clock_out || '--'}</b></span>
+                <div class="font-bold text-slate-900 text-sm sm:text-base">${l.date}</div>
+                <div class="flex items-center space-x-2 text-xs sm:text-sm text-slate-600">
+                  <span>เข้า: <b class="text-emerald-700 font-bold">${l.clock_in || '--'}</b></span>
+                  <span>ออก: <b class="text-rose-700 font-bold">${l.clock_out || '--'}</b></span>
                   <span>(ปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
                 </div>
               </div>
             </div>
-            <div class="text-right flex-shrink-0">
-              ${l.is_full_pay === 1 || (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'))
-                ? `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">✨ งานเสร็จ (เต็มวัน)</span>`
+            <div class="text-right flex-shrink-0 pl-2">
+              ${isFullPay
+                ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">✨ งานเสร็จ (เต็มวัน)</span>`
                 : isLate 
-                  ? `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">สาย ${l.late_minutes} น.</span>`
-                  : `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">ปกติ</span>`
+                  ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-sm">สาย ${l.late_minutes} น.</span>`
+                  : `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">ปกติ</span>`
               }
+              <div class="text-[11px] sm:text-xs text-slate-400 mt-1 flex items-center justify-end gap-1 font-medium group-hover:text-sky-600 transition">
+                <span>แตะดู</span> <i class="fa-solid fa-chevron-right text-[9px]"></i>
+              </div>
             </div>
           </div>
         `;
@@ -2923,6 +2928,137 @@ async function loadEmployeeHistory() {
   } catch(e) {
     if (container) container.innerHTML = '<div class="text-center py-6 text-sm text-rose-500 font-medium">โหลดข้อมูลไม่สำเร็จ</div>';
   }
+}
+
+// ------------------------------------------------------------------------------
+// History Item Detail Modal
+// ------------------------------------------------------------------------------
+function openHistoryDetailModal(idx) {
+  var logs = window._currentHistoryLogs || [];
+  var l = logs[idx];
+  if (!l) return;
+
+  var isFullPay = l.is_full_pay === 1 || (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
+  var isLate = (l.late_minutes || 0) > 0;
+
+  var badgeEl = document.getElementById('hModalBadge');
+  if (badgeEl) {
+    if (isFullPay) {
+      badgeEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-800 border border-purple-300';
+      badgeEl.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
+    } else if (isLate) {
+      badgeEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800 border border-amber-300';
+      badgeEl.textContent = '🟠 สาย ' + l.late_minutes + ' นาที';
+    } else {
+      badgeEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300';
+      badgeEl.textContent = '🟢 ปฏิบัติงานปกติ';
+    }
+  }
+
+  var branchEl = document.getElementById('hModalBranch');
+  if (branchEl) {
+    branchEl.innerHTML = l.branch_name ? ('🏬 ' + l.branch_name) : (l.branch_id ? ('🏬 ' + l.branch_id) : '🏬 ประจำสาขา');
+  }
+
+  var dateEl = document.getElementById('hModalDate');
+  if (dateEl) dateEl.textContent = l.date || '-';
+
+  // Photos
+  var pInCont = document.getElementById('hModalPhotoInContainer');
+  var pInTime = document.getElementById('hModalPhotoInTime');
+  if (pInTime) pInTime.textContent = l.clock_in ? l.clock_in.substring(0, 5) : '--:--';
+  if (pInCont) {
+    if (l.in_photo_url) {
+      pInCont.innerHTML = '<img src="' + l.in_photo_url + '" class="w-full h-full object-cover" alt="รูปเข้างาน">';
+      pInCont.onclick = function() { previewCertPhoto(l.in_photo_url, 'รูปถ่ายเซลฟี่ตอนเข้างาน ' + l.date + ' (' + l.clock_in + ')'); };
+    } else {
+      pInCont.innerHTML = '<span class="text-xs sm:text-sm text-slate-400">ไม่มีรูปภาพ</span>';
+      pInCont.onclick = null;
+    }
+  }
+
+  var pOutCont = document.getElementById('hModalPhotoOutContainer');
+  var pOutTime = document.getElementById('hModalPhotoOutTime');
+  if (pOutTime) pOutTime.textContent = l.clock_out ? l.clock_out.substring(0, 5) : '--:--';
+  if (pOutCont) {
+    if (l.out_photo_url) {
+      pOutCont.innerHTML = '<img src="' + l.out_photo_url + '" class="w-full h-full object-cover" alt="รูปออกงาน">';
+      pOutCont.onclick = function() { previewCertPhoto(l.out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกงาน ' + l.date + ' (' + l.clock_out + ')'); };
+    } else {
+      pOutCont.innerHTML = '<span class="text-xs sm:text-sm text-slate-400">ไม่มีรูปภาพ</span>';
+      pOutCont.onclick = null;
+    }
+  }
+
+  // Timeline
+  var clockInEl = document.getElementById('hModalClockIn');
+  if (clockInEl) {
+    clockInEl.innerHTML = (l.clock_in || '--:--:--') + (isLate ? ' <span class="text-xs sm:text-sm font-bold text-amber-600">(สาย ' + l.late_minutes + ' น.)</span>' : ' <span class="text-xs sm:text-sm font-bold text-emerald-600">(ตรงเวลา)</span>');
+  }
+
+  var breakRow = document.getElementById('hModalBreakRow');
+  var breakEl = document.getElementById('hModalBreak');
+  if (breakRow && breakEl) {
+    if (l.break_out || l.break_in) {
+      breakRow.classList.remove('hidden');
+      breakEl.textContent = (l.break_out || '--') + ' - ' + (l.break_in || '--') + (l.break_minutes ? ' (' + l.break_minutes + ' นาที)' : '');
+    } else {
+      breakRow.classList.add('hidden');
+    }
+  }
+
+  var clockOutEl = document.getElementById('hModalClockOut');
+  if (clockOutEl) {
+    clockOutEl.innerHTML = l.clock_out ? (l.clock_out + (isFullPay ? ' <span class="text-xs sm:text-sm font-bold text-purple-700">(งานเสร็จก่อนเวลา)</span>' : '')) : '<span class="text-slate-400 font-normal">ยังไม่ได้ลงเวลาออก</span>';
+  }
+
+  var hoursEl = document.getElementById('hModalHours');
+  if (hoursEl) {
+    var otTxt = (l.ot_hours && l.ot_hours > 0) ? ' + OT ' + l.ot_hours + ' ชม.' : '';
+    hoursEl.textContent = (l.work_hours || 0) + ' ชม.' + otTxt;
+  }
+
+  // Wage box
+  var wageBox = document.getElementById('hModalWageBox');
+  var wageTitle = document.getElementById('hModalWageTitle');
+  var wageDesc = document.getElementById('hModalWageDesc');
+  if (wageBox && wageTitle && wageDesc) {
+    if (isFullPay) {
+      wageBox.className = 'border rounded-2xl p-3.5 space-y-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-900';
+      wageTitle.innerHTML = '✨ การคิดค่าจ้างของวันนี้: ได้รับค่าแรงเต็มวัน 100%';
+      wageDesc.innerHTML = 'ระบบยกเว้นการหักเงินชั่วโมงขาดให้อัตโนมัติ เนื่องจากสาขาเปิด <strong>โหมดงานเสร็จ-เลิกงานก่อน</strong>';
+    } else if (isLate) {
+      wageBox.className = 'border rounded-2xl p-3.5 space-y-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 text-amber-900';
+      wageTitle.innerHTML = '🟠 การคิดค่าจ้างของวันนี้: มีบันทึกมาสาย ' + l.late_minutes + ' นาที';
+      wageDesc.innerHTML = 'คำนวณการหักเงินสายตามระเบียบบริษัท ในรอบการคิดเงินเดือนประจำงวด';
+    } else {
+      wageBox.className = 'border rounded-2xl p-3.5 space-y-1.5 bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-900';
+      wageTitle.innerHTML = '🟢 การคิดค่าจ้างของวันนี้: ปฏิบัติงานปกติ ครบถ้วน';
+      wageDesc.innerHTML = 'ได้รับค่าจ้างเต็มจำนวนตามรอบการทำงานปกติ ' + ((l.ot_hours && l.ot_hours > 0) ? 'พร้อมคำนวณเงินค่าล่วงเวลา (OT)' : '');
+    }
+  }
+
+  // Remark box
+  var remarkBox = document.getElementById('hModalRemarkBox');
+  var remarkText = document.getElementById('hModalRemarkText');
+  if (remarkBox && remarkText) {
+    if (l.remark && l.remark.trim()) {
+      remarkBox.classList.remove('hidden');
+      remarkText.textContent = l.remark;
+    } else {
+      remarkBox.classList.add('hidden');
+    }
+  }
+
+  var m = document.getElementById('modalHistoryDetail');
+  if (m) {
+    m.classList.remove('hidden');
+  }
+}
+
+function closeHistoryDetailModal() {
+  var m = document.getElementById('modalHistoryDetail');
+  if (m) m.classList.add('hidden');
 }
 
 // ==============================================================================

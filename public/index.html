@@ -1099,6 +1099,100 @@
       </div>
     </div>
 
+    <!-- ATTENDANCE HISTORY DETAIL MODAL (TAP FROM HISTORY LIST) -->
+    <div id="modalHistoryDetail" class="fixed inset-0 bg-black/75 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 hidden backdrop-blur-sm">
+      <div class="bg-white w-full max-w-sm sm:max-w-md rounded-t-[32px] sm:rounded-[32px] p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+        
+        <!-- Header -->
+        <div class="flex items-start justify-between border-b pb-3.5">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="hModalBadge" class="px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
+                ✨ โหมดงานเสร็จ (เต็มวัน)
+              </span>
+              <span id="hModalBranch" class="text-slate-600 text-xs sm:text-sm font-semibold flex items-center gap-1">
+                🏬 ประจำสาขา
+              </span>
+            </div>
+            <div id="hModalDate" class="text-base sm:text-lg font-black text-slate-900">
+              วันที่ --/--/----
+            </div>
+          </div>
+          <button type="button" onclick="closeHistoryDetailModal()" class="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 text-xl font-bold flex items-center justify-center transition active:scale-95">&times;</button>
+        </div>
+
+        <!-- 2 Selfie Photos Grid -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-slate-50 border border-emerald-200 rounded-2xl p-2.5 text-center">
+            <div class="text-xs sm:text-sm font-bold text-emerald-800 mb-1.5 flex items-center justify-center gap-1">
+              📷 รูปเข้างาน (<span id="hModalPhotoInTime">--:--</span>)
+            </div>
+            <div id="hModalPhotoInContainer" class="w-full h-28 sm:h-32 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-center text-slate-400 overflow-hidden cursor-pointer shadow-sm hover:opacity-90 transition">
+              <!-- img or placeholder -->
+            </div>
+          </div>
+          <div class="bg-slate-50 border border-rose-200 rounded-2xl p-2.5 text-center">
+            <div class="text-xs sm:text-sm font-bold text-rose-800 mb-1.5 flex items-center justify-center gap-1">
+              📷 รูปออกงาน (<span id="hModalPhotoOutTime">--:--</span>)
+            </div>
+            <div id="hModalPhotoOutContainer" class="w-full h-28 sm:h-32 rounded-xl bg-rose-50 border border-rose-300 flex items-center justify-center text-slate-400 overflow-hidden cursor-pointer shadow-sm hover:opacity-90 transition">
+              <!-- img or placeholder -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline Info -->
+        <div class="space-y-2.5 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs sm:text-sm">
+          <div class="flex justify-between items-center py-1 border-b border-slate-200">
+            <span class="text-slate-500 font-medium flex items-center gap-2">
+              <span class="text-emerald-600 font-bold">🟢</span> เวลาเข้างาน:
+            </span>
+            <span id="hModalClockIn" class="font-bold text-emerald-700 text-sm sm:text-base">--:--:--</span>
+          </div>
+          <div id="hModalBreakRow" class="flex justify-between items-center py-1 border-b border-slate-200 hidden">
+            <span class="text-slate-500 font-medium flex items-center gap-2">
+              <span class="text-amber-600 font-bold">☕</span> พักกลางวัน:
+            </span>
+            <span id="hModalBreak" class="font-bold text-slate-700 text-sm">--</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-200">
+            <span class="text-slate-500 font-medium flex items-center gap-2">
+              <span class="text-rose-600 font-bold">🔴</span> เวลาออกงาน:
+            </span>
+            <span id="hModalClockOut" class="font-bold text-rose-700 text-sm sm:text-base">--:--:--</span>
+          </div>
+          <div class="flex justify-between items-center py-1">
+            <span class="text-slate-500 font-medium flex items-center gap-2">
+              <span class="text-sky-600 font-bold">⏱️</span> เวลางานรวม:
+            </span>
+            <span id="hModalHours" class="font-extrabold text-slate-900 text-sm sm:text-base">-- ชม.</span>
+          </div>
+        </div>
+
+        <!-- Wage & Deduction Highlights Box -->
+        <div id="hModalWageBox" class="border rounded-2xl p-3.5 space-y-1 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-900">
+          <div class="font-bold text-xs sm:text-sm flex items-center gap-1.5" id="hModalWageTitle">
+            ✨ การคิดค่าจ้างของวันนี้:
+          </div>
+          <div class="text-xs sm:text-sm leading-relaxed" id="hModalWageDesc">
+            --
+          </div>
+        </div>
+
+        <!-- Remarks Box -->
+        <div id="hModalRemarkBox" class="bg-white p-3 rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-600 space-y-1">
+          <span class="font-bold text-slate-700">📝 หมายเหตุ:</span>
+          <div id="hModalRemarkText" class="text-slate-600 leading-normal">-</div>
+        </div>
+
+        <!-- Close Button -->
+        <button type="button" onclick="closeHistoryDetailModal()" class="w-full py-3.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold text-sm sm:text-base rounded-2xl shadow-lg transition">
+          ปิดหน้าต่าง
+        </button>
+
+      </div>
+    </div>
+
     <!-- MAINTENANCE MODE SCREEN (Shown when system_maintenance_mode is true) -->
     <div id="maintenanceScreen" class="hidden fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white">
       <div class="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 text-slate-800 shadow-2xl space-y-6 animate-fade-in border border-slate-100">
@@ -1129,6 +1223,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=9.2"></script>
+  <script src="js/app.js?v=9.3"></script>
 </body>
 </html>
