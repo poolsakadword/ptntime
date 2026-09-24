@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คู่มือและระเบียบปฏิบัติการใช้งานระบบลงเวลาทำงาน PTN Time Attendant</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #e0f2fe;
+      --slate-900: #0f172a;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--slate-700);
+      background-color: #cbd5e1;
+      line-height: 1.6;
+      padding: 30px 16px;
+    }
+
+    .paper {
+      background: #ffffff;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 56px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Print toolbar */
+    .toolbar-top {
+      max-width: 900px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+    .btn-outline {
+      background: white;
+      color: var(--slate-700);
+      border: 1px solid var(--slate-200);
+    }
+    .btn-outline:hover {
+      background: var(--slate-50);
+    }
+
+    /* Header */
+    .doc-header {
+      border-bottom: 2px solid var(--slate-900);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .company-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--slate-900);
+      letter-spacing: -0.5px;
+    }
+
+    .doc-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 6px;
+      margin-top: 6px;
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 12px;
+      color: var(--slate-500);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin: 28px 0 14px;
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid var(--slate-200);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--slate-900);
+      margin: 16px 0 8px;
+    }
+
+    p, li {
+      font-size: 13.5px;
+      color: var(--slate-600);
+      margin-bottom: 8px;
+    }
+
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 14px;
+    }
+
+    /* Tables */
+    .table-responsive {
+      overflow-x: auto;
+      margin: 16px 0 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: var(--slate-100);
+      color: var(--slate-900);
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 12px;
+      border: 1px solid var(--slate-200);
+    }
+
+    td {
+      padding: 9px 12px;
+      border: 1px solid var(--slate-200);
+      color: var(--slate-700);
+    }
+
+    tr:nth-child(even) {
+      background: var(--slate-50);
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 13px;
+      border-left: 4px solid var(--primary);
+      background: var(--primary-light);
+      color: var(--slate-900);
+    }
+
+    .callout-warning {
+      border-left-color: var(--warning);
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .callout-success {
+      border-left-color: var(--success);
+      background: #ecfdf5;
+      color: #065f46;
+    }
+
+    .callout-danger {
+      border-left-color: var(--danger);
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .code-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #0f172a;
+    }
+
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--slate-200);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--slate-500);
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .toolbar-top {
+        display: none !important;
+      }
+      .paper {
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      h2 {
+        page-break-after: avoid;
+      }
+      table, tr, td, th {
+        page-break-inside: avoid;
+      }
+      .callout {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toolbar -->
+  <div class="toolbar-top">
+    <div>
+      <span style="font-weight: 700; color: #1e293b; font-size: 15px;"><i class="fa-solid fa-file-shield text-blue" style="color:#0284c7"></i> คู่มือระเบียบการใช้งาน PTN Time Attendant</span>
+    </div>
+    <div style="display:flex; gap:8px">
+      <button type="button" class="btn btn-outline" onclick="window.close()"><i class="fa-solid fa-arrow-left"></i> ย้อนกลับ</button>
+      <button type="button" class="btn btn-primary" onclick="window.print()"><i class="fa-solid fa-print"></i> พิมพ์คู่มือ / บันทึก PDF</button>
+    </div>
+  </div>
+
+  <!-- Document Paper -->
+  <div class="paper">
+
+    <!-- Header -->
+    <div class="doc-header">
+      <div>
+        <div class="company-title">บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด</div>
+        <div style="font-size: 13px; color: var(--slate-500); margin-top: 2px;">PTN Pharma Center Co., Ltd. — ฝ่ายบริหารทรัพยากรบุคคล (HR)</div>
+        <span class="doc-badge"><i class="fa-solid fa-shield-halved"></i> เอกสารระเบียบปฏิบัติมาตรฐาน (Standard Operating Procedure)</span>
+      </div>
+      <div class="doc-meta">
+        <div><strong>รหัสเอกสาร:</strong> PTN-SOP-TIME-2026</div>
+        <div><strong>เวอร์ชันระบบ:</strong> v8.9 Production</div>
+        <div><strong>วันที่มีผลบังคับใช้:</strong> 24 กันยายน 2569</div>
+      </div>
+    </div>
+
+    <h1>คู่มือและกฎระเบียบการลงเวลาทำงาน (PTN Time Attendant)</h1>
+    <p style="font-size:14px; color: var(--slate-500); margin-bottom: 24px;">คู่มือฉบับสมบูรณ์สำหรับพนักงานและหัวหน้างานในการใช้งานระบบบันทึกเวลาทำงานผ่านสมาร์ตโฟน และการเชื่อมโยงระบบเงินเดือน PTN Payroll</p>
+
+    <!-- SECTION 1 -->
+    <h2><i class="fa-solid fa-circle-info" style="color:var(--primary)"></i> 1. ตารางเวลาทำงานและเวลากะประจำสาขา</h2>
+    <p>บริษัทฯ กำหนดเวลาเริ่มงาน เวลาเลิกงาน เวลาพัก และจุดเริ่มต้นการคำนวณทำงานล่วงเวลา (OT) แยกอิสระตามแต่ละสาขา ดังนี้:</p>
+
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>สาขา</th>
+            <th>รหัส</th>
+            <th>เวลาเริ่มงาน</th>
+            <th>เวลาเลิกงาน</th>
+            <th>เวลาพักกลางวัน</th>
+            <th>เวลาเริ่มคิด OT</th>
+            <th>รัศมี GPS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>สำนักงานใหญ่</strong></td>
+            <td><span class="code-badge">B01</span></td>
+            <td><strong>09:30 น.</strong></td>
+            <td>19:00 น.</td>
+            <td>13:00 - 14:00 น.</td>
+            <td>19:00 น. เป็นต้นไป</td>
+            <td>50 เมตร</td>
+          </tr>
+          <tr>
+            <td><strong>พัฒนาเภสัช</strong></td>
+            <td><span class="code-badge">B02</span></td>
+            <td><strong>09:30 น.</strong></td>
+            <td>19:00 น.</td>
+            <td>13:00 - 14:00 น.</td>
+            <td>20:00 น. เป็นต้นไป</td>
+            <td>50 เมตร</td>
+          </tr>
+          <tr>
+            <td><strong>พัฒนาชุมชน</strong></td>
+            <td><span class="code-badge">B03</span></td>
+            <td><strong>08:30 น.</strong></td>
+            <td>20:00 น.</td>
+            <td>12:00 - 13:00 น.</td>
+            <td>21:00 น. เป็นต้นไป</td>
+            <td>100 เมตร</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECTION 2 -->
+    <h2><i class="fa-solid fa-fingerprint" style="color:var(--primary)"></i> 2. ระเบียบการลงเวลาเข้า-ออกงาน (Clock In / Clock Out)</h2>
+    
+    <h3>2.1 การลงเวลาเข้างาน (Clock In)</h3>
+    <ul>
+      <li>พนักงานต้องเปิดระบบ <strong>PTN Time</strong> ([https://ptntime.pages.dev](https://ptntime.pages.dev)) บนสมาร์ตโฟนส่วนตัวที่ผูกไว้กับระบบ</li>
+      <li>กดปุ่ม <strong>"บันทึกเข้างาน (Clock IN)"</strong> พร้อมถ่ายภาพเซลฟี่ยืนยันตัวตน และสแกน QR Code ประจำสาขา</li>
+      <li><strong>กรณีสแกนก่อนเวลาเริ่มงาน:</strong> ระบบอนุญาตให้สแกนเข้างานล่วงหน้าได้ โดยเวลาที่สแกนจริงจะถูกบันทึกไว้ในประวัติอย่างโปร่งใส แต่ระบบจะเริ่มคำนวณชั่วโมงทำงานจริงตั้งแต่ <strong>"เวลาเริ่มงานของสาขา"</strong> (เช่น 09:30 น. หรือ 08:30 น.)</li>
+      <li><strong>กรณีมาสาย:</strong> การสแกนหลังเวลาเริ่มงานของสาขาจะถูกคำนวณเป็นนาทีสาย และนำไปหักเงินตามเกณฑ์ในงวดเงินเดือน</li>
+    </ul>
+
+    <h3>2.2 การลงเวลาออกงาน (Clock Out)</h3>
+    <ul>
+      <li>เมื่อสิ้นสุดเวลาปฏิบัติงานประจำวัน ให้กดปุ่ม <strong>"ลงเวลาเลิกงาน (Clock OUT)"</strong></li>
+      <li>ระบบจะทำการคำนวณชั่วโมงทำงานสุทธิประจำวัน และคำนวณชั่วโมง OT อัตโนมัติ (หากพนักงานมีสิทธิ์ OT และทำงานหลังเวลาเริ่มคิด OT ของสาขา)</li>
+    </ul>
+
+    <!-- SECTION 3 -->
+    <h2><i class="fa-solid fa-mug-hot" style="color:var(--primary)"></i> 3. ระเบียบการพักเที่ยง & การป้องกันข้อผิดพลาด</h2>
+    
+    <div class="callout callout-success">
+      <strong><i class="fa-solid fa-check-circle"></i> การออกไปพักก่อนเวลา:</strong> ไม่ถือเป็นการมาสาย และไม่ถูกหักเงินใดๆ หากใช้เวลาพักรวมไม่เกิน 60 นาทีตามโควตา
+    </div>
+
+    <ul>
+      <li><strong>ขั้นตอนการพัก:</strong> เมื่อออกไปพัก ให้กด <strong>"ออกไปพัก (Break OUT)"</strong> และเมื่อกลับมา ให้กด <strong>"กลับเข้าทำงาน (Break IN)"</strong></li>
+      <li><strong>การพักเกินเวลา (Overbreak):</strong> โควตาพักคือ 60 นาที หากเกิน เวลาที่เกินจะถูกหักออกจากชั่วโมงทำงานสุทธิ และระบบจะแจ้งเตือนในระบบของ HR</li>
+      <li><strong>⚠️ กรณีลืมสแกนกลับเข้าทำงาน (ลืม Break IN):</strong>
+        <p style="margin-top:4px;">ระบบมีกลไกป้องกัน โดยจะ <strong>ไม่อนุญาตให้กดเลิกงานทันที</strong> หากยังค้างสถานะออกไปพักอยู่ เพื่อป้องกันข้อผิดพลาด</p>
+        <p><strong>วิธีแก้ไข:</strong> ให้กด Break IN แล้วกด Clock OUT ตามปกติ จากนั้นแจ้งฝ่ายบุคคล (HR) ให้เปิดระบบ Payroll เข้าไปแก้ไขเวลา Break IN ให้ตรงตามเวลาจริงในแท็บ "ระบบลงเวลา & PTN Time" ระบบจะคำนวณชั่วโมงทำงานกลับมาเต็มกะปกติ 100%</p>
+      </li>
+    </ul>
+
+    <!-- SECTION 4 -->
+    <h2><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--primary)"></i> 4. กฎระบบตรวจจับอัตโนมัติ (กรณีมีใบลาแต่มาทำงานจริง)</h2>
+    
+    <div class="callout callout-warning">
+      <strong><i class="fa-solid fa-shield-halved"></i> ระบบตรวจจับอัตโนมัติ (Smart Auto-Detection):</strong> หากพนักงานยื่นขอลางานและได้รับการอนุมัติแล้ว แต่ในวันจริงเปลี่ยนใจมาทำงานและสแกนเข้างาน ระบบจะจัดการให้อัตโนมัติดังนี้:
+    </div>
+
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>ชั่วโมงที่มาทำงานจริงในวันลา</th>
+            <th>การปรับยอดวันลา</th>
+            <th>ผลต่อเงินเดือนและสิทธิ์วันลา</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>มาทำงานเต็มกะ (หรือ &ge; 6 ชม.)</strong></td>
+            <td><strong style="color:var(--success)">ยกเว้นวันลา 1 วันเต็ม (เหลือลา 0 วัน)</strong></td>
+            <td>ได้รับค่าจ้างเต็มวัน ไม่โดนหักเงิน และไม่เสียโควตาวันลาไปฟรี</td>
+          </tr>
+          <tr>
+            <td><strong>มาทำงานครึ่งวัน (3.5 – 6 ชม.)</strong></td>
+            <td><strong style="color:var(--primary)">ปรับลดวันลาเหลือ 0.5 วัน (ลาครึ่งวัน)</strong></td>
+            <td>คิดชั่วโมงทำงานส่วนที่มาทำให้อย่างเป็นธรรม หักวันลาเพียงครึ่งวัน</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECTION 5 -->
+    <h2><i class="fa-solid fa-money-bill-wave" style="color:var(--primary)"></i> 5. ระเบียบการขอเบิกเงินล่วงหน้ารายสัปดาห์ (Weekly Advance)</h2>
+    <ul>
+      <li><strong>วันเปิดรับคำขอ:</strong> เปิดให้ยื่นขอเฉพาะ <strong>"วันเสาร์"</strong> เท่านั้น</li>
+      <li><strong>เวลาเปิดระบบ:</strong> เวลา <strong>09:00 น. – 18:00 น.</strong></li>
+      <li><strong>อัตราที่เบิกได้:</strong> <strong>250 บาท ต่อ 1 วันทำงานจริง</strong> ในสัปดาห์นั้น (จันทร์ - เสาร์)</li>
+      <li><strong>ยอดสูงสุด:</strong> ไม่เกิน <strong>3,000 บาท ต่อสัปดาห์</strong></li>
+      <li><strong>การหักชำระคืน:</strong> ระบบจะนำยอดที่เบิกไปหักออกจากเงินเดือนงวดสิ้นเดือนอัตโนมัติ</li>
+    </ul>
+
+    <!-- SECTION 6 -->
+    <h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i> 6. ข้อห้ามและบทลงโทษทางวินัย</h2>
+    <div class="callout callout-danger">
+      <strong><i class="fa-solid fa-ban"></i> ข้อห้ามร้ายแรง:</strong>
+      <ol style="margin-top:6px; margin-bottom:0;">
+        <li><strong>การลงเวลาแทนผู้อื่น:</strong> ถือเป็นการทุจริตร้ายแรง บริษัทมีมาตรการลงโทษทางวินัยสูงสุดถึงขั้นเลิกจ้างโดยไม่จ่ายค่าชดเชย</li>
+        <li><strong>การใช้โปรแกรมจำลองพิกัด (Fake GPS):</strong> ระบบมีระบบวิเคราะห์และปฏิเสธพิกัดปลอม หากตรวจพบจะถูกตั้งกรรมการสอบสวนทางวินัยทันที</li>
+      </ol>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div>บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด | เอกสารระเบียบปฏิบัติมาตรฐาน</div>
+      <div>พิมพ์เมื่อ: 24 กันยายน 2569 | หน้า 1 จาก 1</div>
+    </div>
+
+  </div>
+
+</body>
+</html>
