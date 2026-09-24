@@ -226,6 +226,7 @@ async function ensureTables(db) {
 
   await db.prepare("ALTER TABLE employees ADD COLUMN branch_id TEXT DEFAULT 'B01'").run().catch(() => {});
   await db.prepare("ALTER TABLE employees ADD COLUMN allow_all_branches TEXT DEFAULT 'false'").run().catch(() => {});
+  await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_id TEXT").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_name TEXT").run().catch(() => {});
   isTablesEnsured = true;
@@ -488,7 +489,7 @@ async function handleAction(db, action, params) {
 
   switch (action) {
     case 'getInitialData': {
-      const empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
+      const empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
       const branchRows = await db.prepare("SELECT * FROM branches ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
       const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at FROM employee_devices').all().catch(() => ({ results: [] }));
       const deviceMap = {};
@@ -511,6 +512,7 @@ async function handleAction(db, action, params) {
         phone: e.phone || '',
         branchId: e.branch_id || 'B01',
         allowAllBranches: (e.allow_all_branches === 'true' || e.allow_all_branches === true),
+        isOtEligible: !(e.is_ot_eligible === 'false' || e.is_ot_eligible === false),
         status: e.status || 'Active',
         last4Citizen: (e.citizen_id || '').slice(-4),
         boundDevice: deviceMap[e.emp_id] || null
@@ -1357,6 +1359,11 @@ async function handleAction(db, action, params) {
             calculatedOtHours = Math.round((rawOtMinutes / 60) * 100) / 100;
           }
         }
+      // Check employee OT eligibility (if not eligible, force OT hours to 0)
+      const empRow = await db.prepare('SELECT is_ot_eligible FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
+      const isOtEligible = !(empRow && (empRow.is_ot_eligible === 'false' || empRow.is_ot_eligible === false));
+      if (!isOtEligible) {
+        calculatedOtHours = 0;
       }
 
       const totalWorkHours = Math.round((normalMinutes / 60) * 100) / 100;
@@ -1367,7 +1374,7 @@ async function handleAction(db, action, params) {
         WHERE id = ?
       `).bind(timeStr, lat || null, lng || null, photoUrl || null, totalWorkHours, calculatedOtHours, remark ? ' ' + remark : '', existing.id).run();
 
-      // If OT occurred, record or update in ot_requests automatically
+      // If OT occurred and employee is eligible, record or update in ot_requests automatically
       if (calculatedOtHours > 0) {
         const existingOt = await db.prepare('SELECT * FROM ot_requests WHERE emp_id = ? AND date = ?').bind(empId, date).first();
         const otRate = isSunday ? settings.sunday_ot_rate : 1.5;
@@ -1393,6 +1400,7 @@ async function handleAction(db, action, params) {
         clockOutTime: timeStr,
         workHours: totalWorkHours,
         otHours: calculatedOtHours,
+        isOtEligible,
         isSunday
       };
     }
@@ -1562,6 +1570,11 @@ async function handleAction(db, action, params) {
       const { empId, date, plannedHours, otType, reason } = params;
       if (!empId || !date || !plannedHours) {
         return { success: false, message: 'กรุณากรอกข้อมูลขอทำ OT ให้ครบถ้วน' };
+      }
+
+      const emp = await db.prepare('SELECT is_ot_eligible FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
+      if (emp && (emp.is_ot_eligible === 'false' || emp.is_ot_eligible === false)) {
+        return { success: false, message: 'ตำแหน่งงานของคุณไม่ได้รับสิทธิ์เบิกค่าล่วงเวลา (OT)' };
       }
 
       await db.prepare(`

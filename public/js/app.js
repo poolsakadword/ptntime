@@ -874,8 +874,9 @@ function renderEmployeeCards(filterText = '') {
             </div>
           </div>
         </div>
-        <div class="flex-shrink-0 ml-2">
+        <div class="flex-shrink-0 ml-2 flex flex-col items-end gap-1">
           ${deviceBadge}
+          ${(e.isOtEligible === false || e.is_ot_eligible === 'false') ? `<span class="text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-500 font-medium">เหมาจ่าย (ไม่มี OT)</span>` : ''}
         </div>
       </div>
     `;
@@ -2329,13 +2330,17 @@ async function submitClockWithPhoto(type, qrToken, photoUrl) {
           `
         });
       } else {
+        const isEligible = (data.isOtEligible !== false) && (!currentEmployee || currentEmployee.isOtEligible !== false);
         Swal.fire({
           icon: 'success',
           title: 'บันทึกเวลาออกงานสำเร็จ!',
           html: `
             <div class="text-sm space-y-1">
               <p>เวลาออกงาน: <b class="text-rose-700">${data.clockOutTime}</b></p>
-              <p>งานปกติ: <b>${data.workHours} ชม.</b> | OT วันนี้: <b class="text-indigo-700">${data.otHours} ชม.</b></p>
+              ${isEligible
+                ? `<p>งานปกติ: <b>${data.workHours} ชม.</b> | OT วันนี้: <b class="text-indigo-700">${data.otHours} ชม.</b></p>`
+                : `<p>งานปกติ: <b>${data.workHours} ชม.</b> <span class="text-xs text-slate-500 font-normal">(ตำแหน่งเหมาจ่าย ไม่คิดค่า OT)</span></p>`
+              }
               <p class="text-xs text-slate-500 pt-1">📸 บันทึกรูปถ่ายและพิกัด GPS สำเร็จ</p>
             </div>
           `
@@ -2999,6 +3004,15 @@ async function submitLeaveRequest() {
 async function submitOtRequest() {
   if (!currentEmployee) {
     openEmployeePickerModal();
+    return;
+  }
+
+  if (currentEmployee.isOtEligible === false || currentEmployee.is_ot_eligible === 'false') {
+    Swal.fire({
+      icon: 'info',
+      title: 'ไม่มีสิทธิ์เบิกค่าล่วงเวลา',
+      text: 'ตำแหน่งงานของคุณได้รับการกำหนดค่าจ้างแบบเหมาจ่าย ไม่สามารถส่งคำขอ OT ได้'
+    });
     return;
   }
 
