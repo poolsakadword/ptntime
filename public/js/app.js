@@ -2536,6 +2536,13 @@ async function loadTodayStatus() {
           }
           if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเลิกงาน';
           if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สรุปเวลางาน (Clock OUT - 4/4)';
+          if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
+              badge.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
+            }
+            if (heroSub) heroSub.textContent = '⚡ โหมดงานเสร็จประจำสาขา (ได้รับค่าแรงเต็มวัน ไม่หักเงิน)';
+          }
           if (heroIcon) heroIcon.textContent = '🚪';
           if (heroBtn) {
             heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
@@ -2556,6 +2563,13 @@ async function loadTodayStatus() {
           }
           if (heroTitle) heroTitle.textContent = 'ลงเวลาครบทุกขั้นตอนแล้ว';
           if (heroSub) heroSub.textContent = 'บันทึกเวลาทำงานของวันนี้เรียบร้อยแล้ว พักผ่อนได้เลยครับ';
+          if (log.is_full_pay === 1 || (log.remark && log.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'))) {
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+              badge.textContent = '✨ งานเสร็จ (เต็มวัน)';
+            }
+            if (heroSub) heroSub.textContent = `เลิกงานในโหมดงานเสร็จเรียบร้อยแล้ว (ออกเวลา ${log.clock_out}) ได้รับค่าแรงเต็มวัน`;
+          }
           if (heroIcon) heroIcon.textContent = '✅';
           if (heroBtn) {
             heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-lg flex flex-col items-center justify-center space-y-2.5 bg-slate-700 hover:bg-slate-800 cursor-default';
@@ -2875,9 +2889,11 @@ async function loadEmployeeHistory() {
               </div>
             </div>
             <div class="text-right flex-shrink-0">
-              ${isLate 
-                ? `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">สาย ${l.late_minutes} น.</span>`
-                : `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">ปกติ</span>`
+              ${l.is_full_pay === 1 || (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'))
+                ? `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">✨ งานเสร็จ (เต็มวัน)</span>`
+                : isLate 
+                  ? `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">สาย ${l.late_minutes} น.</span>`
+                  : `<span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">ปกติ</span>`
               }
             </div>
           </div>

@@ -230,6 +230,8 @@ async function ensureTables(db) {
   await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_id TEXT").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_name TEXT").run().catch(() => {});
+  await db.prepare("ALTER TABLE branches ADD COLUMN early_dismissal_full_pay INTEGER DEFAULT 0").run().catch(() => {});
+  await db.prepare("ALTER TABLE time_logs ADD COLUMN is_full_pay INTEGER DEFAULT 0").run().catch(() => {});
   isTablesEnsured = true;
 }
 
@@ -275,7 +277,8 @@ async function getEmployeeBranchConfig(db, empId, lat, lng, defaultSettings) {
       lunchEndTime: chosenBranch.lunch_end_time || defaultSettings.lunch_end_time,
       graceMinutes: (chosenBranch.grace_minutes !== undefined && chosenBranch.grace_minutes !== null) ? Number(chosenBranch.grace_minutes) : (Number(defaultSettings.grace_period_morning_minutes) || 0),
       otStartTime: chosenBranch.ot_start_time || chosenBranch.work_end_time || defaultSettings.ot_start_time,
-      kioskPin: chosenBranch.kiosk_pin || defaultSettings.kiosk_pin || '123456'
+      kioskPin: chosenBranch.kiosk_pin || defaultSettings.kiosk_pin || '123456',
+      earlyDismissalFullPay: (chosenBranch.early_dismissal_full_pay === 1 || chosenBranch.early_dismissal_full_pay === '1' || chosenBranch.early_dismissal_full_pay === 'true' || chosenBranch.early_dismissal_full_pay === true)
     };
   }
 
@@ -471,7 +474,8 @@ async function handleAction(db, action, params) {
       'saveSettings',
       'resetDeviceLock',
       'getMasterUnlockToken',
-      'getBranches'
+      'getBranches',
+      'toggleBranchEarlyDismissal'
     ];
     if (!supervisorActions.includes(action)) {
       return {
@@ -939,13 +943,15 @@ async function handleAction(db, action, params) {
       const log = await db.prepare('SELECT * FROM time_logs WHERE emp_id = ? AND date = ?').bind(empId, date).first();
       const pendingLeave = await db.prepare('SELECT * FROM leave_requests WHERE emp_id = ? AND ? BETWEEN start_date AND end_date').bind(empId, date).first();
       const approvedOt = await db.prepare('SELECT * FROM ot_requests WHERE emp_id = ? AND date = ?').bind(empId, date).first();
+      const branchCfg = await getEmployeeBranchConfig(db, empId, null, null, settings);
 
       return {
         success: true,
         log: log || null,
         leave: pendingLeave || null,
         ot: approvedOt || null,
-        settings
+        settings,
+        branchConfig: branchCfg || null
       };
     }
 
@@ -1320,7 +1326,8 @@ async function handleAction(db, action, params) {
             lunchStartTime: recordedBranch.lunch_start_time || effectiveBranchCfg.lunchStartTime,
             lunchEndTime: recordedBranch.lunch_end_time || effectiveBranchCfg.lunchEndTime,
             graceMinutes: recordedBranch.grace_minutes != null ? Number(recordedBranch.grace_minutes) : effectiveBranchCfg.graceMinutes,
-            otStartTime: recordedBranch.ot_start_time || recordedBranch.work_end_time || effectiveBranchCfg.otStartTime
+            otStartTime: recordedBranch.ot_start_time || recordedBranch.work_end_time || effectiveBranchCfg.otStartTime,
+            earlyDismissalFullPay: (recordedBranch.early_dismissal_full_pay === 1 || recordedBranch.early_dismissal_full_pay === '1' || recordedBranch.early_dismissal_full_pay === 'true' || recordedBranch.early_dismissal_full_pay === true)
           };
         }
       }
@@ -1397,12 +1404,18 @@ async function handleAction(db, action, params) {
       }
 
       const totalWorkHours = Math.round((normalMinutes / 60) * 100) / 100;
+      const isEarlyDismissalFullPay = !!effectiveBranchCfg.earlyDismissalFullPay;
+      const finalIsFullPay = isEarlyDismissalFullPay ? 1 : 0;
+      const earlyDismissalRemark = isEarlyDismissalFullPay ? ' [งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน]' : '';
 
       await db.prepare(`
         UPDATE time_logs 
-        SET clock_out = ?, out_lat = ?, out_lng = ?, out_photo_url = ?, work_hours = ?, ot_hours = ?, remark = COALESCE(remark, '') || ?
+        SET clock_out = ?, out_lat = ?, out_lng = ?, out_photo_url = ?, work_hours = ?, ot_hours = ?,
+            is_full_pay = CASE WHEN ? = 1 THEN 1 ELSE COALESCE(is_full_pay, 0) END,
+            status = CASE WHEN ? = 1 THEN 'NORMAL' ELSE status END,
+            remark = COALESCE(remark, '') || ?
         WHERE id = ?
-      `).bind(timeStr, lat || null, lng || null, photoUrl || null, totalWorkHours, calculatedOtHours, remark ? ' ' + remark : '', existing.id).run();
+      `).bind(timeStr, lat || null, lng || null, photoUrl || null, totalWorkHours, calculatedOtHours, finalIsFullPay, finalIsFullPay, (remark ? ' ' + remark : '') + earlyDismissalRemark, existing.id).run();
 
       // If OT occurred and employee is eligible, record or update in ot_requests automatically
       if (calculatedOtHours > 0) {
@@ -1423,6 +1436,9 @@ async function handleAction(db, action, params) {
       }
 
       let clockOutMsg = `บันทึกเวลาออกงานสำเร็จ (${effectiveBranchCfg.branchName})`;
+      if (isEarlyDismissalFullPay) {
+        clockOutMsg += ` ✨ โหมดงานเสร็จ: ได้รับค่าแรงเต็มวัน`;
+      }
       let hasApprovedLeaveToday = false;
       try {
         const approvedLeaveToday = await db.prepare(`
@@ -1439,6 +1455,7 @@ async function handleAction(db, action, params) {
       return {
         success: true,
         message: clockOutMsg,
+        isFullPay: isEarlyDismissalFullPay,
         hasApprovedLeaveToday,
         branchId: effectiveBranchCfg.branchId,
         branchName: effectiveBranchCfg.branchName,
@@ -1818,6 +1835,25 @@ async function handleAction(db, action, params) {
         await db.prepare('INSERT OR REPLACE INTO attendance_settings (key, value) VALUES (?, ?)').bind(k, String(v)).run();
       }
       return { success: true, message: 'บันทึกการตั้งค่าระบบลงเวลาเรียบร้อยแล้ว' };
+    }
+
+    // Toggle Branch Early Dismissal Mode (โหมดงานเสร็จ - จ่ายเต็มวัน)
+    case 'toggleBranchEarlyDismissal': {
+      const branchId = String(params.branchId || params.branch_id || '').trim();
+      const enabled = (params.enabled === true || params.enabled === 'true' || params.enabled === 1 || params.enabled === '1') ? 1 : 0;
+      if (!branchId) return { success: false, message: 'กรุณาระบุรหัสสาขา' };
+
+      await db.prepare('UPDATE branches SET early_dismissal_full_pay = ? WHERE branch_id = ?').bind(enabled, branchId).run();
+      const branch = await db.prepare('SELECT branch_name FROM branches WHERE branch_id = ?').bind(branchId).first();
+      const branchName = branch?.branch_name || branchId;
+      const statusText = enabled ? 'เปิดโหมดงานเสร็จ-เลิกงานก่อน (จ่ายค่าแรงเต็มวัน)' : 'ปิดโหมดงานเสร็จ (กลับสู่โหมดปกติ)';
+
+      return {
+        success: true,
+        branchId,
+        enabled: enabled === 1,
+        message: `${statusText} สำหรับสาขา ${branchName} เรียบร้อยแล้ว`
+      };
     }
 
     // 16. Payroll Sync Data (Cut-off period 26th previous month to 25th current month)
