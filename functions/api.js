@@ -1322,10 +1322,15 @@ async function handleAction(db, action, params) {
       const isSunday = (dayOfWeekNumber === 0);
       const inMinutes = timeToMinutes(existing.clock_in);
       const outMinutes = timeToMinutes(timeStr);
+      const workStartMinutes = timeToMinutes(effectiveBranchCfg.workStartTime);
       const workEndMinutes = timeToMinutes(effectiveBranchCfg.workEndTime);
       const otStartMinutes = timeToMinutes(effectiveBranchCfg.otStartTime);
       const lunchStart = timeToMinutes(effectiveBranchCfg.lunchStartTime);
       const lunchEnd = timeToMinutes(effectiveBranchCfg.lunchEndTime);
+
+      // Early clock-in handling: if employee clocks in early before branch workStartTime,
+      // start counting work hours strictly from workStartTime (preserving actual clock-in timestamp in history)
+      const effectiveInMinutes = Math.max(inMinutes, workStartMinutes);
 
       let normalMinutes = 0;
       let calculatedOtHours = 0;
@@ -1334,13 +1339,13 @@ async function handleAction(db, action, params) {
       let breakDeduction = 0;
       if (existing.break_minutes != null && existing.break_minutes > 0) {
         breakDeduction = existing.break_minutes;
-      } else if (inMinutes <= lunchStart && (isSunday ? outMinutes >= lunchEnd : Math.min(outMinutes, workEndMinutes) >= lunchEnd)) {
+      } else if (effectiveInMinutes <= lunchStart && (isSunday ? outMinutes >= lunchEnd : Math.min(outMinutes, workEndMinutes) >= lunchEnd)) {
         breakDeduction = Number(settings.break_duration_minutes) || 60;
       }
 
       if (isSunday) {
-        // Sunday: All hours count as Sunday OT at sunday_ot_rate (1.0x default)
-        let totalSunMinutes = Math.max(0, outMinutes - inMinutes);
+        // Sunday: All hours count as Sunday OT at sunday_ot_rate (1.0x default, starting from workStartTime)
+        let totalSunMinutes = Math.max(0, outMinutes - effectiveInMinutes);
         totalSunMinutes = Math.max(0, totalSunMinutes - breakDeduction);
         if (settings.ot_rounding_mode === 'HALF_HOUR') {
           calculatedOtHours = Math.floor(totalSunMinutes / 30) * 0.5;
@@ -1350,9 +1355,9 @@ async function handleAction(db, action, params) {
         normalMinutes = 0;
       } else {
         // Normal workday (Mon - Sat)
-        // Normal work cut at workEndMinutes (branch-specific)
+        // Normal work cut between effectiveInMinutes (branch workStartTime) and workEndMinutes
         const cappedEnd = Math.min(outMinutes, workEndMinutes);
-        normalMinutes = Math.max(0, cappedEnd - inMinutes);
+        normalMinutes = Math.max(0, cappedEnd - effectiveInMinutes);
         normalMinutes = Math.max(0, normalMinutes - breakDeduction);
 
         // Automatic OT: If Clock Out is after otStartMinutes (branch-specific)
