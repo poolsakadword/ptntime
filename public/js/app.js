@@ -276,6 +276,7 @@ function checkMaintenanceMode() {
       showAdminMaintenanceBanner();
     } else {
       removeAdminMaintenanceBanner();
+    }
   }
 }
 
