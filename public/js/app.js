@@ -242,6 +242,7 @@ async function loadInitialData() {
       updateHeaderEmployeeView();
       applyFeatureToggles();
       checkMaintenanceMode();
+      checkAppAnnouncement(data.announcement);
 
       // Recalculate GPS location for this employee's branch
       if (currentLocation) {
@@ -275,8 +276,93 @@ function checkMaintenanceMode() {
       showAdminMaintenanceBanner();
     } else {
       removeAdminMaintenanceBanner();
+  }
+}
+
+// ==============================================================================
+// 2.1 APP ANNOUNCEMENT CONTROLLERS (GRAPHIC BANNER CARD - DESIGN 2)
+// ==============================================================================
+let activeAppAnnouncement = null;
+
+function checkAppAnnouncement(announcement) {
+  if (!announcement || announcement.active === false || announcement.active === 'false') {
+    return;
+  }
+
+  activeAppAnnouncement = announcement;
+  const annId = announcement.id || 'ann_default';
+  const todayStr = new Date().toISOString().substring(0, 10);
+
+  // Check if dismissed for today
+  try {
+    const dismissedRaw = localStorage.getItem('ptn_dismissed_announcement');
+    if (dismissedRaw) {
+      const dismissed = JSON.parse(dismissedRaw);
+      if (dismissed && dismissed.id === annId && dismissed.date === todayStr) {
+        return; // Don't show again today
+      }
+    }
+  } catch(e) {}
+
+  // Populate data into Graphic Banner Card
+  const tagEl = document.getElementById('popupAnnTagText');
+  if (tagEl) tagEl.textContent = announcement.tag || 'อัปเดตใหม่';
+
+  const bannerTitleEl = document.getElementById('popupAnnBannerTitle');
+  if (bannerTitleEl) bannerTitleEl.textContent = announcement.bannerTitle || 'PTN TIME GO LIVE!';
+
+  const titleEl = document.getElementById('popupAnnTitle');
+  if (titleEl) titleEl.textContent = announcement.title || 'ประกาศจากบริษัทฯ';
+
+  const bodyEl = document.getElementById('popupAnnBody');
+  if (bodyEl) bodyEl.textContent = announcement.body || '';
+
+  const subnoteBox = document.getElementById('popupAnnSubnoteBox');
+  const subnoteText = document.getElementById('popupAnnSubnoteText');
+  if (subnoteBox && subnoteText) {
+    if (announcement.subnote) {
+      subnoteText.textContent = announcement.subnote;
+      subnoteBox.classList.remove('hidden');
+      subnoteBox.classList.add('flex');
+    } else {
+      subnoteBox.classList.add('hidden');
+      subnoteBox.classList.remove('flex');
     }
   }
+
+  // Reset checkbox
+  const chk = document.getElementById('chkDontShowAnnouncement');
+  if (chk) chk.checked = false;
+
+  // Show modal with a short gentle delay (400ms)
+  setTimeout(() => {
+    const modal = document.getElementById('modalAppAnnouncement');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+  }, 400);
+}
+
+function closeAppAnnouncementModal() {
+  const chk = document.getElementById('chkDontShowAnnouncement');
+  if (chk && chk.checked && activeAppAnnouncement) {
+    const annId = activeAppAnnouncement.id || 'ann_default';
+    const todayStr = new Date().toISOString().substring(0, 10);
+    try {
+      localStorage.setItem('ptn_dismissed_announcement', JSON.stringify({ id: annId, date: todayStr }));
+    } catch(e) {}
+  }
+
+  const modal = document.getElementById('modalAppAnnouncement');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+}
+
+function handleAppAnnouncementConfirm() {
+  closeAppAnnouncementModal();
 }
 
 function showAdminMaintenanceBanner() {

@@ -540,6 +540,16 @@ async function handleAction(db, action, params) {
       const safeSettings = { ...settings };
       delete safeSettings.kiosk_pin;
 
+      let announcement = null;
+      try {
+        const annRow = await db.prepare("SELECT value FROM settings WHERE key = 'app_announcement'").first();
+        if (annRow && annRow.value) {
+          announcement = JSON.parse(annRow.value);
+        }
+      } catch (e) {
+        console.warn('Announcement fetch error:', e);
+      }
+
       return {
         success: true,
         settings: safeSettings,
@@ -550,7 +560,8 @@ async function handleAction(db, action, params) {
         dynamicToken,
         secondsLeft,
         employees,
-        devices: deviceRows.results || []
+        devices: deviceRows.results || [],
+        announcement
       };
     }
 
@@ -2179,6 +2190,25 @@ async function handleAction(db, action, params) {
         success: true,
         notifications: rows.results || []
       };
+    }
+
+    // 20. APP ANNOUNCEMENT CONTROLLERS
+    case 'getAppAnnouncement': {
+      let announcement = null;
+      try {
+        const annRow = await db.prepare("SELECT value FROM settings WHERE key = 'app_announcement'").first();
+        if (annRow && annRow.value) {
+          announcement = JSON.parse(annRow.value);
+        }
+      } catch (e) {}
+      return { success: true, announcement };
+    }
+
+    case 'saveAppAnnouncement': {
+      const ann = params.announcement || {};
+      const val = typeof ann === 'string' ? ann : JSON.stringify(ann);
+      await db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES ("app_announcement", ?)').bind(val).run();
+      return { success: true, message: 'บันทึกประกาศเรียบร้อยแล้ว' };
     }
 
     default:

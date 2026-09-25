@@ -181,3 +181,12 @@ input, select, textarea {
   0%, 100% { box-shadow: 0 10px 25px -4px rgba(244, 63, 94, 0.4); }
   50% { box-shadow: 0 10px 30px 6px rgba(244, 63, 94, 0.15); }
 }
+
+/* Modal Popup Animations */
+@keyframes popIn {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop {
+  animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

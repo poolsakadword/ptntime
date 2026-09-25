@@ -7,10 +7,11 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0284c7">
   
-  <!-- Fonts -->
+  <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -1248,6 +1249,65 @@
       </div>
     </div>
 
+    <!-- 📢 POPUP ANNOUNCEMENT MODAL (GRAPHIC BANNER CARD - DESIGN 2) -->
+    <div id="modalAppAnnouncement" class="fixed inset-0 bg-black/65 z-50 flex items-center justify-center p-3.5 sm:p-4 hidden backdrop-blur-sm transition-all duration-300">
+      <div class="bg-white w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-slate-100 animate-pop flex flex-col text-left">
+        <!-- Top Graphic Banner with Gradient & Illustration -->
+        <div class="h-36 sm:h-40 bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 p-5 relative flex flex-col justify-between text-white select-none">
+          <div class="flex items-center justify-between">
+            <span id="popupAnnTag" class="px-3 py-1 rounded-full text-xs font-extrabold bg-white/25 backdrop-blur-md border border-white/40 tracking-wide uppercase flex items-center gap-1.5">
+              <i class="fa-solid fa-sparkles text-amber-300"></i> <span id="popupAnnTagText">อัปเดตใหม่</span>
+            </span>
+            <button type="button" onclick="closeAppAnnouncementModal()" class="w-8 h-8 rounded-full bg-black/35 hover:bg-black/55 active:scale-90 text-white flex items-center justify-center text-sm transition-colors font-bold" title="ปิด">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="relative z-10">
+            <div class="text-xs text-blue-100 font-medium">ประกาศจากบริษัทฯ</div>
+            <div id="popupAnnBannerTitle" class="text-xl sm:text-2xl font-black leading-tight tracking-tight drop-shadow-sm">PTN TIME GO LIVE!</div>
+          </div>
+          <!-- Decorative Watermark Icon -->
+          <i class="fa-solid fa-bullhorn absolute -bottom-3 -right-2 text-7xl text-white/10 pointer-events-none"></i>
+        </div>
+
+        <!-- Card Body -->
+        <div class="p-5 sm:p-6 flex flex-col space-y-4">
+          <div>
+            <h4 id="popupAnnTitle" class="text-base sm:text-lg font-extrabold text-slate-900 leading-snug mb-2">
+              --
+            </h4>
+            <div id="popupAnnBody" class="text-sm text-slate-700 leading-relaxed whitespace-pre-line max-h-56 overflow-y-auto pr-1">
+              --
+            </div>
+          </div>
+
+          <!-- Highlight / Subnote Box (optional) -->
+          <div id="popupAnnSubnoteBox" class="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs sm:text-sm font-semibold">
+            <i class="fa-solid fa-bell text-amber-600 text-base shrink-0"></i>
+            <span id="popupAnnSubnoteText">--</span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-2.5 pt-1">
+            <button type="button" onclick="closeAppAnnouncementModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 rounded-2xl font-bold text-sm transition-all text-center">
+              ปิดหน้าต่าง
+            </button>
+            <button type="button" onclick="handleAppAnnouncementConfirm()" class="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white rounded-2xl font-bold text-sm shadow-md shadow-blue-500/25 transition-all text-center">
+              รับทราบประกาศ
+            </button>
+          </div>
+
+          <!-- Checkbox: Don't show again today -->
+          <div class="text-center pt-1">
+            <label class="inline-flex items-center gap-2 text-xs sm:text-sm text-slate-500 select-none cursor-pointer font-medium hover:text-slate-700">
+              <input type="checkbox" id="chkDontShowAnnouncement" class="rounded text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer">
+              <span>รับทราบแล้ว ไม่ต้องแสดงเตือนซ้ำในวันนี้</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- MAINTENANCE MODE SCREEN (Shown when system_maintenance_mode is true) -->
     <div id="maintenanceScreen" class="hidden fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white">
       <div class="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 text-slate-800 shadow-2xl space-y-6 animate-fade-in border border-slate-100">
@@ -1278,6 +1338,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=9.6"></script>
+  <script src="js/app.js?v=9.7"></script>
 </body>
 </html>
