@@ -1862,16 +1862,16 @@ function drawCanvasRoundRect(ctx, x, y, width, height, radius) {
 }
 
 function drawAttendanceWatermark(ctx, width, height, clockType) {
-  const bannerH = 140;
+  const bannerH = 150;
   const startY = height - bannerH;
 
   // 1. Dark Gradient Background from transparent to 95% opacity
-  const grad = ctx.createLinearGradient(0, startY - 20, 0, height);
+  const grad = ctx.createLinearGradient(0, startY - 24, 0, height);
   grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  grad.addColorStop(0.3, 'rgba(15, 23, 42, 0.80)');
+  grad.addColorStop(0.25, 'rgba(15, 23, 42, 0.80)');
   grad.addColorStop(1, 'rgba(15, 23, 42, 0.96)');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, startY - 20, width, bannerH + 20);
+  ctx.fillRect(0, startY - 24, width, bannerH + 24);
 
   // 2. Action Badge Info
   let badgeText = 'เข้างาน (IN)';
@@ -1922,47 +1922,47 @@ function drawAttendanceWatermark(ctx, width, height, clockType) {
 
   // Draw Badge Pill
   const fontSans = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-  ctx.font = `bold 12px ${fontSans}`;
+  ctx.font = `bold 13px ${fontSans}`;
   const badgeTextWidth = ctx.measureText(badgeText).width;
   const badgeW = badgeTextWidth + 24;
-  const badgeH = 22;
-  const badgeX = 14;
-  const badgeY = startY + 6;
+  const badgeH = 24;
+  const badgeX = 16;
+  const badgeY = startY + 8;
 
   ctx.fillStyle = badgeColor;
-  drawCanvasRoundRect(ctx, badgeX, badgeY, badgeW, badgeH, 11);
+  drawCanvasRoundRect(ctx, badgeX, badgeY, badgeW, badgeH, 12);
 
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(badgeText, badgeX + 12, badgeY + 15);
+  ctx.fillText(badgeText, badgeX + 12, badgeY + 17);
 
   // Timestamp next to badge
-  ctx.font = `bold 12.5px ${fontSans}`;
+  ctx.font = `bold 13.5px ${fontSans}`;
   ctx.fillStyle = '#f8fafc';
-  ctx.fillText(`📅 ${dateStr} • ${timeStr}`, badgeX + badgeW + 10, badgeY + 16);
+  ctx.fillText(`📅 ${dateStr} • ${timeStr}`, badgeX + badgeW + 12, badgeY + 17);
 
   // Line 2: Employee Name
-  ctx.font = `bold 15px ${fontSans}`;
+  ctx.font = `bold 17px ${fontSans}`;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(`👤 ${empDisplay}`, 16, startY + 52);
+  ctx.fillText(`👤 ${empDisplay}`, 18, startY + 58);
 
   // Line 3: Branch & Distance
-  ctx.font = `12px ${fontSans}`;
+  ctx.font = `13.5px ${fontSans}`;
   ctx.fillStyle = '#cbd5e1';
-  ctx.fillText(branchDisplay, 16, startY + 74);
+  ctx.fillText(branchDisplay, 18, startY + 83);
 
   // Line 4: GPS Coordinates
-  ctx.font = 'bold 12.5px "Courier New", monospace';
+  ctx.font = 'bold 13px "Courier New", monospace';
   ctx.fillStyle = '#38bdf8';
-  ctx.fillText(gpsDisplay, 16, startY + 97);
+  ctx.fillText(gpsDisplay, 18, startY + 107);
 
   // Line 5: Verification text & Brand
-  ctx.font = `10.5px ${fontSans}`;
+  ctx.font = `11.5px ${fontSans}`;
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText('✓ ยืนยันพิกัดผ่านระบบ PTN Time Attendant', 16, startY + 118);
+  ctx.fillText('✓ ยืนยันพิกัดผ่านระบบ PTN Time Attendant', 18, startY + 130);
 
-  ctx.font = `bold 11px ${fontSans}`;
+  ctx.font = `bold 12px ${fontSans}`;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-  ctx.fillText('PTN TIME', width - 70, startY + 118);
+  ctx.fillText('PTN TIME', width - 80, startY + 130);
 
   ctx.restore();
 }
@@ -2022,8 +2022,8 @@ async function triggerShutterCapture() {
     try { navigator.vibrate(50); } catch(e) {}
   }
 
-  // 2. Crop and Compress Frame from Video
-  const targetSize = 480; // 480x480 square crop for crisp photo and watermark
+  // 2. Crop and Compress Frame from Video (Upgraded to 640x640 with Natural Beauty Filter)
+  const targetSize = 640; // 640x640 HD resolution for sharp, radiant portrait
   canvas.width = targetSize;
   canvas.height = targetSize;
   const ctx = canvas.getContext('2d');
@@ -2035,18 +2035,25 @@ async function triggerShutterCapture() {
   const startY = (vh - cropSize) / 2;
 
   ctx.save();
+  // 🌟 Natural Beauty Tone Filter: brightness +6%, contrast +3%, saturation +8%
+  // ช่วยให้ใบหน้าสว่างใส อมชมพู ผิวผ่อง ไม่มืดหมอง เป็นธรรมชาติ
+  try {
+    ctx.filter = 'brightness(1.06) contrast(1.03) saturate(1.08)';
+  } catch(e) {}
+
   if (currentCameraFacing === 'user') {
     ctx.translate(targetSize, 0);
     ctx.scale(-1, 1);
   }
   ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
   ctx.restore();
+  try { ctx.filter = 'none'; } catch(e) {}
 
   // Overlay GPS Watermark (Style 1: Modern Gradient Banner)
   drawAttendanceWatermark(ctx, targetSize, targetSize, activePendingClock ? activePendingClock.type : 'IN');
 
-  // Smart Concurrency Optimization: 0.65 JPEG Quality (~30-40KB, saves ~70% disk & network payload)
-  const photoBase64 = canvas.toDataURL('image/jpeg', 0.65);
+  // Smart HD Optimization: 0.78 JPEG Quality (~45-55KB, crisp details, smooth skin without artifacts)
+  const photoBase64 = canvas.toDataURL('image/jpeg', 0.78);
 
   const pendingData = Object.assign({}, activePendingClock);
   closeFullscreenCamera();

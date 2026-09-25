@@ -95,6 +95,8 @@ input, select, textarea {
   -webkit-transform: scaleX(-1) translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  filter: brightness(1.06) contrast(1.03) saturate(1.08);
+  -webkit-filter: brightness(1.06) contrast(1.03) saturate(1.08);
 }
 
 .cam-video-normal {
@@ -102,6 +104,8 @@ input, select, textarea {
   -webkit-transform: scaleX(1) translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  filter: brightness(1.06) contrast(1.03) saturate(1.08);
+  -webkit-filter: brightness(1.06) contrast(1.03) saturate(1.08);
 }
 
 .face-guide-oval {
