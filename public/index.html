@@ -831,7 +831,7 @@
         </button>
       </div>
 
-      <!-- Viewport with Face Oval Guide -->
+      <!-- Viewport with Face Oval Guide & Smile Meter -->
       <div class="relative flex-1 flex items-center justify-center overflow-hidden bg-black cursor-pointer" id="camViewportContainer">
         <!-- Camera Loading Spinner / Placeholder -->
         <div id="camLoadingSpinner" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 space-y-3 pointer-events-none z-0">
@@ -841,6 +841,21 @@
 
         <video id="fsVideoPreview" autoplay playsinline webkit-playsinline muted class="absolute inset-0 w-full h-full object-cover cam-video-mirrored"></video>
         
+        <!-- SMILE METER & CELEBRATION FLOATING BADGE (TOP OVERLAY) -->
+        <div id="camSmileMeterContainer" class="pointer-events-none absolute top-3 inset-x-0 z-30 flex flex-col items-center px-4 transition-all duration-300 opacity-0 transform -translate-y-2">
+          <div id="camSmileMeterBadge" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-amber-300 shadow-xl text-amber-950 transition-all duration-300">
+            <span id="camSmileIcon" class="text-base select-none">😊</span>
+            <span id="camSmileScoreText" class="text-xs font-black tracking-wide">Smile Score: 85%</span>
+            <span id="camSmileMoodTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">ยิ้มเข้าไว้ ✨</span>
+          </div>
+
+          <!-- SPECIAL CELEBRATION BANNER (BIRTHDAY / SATURDAY) -->
+          <div id="camSpecialEventBanner" class="mt-1.5 hidden flex items-center gap-2 px-3.5 py-1 rounded-2xl bg-gradient-to-r from-pink-500/90 via-purple-500/90 to-amber-500/90 backdrop-blur-md border border-white/50 shadow-lg text-white text-[11px] font-black animate-pulse">
+            <span id="camSpecialEventEmoji">🎂</span>
+            <span id="camSpecialEventText">สุขสันต์วันเกิด! ขอให้มีความสุข สดใสตลอดปีนะคะ ✨</span>
+          </div>
+        </div>
+
         <!-- Enlarged Oval Face Guide with AI Detection Cues -->
         <div id="camFaceOval" class="pointer-events-none relative z-10 w-[295px] h-[400px] sm:w-[335px] sm:h-[450px] md:w-[375px] md:h-[490px] rounded-[50%] border-2.5 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300">
           <span id="camGuideTopHint" class="text-white text-xs md:text-sm font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md">
@@ -855,11 +870,28 @@
         <div id="camFlashOverlay" class="pointer-events-none absolute inset-0 bg-white opacity-0 transition-opacity duration-150 z-20"></div>
       </div>
 
-      <!-- Bottom Bar with Shutter Button -->
-      <div class="relative z-20 pb-8 pt-4 px-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center justify-center space-y-2">
+      <!-- Bottom Bar with Positive Greeting Bubble & Shutter Button -->
+      <div class="relative z-20 pb-6 pt-2 px-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex flex-col items-center justify-center space-y-2">
+        
+        <!-- POSITIVE GREETINGS BUBBLE OVERLAY -->
+        <div id="camGreetingBubbleContainer" class="pointer-events-none w-full max-w-sm px-2 transition-all duration-300 opacity-0 transform translate-y-2">
+          <div id="camGreetingCard" class="relative rounded-2xl p-2.5 bg-white/95 backdrop-blur-md border border-amber-300/80 shadow-2xl text-slate-800 text-center transition-all">
+            <div id="camGreetingEventPill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 mb-1">
+              <span id="camGreetingEventIcon">🌅</span>
+              <span id="camGreetingEventTitle">ข้อความทักทายตอนเข้างาน</span>
+            </div>
+            <p id="camGreetingMessage" class="text-xs md:text-sm font-extrabold text-slate-800 leading-snug drop-shadow-sm px-1">
+              "สวัสดีตอนเช้าค่ะ วันนี้ยิ้มสดใสมาก ขอให้เป็นวันที่ราบรื่นและมีความสุขนะคะ 🌸"
+            </p>
+            <p id="camGreetingSub" class="text-[9.5px] text-slate-500 font-semibold mt-0.5">
+              PTN Time • พร้อมส่งพลังบวกให้คุณทุกวัน ✨
+            </p>
+          </div>
+        </div>
+
         <div class="flex items-center justify-center w-full">
           <!-- Shutter Button (Locked until face detected) -->
-          <button type="button" id="btnShutterTrigger" onclick="triggerShutterCapture()" disabled class="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white bg-transparent flex items-center justify-center active:scale-90 transition p-1 group shadow-2xl shutter-btn-outer disabled:opacity-40 disabled:cursor-not-allowed">
+          <button type="button" id="btnShutterTrigger" onclick="triggerShutterCapture()" disabled class="w-18 h-18 md:w-22 md:h-22 rounded-full border-4 border-white bg-transparent flex items-center justify-center active:scale-90 transition p-1 group shadow-2xl shutter-btn-outer disabled:opacity-40 disabled:cursor-not-allowed">
             <span id="btnShutterInner" class="w-full h-full rounded-full bg-white group-active:bg-slate-200 shadow-inner flex items-center justify-center text-slate-800 text-3xl font-bold transition-all">
               📸
             </span>
@@ -1338,6 +1370,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=9.8"></script>
+  <script src="js/app.js?v=9.9"></script>
 </body>
 </html>

@@ -48,7 +48,16 @@ let appSettings = {
   enable_payslip: 'true',
   payslip_release_mode: 'CLOSED_PERIODS_ONLY',
   system_maintenance_mode: 'false',
-  system_maintenance_message: 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก'
+  system_maintenance_message: 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก',
+  enable_selfie_greetings: 'true',
+  enable_selfie_clockin_greetings: 'true',
+  enable_selfie_break_greetings: 'true',
+  enable_selfie_clockout_greetings: 'true',
+  enable_birthday_greeting: 'true',
+  enable_saturday_greeting: 'true',
+  selfie_custom_messages: 'สวัสดีตอนเช้าค่ะ วันนี้ยิ้มสดใสมาก ขอให้เป็นวันที่ราบรื่นและมีความสุขนะคะ 🌸\nพร้อมลุยงานวันนี้! ยิ้มรับลูกค้าด้วยหัวใจบริการค่ะ ✨\nเริ่มต้นวันใหม่ด้วยพลังบวก ขอให้การทำงานวันนี้ราบรื่นสำเร็จทุกสิ่งนะคะ 💖',
+  selfie_custom_messages_break: 'ทานอาหารกลางวันให้อร่อยนะคะ ชาร์จพลังให้เต็มที่ 🍜🍱\nพักสายตาและผ่อนคลายความเหนื่อยล้าสักครู่ค่ะ ☕🍰\nชาร์จพลังเต็มที่แล้ว พร้อมลุยงานช่วงบ่ายอย่างสดชื่นค่ะ 💪✨',
+  selfie_custom_messages_out: 'ขอบคุณสำหรับความทุ่มเทในวันนี้นะคะ ทำงานเหนื่อยมาทั้งวันแล้ว เก่งมากๆ ค่ะ 👏💖\nเดินทางกลับบ้านโดยสวัสดิภาพนะคะ พักผ่อนให้เต็มที่ พรุ่งนี้พบกันใหม่ค่ะ 🚗🏠\nทำงานสำเร็จไปอีกวันแล้ว วันนี้คุณทำได้ยอดเยี่ยมมากค่ะ 🌟'
 };
 let currentLocation = null;
 let currentDistanceMeters = null;
@@ -1338,6 +1347,205 @@ let faceConsecutiveErrorCount = 0;
 let offscreenFaceCanvas = null;
 let offscreenFaceCtx = null;
 
+// ==============================================================================
+// SMILE METER & POSITIVE GREETINGS REAL-TIME OVERLAY
+// ==============================================================================
+let smileMeterInterval = null;
+let currentSmileScore = 80;
+let targetSmileScore = 85;
+
+function setupSelfieGreetingsAndSmileMeter(clockType) {
+  const containerMeter = document.getElementById('camSmileMeterContainer');
+  const containerBubble = document.getElementById('camGreetingBubbleContainer');
+  const banner = document.getElementById('camSpecialEventBanner');
+  const bannerEmoji = document.getElementById('camSpecialEventEmoji');
+  const bannerText = document.getElementById('camSpecialEventText');
+
+  // Check master switch
+  const isEnabled = (appSettings.enable_selfie_greetings !== 'false');
+  if (!isEnabled) {
+    if (containerMeter) {
+      containerMeter.classList.add('opacity-0', '-translate-y-2');
+      containerMeter.classList.remove('opacity-100', 'translate-y-0');
+    }
+    if (containerBubble) {
+      containerBubble.classList.add('opacity-0', 'translate-y-2');
+      containerBubble.classList.remove('opacity-100', 'translate-y-0');
+    }
+    return;
+  }
+
+  // 1. Setup Positive Greeting based on clockType and settings
+  let typeEnabled = true;
+  let eventTitle = 'ข้อความทักทายตอนเข้างาน';
+  let eventIcon = '🌅';
+  let messagesText = appSettings.selfie_custom_messages || '';
+
+  if (clockType === 'BREAK_OUT' || clockType === 'BREAK_IN') {
+    typeEnabled = (appSettings.enable_selfie_break_greetings !== 'false');
+    eventTitle = clockType === 'BREAK_OUT' ? 'ข้อความทักทายช่วงพัก' : 'ข้อความกลับเข้าทำงาน';
+    eventIcon = '☕';
+    messagesText = appSettings.selfie_custom_messages_break || '';
+  } else if (clockType === 'OUT') {
+    typeEnabled = (appSettings.enable_selfie_clockout_greetings !== 'false');
+    eventTitle = 'ข้อความขอบคุณตอนเลิกงาน';
+    eventIcon = '🌆';
+    messagesText = appSettings.selfie_custom_messages_out || '';
+  } else {
+    typeEnabled = (appSettings.enable_selfie_clockin_greetings !== 'false');
+    eventTitle = 'ข้อความทักทายตอนเข้างาน';
+    eventIcon = '🌅';
+    messagesText = appSettings.selfie_custom_messages || '';
+  }
+
+  // Choose greeting line
+  const lines = messagesText.split('\n').map(s => s.trim()).filter(Boolean);
+  let chosenMessage = '';
+  if (lines.length > 0) {
+    const day = new Date().getDate();
+    const charCode = currentEmployee && currentEmployee.empId ? currentEmployee.empId.charCodeAt(currentEmployee.empId.length - 1) : 0;
+    const idx = (day + charCode) % lines.length;
+    chosenMessage = lines[idx] || lines[0];
+  } else {
+    if (clockType === 'OUT') {
+      chosenMessage = 'ขอบคุณสำหรับความทุ่มเทในวันนี้นะคะ ทำงานเหนื่อยมาทั้งวันแล้ว เก่งมากๆ ค่ะ 👏💖';
+    } else if (clockType === 'BREAK_OUT' || clockType === 'BREAK_IN') {
+      chosenMessage = 'ทานอาหารกลางวันให้อร่อยนะคะ ชาร์จพลังให้เต็มที่ 🍜🍱';
+    } else {
+      chosenMessage = 'สวัสดีตอนเช้าค่ะ วันนี้ยิ้มสดใสมาก ขอให้เป็นวันที่ราบรื่นและมีความสุขนะคะ 🌸';
+    }
+  }
+
+  const msgEl = document.getElementById('camGreetingMessage');
+  const titleEl = document.getElementById('camGreetingEventTitle');
+  const iconEl = document.getElementById('camGreetingEventIcon');
+  if (msgEl) msgEl.textContent = `"${chosenMessage}"`;
+  if (titleEl) titleEl.textContent = eventTitle;
+  if (iconEl) iconEl.textContent = eventIcon;
+
+  // Show or hide Greeting Bubble
+  if (containerBubble) {
+    if (typeEnabled) {
+      containerBubble.classList.remove('opacity-0', 'translate-y-2');
+      containerBubble.classList.add('opacity-100', 'translate-y-0');
+    } else {
+      containerBubble.classList.add('opacity-0', 'translate-y-2');
+      containerBubble.classList.remove('opacity-100', 'translate-y-0');
+    }
+  }
+
+  // 2. Birthday / Saturday Special Event Check
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  const currentDay = now.getDate();
+  const dayOfWeek = now.getDay(); // 0=Sun, 6=Sat
+
+  let isBirthday = false;
+  if (appSettings.enable_birthday_greeting !== 'false' && currentEmployee && currentEmployee.birthDate) {
+    try {
+      const bDate = new Date(currentEmployee.birthDate);
+      if (!isNaN(bDate.getTime())) {
+        if (bDate.getDate() === currentDay && (bDate.getMonth() + 1) === currentMonth) {
+          isBirthday = true;
+        }
+      }
+    } catch (e) {}
+  }
+
+  const isSaturday = (appSettings.enable_saturday_greeting !== 'false' || appSettings.enable_friday_tgif !== 'false') && dayOfWeek === 6;
+
+  if (banner && bannerEmoji && bannerText) {
+    if (isBirthday) {
+      bannerEmoji.textContent = '🎂';
+      bannerText.textContent = `สุขสันต์วันเกิดคุณ ${currentEmployee?.nickname || currentEmployee?.fullName || ''}! ขอให้มีความสุข สดใสตลอดปีนะคะ ✨`;
+      banner.classList.remove('hidden');
+    } else if (isSaturday) {
+      bannerEmoji.textContent = '🎉';
+      bannerText.textContent = 'สุขสันต์วันเสาร์! พรุ่งนี้วันหยุดพักผ่อนแล้ว ยิ้มรับวันใหม่กันนะคะ 🌈';
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+
+  // 3. Start Smile Meter simulation & display badge
+  if (containerMeter) {
+    containerMeter.classList.remove('opacity-0', '-translate-y-2');
+    containerMeter.classList.add('opacity-100', 'translate-y-0');
+  }
+
+  currentSmileScore = 78 + Math.floor(Math.random() * 6); // 78-83%
+  updateSmileMeterUI(currentSmileScore, false);
+  startSmileMeterSimulation();
+}
+
+function startSmileMeterSimulation() {
+  stopSmileMeterSimulation();
+  smileMeterInterval = setInterval(() => {
+    if (isFaceDetected) {
+      targetSmileScore = 93 + Math.floor(Math.random() * 6); // 93-98%
+    } else {
+      targetSmileScore = 76 + Math.floor(Math.random() * 10); // 76-85%
+    }
+    
+    if (currentSmileScore < targetSmileScore) {
+      currentSmileScore += Math.ceil((targetSmileScore - currentSmileScore) * 0.4);
+    } else if (currentSmileScore > targetSmileScore) {
+      currentSmileScore -= Math.ceil((currentSmileScore - targetSmileScore) * 0.4);
+    }
+    
+    updateSmileMeterUI(currentSmileScore, isFaceDetected);
+  }, 400);
+}
+
+function stopSmileMeterSimulation() {
+  if (smileMeterInterval) {
+    clearInterval(smileMeterInterval);
+    smileMeterInterval = null;
+  }
+}
+
+function updateSmileMeterUI(score, faceActive) {
+  const scoreText = document.getElementById('camSmileScoreText');
+  const moodTag = document.getElementById('camSmileMoodTag');
+  const icon = document.getElementById('camSmileIcon');
+  const badge = document.getElementById('camSmileMeterBadge');
+
+  if (!scoreText) return;
+
+  score = Math.max(60, Math.min(99, score));
+  scoreText.textContent = `Smile Score: ${score}%`;
+
+  if (score >= 92 || faceActive) {
+    if (icon) icon.textContent = '🌟';
+    if (moodTag) {
+      moodTag.textContent = 'ยิ้มสดใสมาก! 🌸';
+      moodTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300';
+    }
+    if (badge) {
+      badge.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-emerald-400 shadow-xl text-emerald-950 transition-all duration-300 ring-2 ring-emerald-300/50 scale-105';
+    }
+  } else if (score >= 82) {
+    if (icon) icon.textContent = '😊';
+    if (moodTag) {
+      moodTag.textContent = 'ยิ้มเข้าไว้ ✨';
+      moodTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200';
+    }
+    if (badge) {
+      badge.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-amber-300 shadow-xl text-amber-950 transition-all duration-300';
+    }
+  } else {
+    if (icon) icon.textContent = '🙂';
+    if (moodTag) {
+      moodTag.textContent = 'ส่งยิ้มพิมพ์ใจ 💖';
+      moodTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200';
+    }
+    if (badge) {
+      badge.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-300 shadow-lg text-slate-800 transition-all duration-300';
+    }
+  }
+}
+
 async function initFaceDetectionEngine() {
   if (faceDetectorEngine) return faceDetectorEngine;
   if (isInitializingFaceEngine) return null;
@@ -1423,6 +1631,10 @@ function setFaceDetectionUIState(found, isFallback = false) {
       if (shutterHint) {
         shutterHint.className = 'text-xs text-emerald-300 font-bold tracking-wider drop-shadow transition-colors';
         shutterHint.innerHTML = '✨ พร้อมบันทึกภาพ — แตะปุ่มชัตเตอร์ได้เลย';
+      }
+      if (typeof updateSmileMeterUI === 'function') {
+        currentSmileScore = 93 + Math.floor(Math.random() * 6);
+        updateSmileMeterUI(currentSmileScore, true);
       }
     }
   } else {
@@ -1648,6 +1860,9 @@ async function openFullscreenCamera(type, qrToken) {
 
   modal?.classList.remove('hidden');
 
+  // Initialize Smile Meter & Positive Greetings
+  setupSelfieGreetingsAndSmileMeter(type);
+
   // Add click/tap to resume video playback if mobile browser delayed autoplay
   const viewport = document.getElementById('camViewportContainer');
   if (viewport && !viewport._hasPlayListener) {
@@ -1808,6 +2023,7 @@ function toggleCameraFacing() {
 
 function closeFullscreenCamera() {
   stopFaceDetectionLoop();
+  stopSmileMeterSimulation();
 
   const modal = document.getElementById('modalCameraFullscreen');
   modal?.classList.add('hidden');

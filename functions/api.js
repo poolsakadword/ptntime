@@ -70,6 +70,7 @@ async function ensureTables(db) {
   if (isTablesEnsured) return;
   try {
     await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
+    await db.prepare("ALTER TABLE employees ADD COLUMN birth_date TEXT").run().catch(() => {});
     const check = await db.prepare("SELECT 1 FROM employees LIMIT 1").first();
     if (check !== undefined) {
       isTablesEnsured = true;
@@ -357,7 +358,16 @@ async function getSettings(db) {
     system_maintenance_mode: 'false',
     system_maintenance_message: 'ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก',
     enable_payslip: 'true',
-    payslip_release_mode: 'CLOSED_PERIODS_ONLY'
+    payslip_release_mode: 'CLOSED_PERIODS_ONLY',
+    enable_selfie_greetings: 'true',
+    enable_selfie_clockin_greetings: 'true',
+    enable_selfie_break_greetings: 'true',
+    enable_selfie_clockout_greetings: 'true',
+    enable_birthday_greeting: 'true',
+    enable_saturday_greeting: 'true',
+    selfie_custom_messages: 'สวัสดีตอนเช้าค่ะ วันนี้ยิ้มสดใสมาก ขอให้เป็นวันที่ราบรื่นและมีความสุขนะคะ 🌸\nพร้อมลุยงานวันนี้! ยิ้มรับลูกค้าด้วยหัวใจบริการค่ะ ✨\nเริ่มต้นวันใหม่ด้วยพลังบวก ขอให้การทำงานวันนี้ราบรื่นสำเร็จทุกสิ่งนะคะ 💖',
+    selfie_custom_messages_break: 'ทานอาหารกลางวันให้อร่อยนะคะ ชาร์จพลังให้เต็มที่ 🍜🍱\nพักสายตาและผ่อนคลายความเหนื่อยล้าสักครู่ค่ะ ☕🍰\nชาร์จพลังเต็มที่แล้ว พร้อมลุยงานช่วงบ่ายอย่างสดชื่นค่ะ 💪✨',
+    selfie_custom_messages_out: 'ขอบคุณสำหรับความทุ่มเทในวันนี้นะคะ ทำงานเหนื่อยมาทั้งวันแล้ว เก่งมากๆ ค่ะ 👏💖\nเดินทางกลับบ้านโดยสวัสดิภาพนะคะ พักผ่อนให้เต็มที่ พรุ่งนี้พบกันใหม่ค่ะ 🚗🏠\nทำงานสำเร็จไปอีกวันแล้ว วันนี้คุณทำได้ยอดเยี่ยมมากค่ะ 🌟'
   };
 
   const map = { ...defaults };
@@ -497,10 +507,11 @@ async function handleAction(db, action, params) {
 
   switch (action) {
     case 'getInitialData': {
-      let empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => null);
+      let empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => null);
       if (!empRows) {
         await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
-        empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
+        await db.prepare("ALTER TABLE employees ADD COLUMN birth_date TEXT").run().catch(() => {});
+        empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
       }
       const branchRows = await db.prepare("SELECT * FROM branches ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
       const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at FROM employee_devices').all().catch(() => ({ results: [] }));
@@ -526,6 +537,7 @@ async function handleAction(db, action, params) {
         allowAllBranches: (e.allow_all_branches === 'true' || e.allow_all_branches === true),
         isOtEligible: !(e.is_ot_eligible === 'false' || e.is_ot_eligible === false),
         status: e.status || 'Active',
+        birthDate: e.birth_date || '',
         last4Citizen: (e.citizen_id || '').slice(-4),
         boundDevice: deviceMap[e.emp_id] || null
       })).sort((a, b) => {
@@ -744,7 +756,8 @@ async function handleAction(db, action, params) {
           position: emp.position,
           phone: emp.phone,
           branchId: emp.branch_id || 'B01',
-          allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true)
+          allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true),
+          birthDate: emp.birth_date || ''
         }
       };
     }
