@@ -1793,21 +1793,101 @@ function stopFaceDetectionLoop() {
   }
 }
 
+function fetchCurrentLocationPromise(timeoutMs = 6000) {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    let resolved = false;
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(currentLocation);
+      }
+    }, timeoutMs);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
+          try {
+            const targetBranch = getCurrentEmployeeTargetBranch();
+            currentDistanceMeters = calculateDistanceMeters(lat, lng, targetBranch.lat || appSettings.office_lat, targetBranch.lng || appSettings.office_lng);
+          } catch(e) {}
+          resolve(currentLocation);
+        }
+      },
+      (err) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve(currentLocation);
+        }
+      },
+      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 30000 }
+    );
+  });
+}
+
+async function compressImageFile(file, maxDimension = 1024, quality = 0.75) {
+  if (!file) return null;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDimension || h > maxDimension) {
+          if (w > h) {
+            h = Math.round((h * maxDimension) / w);
+            w = maxDimension;
+          } else {
+            w = Math.round((w * maxDimension) / h);
+            h = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
 async function openFullscreenCamera(type, qrToken) {
   if (!currentEmployee) {
     openEmployeePickerModal();
     return;
   }
 
-  // Geofence check before opening camera
+  // Geofence check before opening camera with seamless Auto-GPS resolution
   if (!currentLocation) {
-    getCurrentLocation();
     Swal.fire({
-      icon: 'info',
-      title: 'กำลังตรวจสอบพิกัด GPS',
-      text: 'กรุณารอสักครู่เพื่อให้ระบบตรวจพิกัดสาขา แล้วกดใหม่อีกครั้ง'
+      title: 'กำลังระบุพิกัด GPS...',
+      text: 'ระบบกำลังดึงพิกัดสาขาเพื่อเปิดกล้องอัตโนมัติ',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
     });
-    return;
+    await fetchCurrentLocationPromise(5000);
+    Swal.close();
+    if (!currentLocation) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่สามารถระบุพิกัดได้',
+        text: 'กรุณาเปิดบริการตำแหน่ง (GPS) ในโทรศัพท์ แล้วลองใหม่อีกครั้ง'
+      });
+      return;
+    }
   }
 
   const targetBranch = getCurrentEmployeeTargetBranch();
@@ -3495,11 +3575,7 @@ async function submitLeaveRequest() {
 
   let certDataUrl = null;
   if (fileInput && fileInput.files && fileInput.files[0]) {
-    certDataUrl = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(fileInput.files[0]);
-    });
+    certDataUrl = await compressImageFile(fileInput.files[0], 1024, 0.75);
   }
 
   Swal.fire({ title: 'กำลังส่งคำขอลางาน...', didOpen: () => Swal.showLoading() });

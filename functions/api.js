@@ -68,12 +68,11 @@ let isTablesEnsured = false;
 
 async function ensureTables(db) {
   if (isTablesEnsured) return;
+  isTablesEnsured = true;
   try {
-    await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
-    await db.prepare("ALTER TABLE employees ADD COLUMN birth_date TEXT").run().catch(() => {});
-    const check = await db.prepare("SELECT 1 FROM employees LIMIT 1").first();
-    if (check !== undefined) {
-      isTablesEnsured = true;
+    const check = await db.prepare("SELECT 1 FROM employees LIMIT 1").first().catch(() => null);
+    if (check !== null && check !== undefined) {
+      // Database tables already initialized, skip heavy DDL migrations
       return;
     }
   } catch (e) {
