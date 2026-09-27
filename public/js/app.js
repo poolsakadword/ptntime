@@ -198,6 +198,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   restoreSavedEmployee();
   getCurrentLocation();
   
+  // Auto-refresh GPS and attendance status whenever employee wakes or switches back to app
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      getCurrentLocation(true, false);
+      loadTodayStatus();
+    }
+  });
+  window.addEventListener('focus', () => {
+    getCurrentLocation(true, false);
+  });
+
   // Initialize PWA Service Worker & Push Notification Handlers
   initServiceWorker().catch(() => {});
   checkNotificationBanner();
