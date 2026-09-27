@@ -95,8 +95,9 @@ input, select, textarea {
   -webkit-transform: scaleX(-1) translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  filter: brightness(1.06) contrast(1.03) saturate(1.08);
-  -webkit-filter: brightness(1.06) contrast(1.03) saturate(1.08);
+  /* Auto Beauty Filter: Soft-focus wrinkle reduction & radiant skin */
+  filter: brightness(1.08) contrast(0.97) saturate(1.08) blur(0.35px);
+  -webkit-filter: brightness(1.08) contrast(0.97) saturate(1.08) blur(0.35px);
 }
 
 .cam-video-normal {
@@ -104,8 +105,9 @@ input, select, textarea {
   -webkit-transform: scaleX(1) translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  filter: brightness(1.06) contrast(1.03) saturate(1.08);
-  -webkit-filter: brightness(1.06) contrast(1.03) saturate(1.08);
+  /* Auto Beauty Filter: Soft-focus wrinkle reduction & radiant skin */
+  filter: brightness(1.08) contrast(0.97) saturate(1.08) blur(0.35px);
+  -webkit-filter: brightness(1.08) contrast(0.97) saturate(1.08) blur(0.35px);
 }
 
 .face-guide-oval {

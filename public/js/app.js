@@ -2368,17 +2368,27 @@ async function triggerShutterCapture() {
   const startY = (vh - cropSize) / 2;
 
   ctx.save();
-  // 🌟 Natural Beauty Tone Filter: brightness +6%, contrast +3%, saturation +8%
-  // ช่วยให้ใบหน้าสว่างใส อมชมพู ผิวผ่อง ไม่มืดหมอง เป็นธรรมชาติ
-  try {
-    ctx.filter = 'brightness(1.06) contrast(1.03) saturate(1.08)';
-  } catch(e) {}
-
   if (currentCameraFacing === 'user') {
     ctx.translate(targetSize, 0);
     ctx.scale(-1, 1);
   }
+
+  // 🌟 Pass 1: Crisp Base Layer with radiant skin tone (สว่างใส คมชัด)
+  try {
+    ctx.filter = 'brightness(1.07) contrast(1.01) saturate(1.08)';
+  } catch(e) {}
   ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+
+  // 🌟 Pass 2: Automatic Dual-Pass Soft-Focus (ลดริ้วรอย รูขุมขน เกลี่ยผิวหน้าเนียนใสเป็นธรรมชาติ)
+  // ผสานแสงนุ่มนวลลบเลือนริ้วรอยและความหมองคล้ำ โดยยังคงความคมชัดของดวงตา คิ้ว และรอยยิ้ม
+  try {
+    ctx.save();
+    ctx.filter = 'blur(4px) brightness(1.10) contrast(0.94)';
+    ctx.globalAlpha = 0.35;
+    ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+    ctx.restore();
+  } catch(e) {}
+
   ctx.restore();
   try { ctx.filter = 'none'; } catch(e) {}
 
