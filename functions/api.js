@@ -246,7 +246,259 @@ async function ensureTables(db) {
   `).run().catch(() => {});
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_company_holidays_date ON company_holidays(date)').run().catch(() => {});
 
+  // 8. push_subscriptions (Shared Web Push Subscriptions for PTN Time & PTN Payroll)
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      emp_id TEXT,
+      endpoint TEXT UNIQUE NOT NULL,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      user_agent TEXT,
+      app_type TEXT DEFAULT 'PTNTIME',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run().catch(() => {});
+  await db.prepare("ALTER TABLE push_subscriptions ADD COLUMN app_type TEXT DEFAULT 'PTNTIME'").run().catch(() => {});
+
   isTablesEnsured = true;
+}
+
+// ==============================================================================
+// WEB PUSH NOTIFICATION (VAPID + RFC 8291 / 8292 ZERO-DEPENDENCY ENGINE)
+// ==============================================================================
+const VAPID_PUBLIC_KEY = 'BFIl918yWYb9YE1JrQvdjqVIDumstq7AoG68thcEd-eeVbOIMA5uhUO6SAlBaO7Ulj2CR3mcJQNHUrx1Crg4g7A';
+const VAPID_PRIVATE_KEY = 'LlUhEMxj03FGhpNmJ854Ht5XjxT7aOAFTEDWDs_SxIw';
+const VAPID_SUBJECT = 'mailto:admin@ptn-pharma.com';
+
+function base64UrlToBytes(b64url) {
+  const b64 = String(b64url).replace(/-/g, '+').replace(/_/g, '/');
+  const pad = b64.length % 4;
+  const padded = pad ? b64 + '='.repeat(4 - pad) : b64;
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function bytesToBase64Url(bytes) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function createVapidJwt(audience) {
+  const pubBytes = base64UrlToBytes(VAPID_PUBLIC_KEY);
+  const x = bytesToBase64Url(pubBytes.slice(1, 33));
+  const y = bytesToBase64Url(pubBytes.slice(33, 65));
+
+  const privKey = await crypto.subtle.importKey(
+    'jwk',
+    { kty: 'EC', crv: 'P-256', x, y, d: VAPID_PRIVATE_KEY },
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+
+  const encoder = new TextEncoder();
+  const header = bytesToBase64Url(encoder.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const claims = bytesToBase64Url(encoder.encode(JSON.stringify({
+    aud: audience,
+    exp: Math.floor(Date.now() / 1000) + 12 * 3600,
+    sub: VAPID_SUBJECT
+  })));
+
+  const data = encoder.encode(header + '.' + claims);
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, privKey, data);
+  return header + '.' + claims + '.' + bytesToBase64Url(new Uint8Array(sig));
+}
+
+async function encryptWebPushPayload(clientP256dhB64, clientAuthB64, payloadString) {
+  const clientPublicKeyBytes = base64UrlToBytes(clientP256dhB64);
+  const clientAuthBytes = base64UrlToBytes(clientAuthB64);
+
+  // 1. Generate local ECDH key pair
+  const localKeyPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveBits']
+  );
+
+  // 2. Import client public key for ECDH
+  const clientKeyJwk = {
+    kty: 'EC',
+    crv: 'P-256',
+    x: bytesToBase64Url(clientPublicKeyBytes.slice(1, 33)),
+    y: bytesToBase64Url(clientPublicKeyBytes.slice(33, 65))
+  };
+  const clientPublicKey = await crypto.subtle.importKey(
+    'jwk',
+    clientKeyJwk,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    []
+  );
+
+  // 3. Derive shared secret (32 bytes)
+  const sharedSecret = await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: clientPublicKey },
+    localKeyPair.privateKey,
+    256
+  );
+
+  // 4. Export local public key in raw format (65 bytes)
+  const localPublicKeyRaw = new Uint8Array(await crypto.subtle.exportKey('raw', localKeyPair.publicKey));
+
+  // 5. HKDF for PRK using auth secret
+  const encoder = new TextEncoder();
+  const authInfoPrefix = encoder.encode('WebPush: info\0');
+  const authInfo = new Uint8Array(authInfoPrefix.length + clientPublicKeyBytes.length + localPublicKeyRaw.length);
+  authInfo.set(authInfoPrefix, 0);
+  authInfo.set(clientPublicKeyBytes, authInfoPrefix.length);
+  authInfo.set(localPublicKeyRaw, authInfoPrefix.length + clientPublicKeyBytes.length);
+
+  const ikmKey = await crypto.subtle.importKey('raw', sharedSecret, 'HKDF', false, ['deriveBits']);
+  const prkBits = await crypto.subtle.deriveBits(
+    { name: 'HKDF', hash: 'SHA-256', salt: clientAuthBytes, info: authInfo },
+    ikmKey,
+    256
+  );
+
+  // 6. Generate 16 bytes random salt
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // 7. Derive Content Encryption Key (CEK, 16 bytes) and Nonce (12 bytes)
+  const prkKey = await crypto.subtle.importKey('raw', prkBits, 'HKDF', false, ['deriveBits']);
+  const cekBits = await crypto.subtle.deriveBits(
+    { name: 'HKDF', hash: 'SHA-256', salt: salt, info: encoder.encode('Content-Encoding: aes128gcm\0') },
+    prkKey,
+    128
+  );
+  const nonceBits = await crypto.subtle.deriveBits(
+    { name: 'HKDF', hash: 'SHA-256', salt: salt, info: encoder.encode('Content-Encoding: nonce\0') },
+    prkKey,
+    96
+  );
+
+  // 8. Encrypt payload with AES-GCM
+  const cek = await crypto.subtle.importKey('raw', cekBits, 'AES-GCM', false, ['encrypt']);
+  const payloadBytes = encoder.encode(payloadString);
+  const record = new Uint8Array(payloadBytes.length + 1);
+  record.set(payloadBytes, 0);
+  record[payloadBytes.length] = 2; // record delimiter
+
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonceBits, tagLength: 128 },
+    cek,
+    record
+  );
+
+  // 9. Build aes128gcm body header
+  const header = new Uint8Array(16 + 4 + 1 + 65);
+  header.set(salt, 0);
+  new DataView(header.buffer).setUint32(16, 4096, false);
+  header[20] = 65;
+  header.set(localPublicKeyRaw, 21);
+
+  const finalBody = new Uint8Array(header.length + ciphertext.byteLength);
+  finalBody.set(header, 0);
+  finalBody.set(new Uint8Array(ciphertext), header.length);
+
+  return finalBody;
+}
+
+async function sendWebPush(subscription, payload) {
+  try {
+    const endpoint = subscription.endpoint;
+    const url = new URL(endpoint);
+    const audience = url.protocol + '//' + url.host;
+
+    const jwt = await createVapidJwt(audience);
+    const bodyBytes = await encryptWebPushPayload(subscription.p256dh, subscription.auth, typeof payload === 'string' ? payload : JSON.stringify(payload));
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
+        'TTL': '86400',
+        'Urgency': 'high',
+        'Authorization': `vapid t=${jwt}, k=${VAPID_PUBLIC_KEY}`
+      },
+      body: bodyBytes
+    });
+
+    if (res.status === 404 || res.status === 410) {
+      return { success: false, expired: true, status: res.status };
+    }
+    return { success: res.ok, status: res.status };
+  } catch(e) {
+    console.error('sendWebPush error:', e);
+    return { success: false, error: e.message };
+  }
+}
+
+async function sendPushToEmployee(db, empId, payload) {
+  if (!empId) return 0;
+  try {
+    const subs = (await db.prepare('SELECT * FROM push_subscriptions WHERE emp_id = ?').bind(empId).all().catch(() => ({ results: [] }))).results || [];
+    let count = 0;
+    for (const sub of subs) {
+      const res = await sendWebPush(sub, payload);
+      if (res.success) count++;
+      else if (res.expired) {
+        await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(sub.endpoint).run().catch(() => {});
+      }
+    }
+    return count;
+  } catch(e) {
+    console.error('sendPushToEmployee error:', e);
+    return 0;
+  }
+}
+
+async function sendPushToAdmins(db, payload) {
+  try {
+    const subs = (await db.prepare("SELECT * FROM push_subscriptions WHERE app_type = 'PAYROLL' OR emp_id = 'ADMIN' OR emp_id LIKE 'ADMIN%'").all().catch(() => ({ results: [] }))).results || [];
+    let count = 0;
+    for (const sub of subs) {
+      const res = await sendWebPush(sub, payload);
+      if (res.success) count++;
+      else if (res.expired) {
+        await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(sub.endpoint).run().catch(() => {});
+      }
+    }
+    return count;
+  } catch(e) {
+    console.error('sendPushToAdmins error:', e);
+    return 0;
+  }
+}
+
+async function broadcastPushNotification(db, payload, appTypeFilter = null) {
+  try {
+    let sql = 'SELECT * FROM push_subscriptions';
+    let binds = [];
+    if (appTypeFilter) {
+      sql += ' WHERE app_type = ? OR app_type = "ALL"';
+      binds.push(appTypeFilter);
+    }
+    const subs = (await db.prepare(sql).bind(...binds).all().catch(() => ({ results: [] }))).results || [];
+    let count = 0;
+    for (const sub of subs) {
+      const res = await sendWebPush(sub, payload);
+      if (res.success) count++;
+      else if (res.expired) {
+        await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(sub.endpoint).run().catch(() => {});
+      }
+    }
+    return count;
+  } catch(e) {
+    console.error('broadcastPushNotification error:', e);
+    return 0;
+  }
 }
 
 async function getEmployeeBranchConfig(db, empId, lat, lng, defaultSettings) {
@@ -1100,6 +1352,14 @@ async function handleAction(db, action, params) {
         `).bind(empId, date, timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, effectiveRemark, branchCfg.branchId, branchCfg.branchName).run();
       }
 
+      if (distanceMeters && branchCfg.radiusMeters && distanceMeters > branchCfg.radiusMeters) {
+        sendPushToAdmins(db, {
+          title: '⚠️ แจ้งเตือน: ลงเวลาเข้างานนอกรัศมีสาขา',
+          body: `พนักงาน [${empId}] ลงเวลาเข้างานที่ ${branchCfg.branchName} ระยะห่าง ${distanceMeters} ม. (กำหนดไม่เกิน ${branchCfg.radiusMeters} ม.)`,
+          url: '/?tab=attendance'
+        }).catch(() => {});
+      }
+
       return {
         success: true,
         message: clockInMsg,
@@ -1666,6 +1926,13 @@ async function handleAction(db, action, params) {
         VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')
       `).bind(empId, period, today, numAmount, daysWorked, dailyRate, reason || '').run();
 
+      sendPushToAdmins(db, {
+        title: '💵 คำขอเบิกเงินล่วงหน้าใหม่',
+        body: `พนักงาน [${empId}] ยื่นขอเบิกเงิน ${numAmount.toLocaleString()} บาท`,
+        url: '/?tab=attendance&sub=requests',
+        tag: `advance-new-${empId}-${Date.now()}`
+      }).catch(() => {});
+
       return { success: true, message: `ยื่นขอเบิกเงินล่วงหน้าจำนวน ${numAmount} บาท เรียบร้อยแล้ว` };
     }
 
@@ -1683,6 +1950,13 @@ async function handleAction(db, action, params) {
         INSERT INTO leave_requests (emp_id, leave_type, start_date, end_date, days_count, reason, medical_cert_url, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')
       `).bind(empId, leaveType, startDate, endDate, Number(daysCount) || 1.0, reason || '', medicalCertUrl || null).run();
+
+      sendPushToAdmins(db, {
+        title: '📋 คำขอยื่นใบลาใหม่',
+        body: `พนักงาน [${empId}] ยื่นขอลา ${leaveType || ''} (${Number(daysCount) || 1} วัน: ${startDate} ถึง ${endDate})`,
+        url: '/?tab=attendance&sub=requests',
+        tag: `leave-new-${empId}-${Date.now()}`
+      }).catch(() => {});
 
       return { success: true, message: 'ส่งคำขอลางานเรียบร้อยแล้ว รอการอนุมัติ' };
     }
@@ -1706,6 +1980,13 @@ async function handleAction(db, action, params) {
         INSERT INTO ot_requests (emp_id, date, planned_hours, ot_type, reason, status)
         VALUES (?, ?, ?, ?, ?, 'PENDING')
       `).bind(empId, date, Number(plannedHours), Number(otType) || 1.5, reason || '').run();
+
+      sendPushToAdmins(db, {
+        title: '⏰ คำขอยื่นทำ OT ใหม่',
+        body: `พนักงาน [${empId}] ขอทำ OT ${plannedHours} ชม. (วันที่ ${date})`,
+        url: '/?tab=attendance&sub=requests',
+        tag: `ot-new-${empId}-${Date.now()}`
+      }).catch(() => {});
 
       return { success: true, message: 'ส่งคำขอทำงานล่วงเวลาเรียบร้อยแล้ว' };
     }
@@ -1840,6 +2121,20 @@ async function handleAction(db, action, params) {
         return { success: true, message: `ลบคำขอเรียบร้อยแล้ว` };
       }
 
+      // Fetch request details before update to get target employee
+      let targetEmpId = null;
+      let reqDesc = '';
+      if (type === 'leave') {
+        const row = await db.prepare('SELECT emp_id, leave_type, days_count FROM leave_requests WHERE id = ?').bind(id).first().catch(() => null);
+        if (row) { targetEmpId = row.emp_id; reqDesc = `ขอลางาน (${row.leave_type || ''}) ${row.days_count || 1} วัน`; }
+      } else if (type === 'ot') {
+        const row = await db.prepare('SELECT emp_id, planned_hours, date FROM ot_requests WHERE id = ?').bind(id).first().catch(() => null);
+        if (row) { targetEmpId = row.emp_id; reqDesc = `ขอทำ OT ${row.planned_hours || ''} ชม. (${row.date || ''})`; }
+      } else if (type === 'advance') {
+        const row = await db.prepare('SELECT emp_id, amount FROM advance_requests WHERE id = ?').bind(id).first().catch(() => null);
+        if (row) { targetEmpId = row.emp_id; reqDesc = `ขอเบิกเงินล่วงหน้า ${Number(row.amount || 0).toLocaleString()} บาท`; }
+      }
+
       const status = decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
       const now = new Date().toISOString();
 
@@ -1861,6 +2156,21 @@ async function handleAction(db, action, params) {
           SET status = ?, approver_id = ?, approved_at = ?, rejection_reason = ?
           WHERE id = ?
         `).bind(status, approverId || 'Supervisor', now, rejectionReason || '', id).run();
+      }
+
+      // Send Real Web Push to employee
+      if (targetEmpId) {
+        const isApproved = status === 'APPROVED';
+        const notifTitle = isApproved ? '✅ คำขอได้รับการอนุมัติแล้ว' : '❌ คำขอไม่ได้รับการอนุมัติ';
+        const notifBody = isApproved
+          ? `คำขอ${reqDesc} ได้รับการอนุมัติแล้วโดย ${approverId || 'หัวหน้างาน'}`
+          : `คำขอ${reqDesc} ไม่ได้รับการอนุมัติ ${rejectionReason ? `(เหตุผล: ${rejectionReason})` : ''}`;
+        sendPushToEmployee(db, targetEmpId, {
+          title: notifTitle,
+          body: notifBody,
+          url: '/?tab=history',
+          tag: `approval-${type}-${id}`
+        }).catch(err => console.error('sendPushToEmployee error:', err));
       }
 
       return { success: true, message: `ดำเนินการ ${decision === 'APPROVE' ? 'อนุมัติ' : 'ปฏิเสธ'} เรียบร้อยแล้ว` };
@@ -2201,6 +2511,14 @@ async function handleAction(db, action, params) {
         VALUES (?, ?, 'payslip', 'ALL', ?)
       `).bind(title, body, period).run();
 
+      // Dispatch Web Push notification to all employees
+      broadcastPushNotification(db, {
+        title,
+        body,
+        url: '/?tab=payslip',
+        tag: 'payslip-' + period
+      }).catch(err => console.error('broadcastPushNotification error:', err));
+
       return {
         success: true,
         period,
@@ -2253,6 +2571,135 @@ async function handleAction(db, action, params) {
       const val = typeof ann === 'string' ? ann : JSON.stringify(ann);
       await db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES ("app_announcement", ?)').bind(val).run();
       return { success: true, message: 'บันทึกประกาศเรียบร้อยแล้ว' };
+    }
+
+    // 21. WEB PUSH NOTIFICATION CONTROLLERS (VAPID)
+    case 'getVapidPublicKey': {
+      return {
+        success: true,
+        publicKey: VAPID_PUBLIC_KEY
+      };
+    }
+
+    case 'savePushSubscription': {
+      const { empId, endpoint, p256dh, auth, userAgent, appType } = params;
+      if (!endpoint || !p256dh || !auth) {
+        return { success: false, message: 'ข้อมูล Subscription ไม่ครบถ้วน' };
+      }
+
+      const finalAppType = appType || 'PTNTIME';
+      await db.prepare(`
+        INSERT INTO push_subscriptions (emp_id, endpoint, p256dh, auth, user_agent, app_type, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(endpoint) DO UPDATE SET
+          emp_id = COALESCE(excluded.emp_id, push_subscriptions.emp_id),
+          p256dh = excluded.p256dh,
+          auth = excluded.auth,
+          user_agent = excluded.user_agent,
+          app_type = excluded.app_type,
+          updated_at = datetime('now')
+      `).bind(empId || null, endpoint, p256dh, auth, userAgent || '', finalAppType).run();
+
+      return { success: true, message: 'บันทึกอุปกรณ์เพื่อรับการแจ้งเตือน Real Web Push สำเร็จ' };
+    }
+
+    case 'removePushSubscription': {
+      const endpoint = params.endpoint;
+      if (endpoint) {
+        await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(endpoint).run();
+      }
+      return { success: true, message: 'ยกเลิกการรับแจ้งเตือนบนอุปกรณ์นี้เรียบร้อยแล้ว' };
+    }
+
+    case 'getPushSubscriptionStatus': {
+      const empId = params.empId;
+      const countRow = await db.prepare('SELECT COUNT(*) as count FROM push_subscriptions').first().catch(() => ({ count: 0 }));
+      let isEmpSubscribed = false;
+      if (empId) {
+        const empSub = await db.prepare('SELECT id FROM push_subscriptions WHERE emp_id = ?').bind(empId).first().catch(() => null);
+        if (empSub) isEmpSubscribed = true;
+      }
+      return {
+        success: true,
+        totalSubscribers: countRow ? Number(countRow.count) : 0,
+        isEmpSubscribed
+      };
+    }
+
+    case 'sendTestPushNotification': {
+      const endpoint = params.endpoint;
+      const empId = params.empId;
+      let subs = [];
+
+      if (endpoint) {
+        const row = await db.prepare('SELECT * FROM push_subscriptions WHERE endpoint = ?').bind(endpoint).first();
+        if (row) subs.push(row);
+      } else if (empId) {
+        const rows = await db.prepare('SELECT * FROM push_subscriptions WHERE emp_id = ?').bind(empId).all().catch(() => ({ results: [] }));
+        subs = rows.results || [];
+      }
+
+      if (subs.length === 0) {
+        subs = (await db.prepare('SELECT * FROM push_subscriptions').all().catch(() => ({ results: [] }))).results || [];
+      }
+
+      if (subs.length === 0) {
+        return {
+          success: false,
+          message: 'ยังไม่มีอุปกรณ์ที่ลงทะเบียนรับแจ้งเตือน กรุณากดปุ่มเปิดรับการแจ้งเตือนบนอุปกรณ์นี้ก่อน'
+        };
+      }
+
+      const testPayload = {
+        title: '🔔 ทดสอบแจ้งเตือน PTN Time',
+        body: 'ระบบ Real Web Push เชื่อมต่อสำเร็จ! เด้งเตือนทันทีแม้ปิดหน้าจอหรือล็อคเครื่อง',
+        url: '/',
+        tag: 'ptntime-test-' + Date.now()
+      };
+
+      let successCount = 0;
+      for (const s of subs) {
+        const res = await sendWebPush(s, testPayload);
+        if (res.success) {
+          successCount++;
+        } else if (res.expired) {
+          await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(s.endpoint).run().catch(() => {});
+        }
+      }
+
+      return {
+        success: true,
+        sentCount: successCount,
+        message: `ส่งการแจ้งเตือนทดสอบสำเร็จไปยัง ${successCount} อุปกรณ์ (เด้งเตือนทันทีภายใน 1-3 วินาที)`
+      };
+    }
+
+    case 'checkAndSendMissingClockOutAlerts': {
+      const logs = await db.prepare(`
+        SELECT l.emp_id, l.clock_in, l.clock_out, e.full_name, e.nickname
+        FROM time_logs l
+        LEFT JOIN employees e ON l.emp_id = e.emp_id
+        WHERE l.date = ? AND l.clock_in IS NOT NULL AND (l.clock_out IS NULL OR l.clock_out = '')
+      `).bind(today).all().catch(() => ({ results: [] }));
+
+      let sentCount = 0;
+      for (const log of (logs.results || [])) {
+        const empName = log.nickname || log.full_name || log.emp_id;
+        const res = await sendPushToEmployee(db, log.emp_id, {
+          title: '🔔 แจ้งเตือน: ยังไม่ได้สแกนออกงาน',
+          body: `สวัสดีครับคุณ ${empName} ขณะนี้เลยเวลาเลิกงานแล้ว ระบบตรวจพบว่าคุณยังไม่ได้สแกนออกงาน กรุณาสแกนออกหรือแจ้งหัวหน้างาน`,
+          url: '/',
+          tag: `missing-out-${log.emp_id}-${today}`
+        });
+        if (res > 0) sentCount += res;
+      }
+
+      return {
+        success: true,
+        missingCount: (logs.results || []).length,
+        sentCount,
+        message: `ส่งการแจ้งเตือนเตือนสแกนออกงานไปยัง ${sentCount} อุปกรณ์เรียบร้อยแล้ว`
+      };
     }
 
     default:

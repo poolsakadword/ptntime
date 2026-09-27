@@ -733,6 +733,7 @@ async function restoreSavedEmployee() {
           if (data.isBound) {
             if (data.isThisDevice) {
               isDeviceLocked = true;
+              syncWebPushSubscriptionWithEmployee(currentEmployee.empId);
             } else {
               // Account bound to another device!
               currentEmployee = null;
@@ -1188,6 +1189,7 @@ async function confirmEmployeeLogin() {
     closeEmployeePickerModal();
     loadTodayStatus();
     loadAdvanceEligibility();
+    syncWebPushSubscriptionWithEmployee(currentEmployee.empId);
 
     // Recalculate GPS location for this employee's branch
     getCurrentLocation(true, false);
@@ -1210,6 +1212,7 @@ async function confirmEmployeeLogin() {
       loadTodayStatus();
       loadAdvanceEligibility();
       getCurrentLocation(true, false);
+      syncWebPushSubscriptionWithEmployee(currentEmployee.empId);
     }
   }
 }
@@ -4563,48 +4566,213 @@ async function initServiceWorker() {
     try {
       swRegistration = await navigator.serviceWorker.register('/sw.js');
       console.log('PTN Time Service Worker registered');
+      await checkPushSubscriptionStatus();
     } catch (e) {
       console.warn('Service Worker registration note:', e);
     }
   }
 }
 
-// Request Notification Permission
-async function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    Swal.fire('อุปกรณ์ไม่รองรับ', 'เบราว์เซอร์หรืออุปกรณ์นี้ไม่รองรับการแจ้งเตือนแบบ Push', 'info');
+// Convert Base64URL string to Uint8Array for VAPID applicationServerKey
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+let currentPushSubscription = null;
+
+async function checkPushSubscriptionStatus() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    updatePushUiStatus(false, 'unsupported');
+    return null;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    currentPushSubscription = await reg.pushManager.getSubscription();
+    const isSubscribed = !!currentPushSubscription;
+    updatePushUiStatus(isSubscribed);
+    checkNotificationBanner();
+    return currentPushSubscription;
+  } catch (e) {
+    console.warn('checkPushSubscriptionStatus error:', e);
+    return null;
+  }
+}
+
+async function subscribeWebPush(silent = false) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (!silent) {
+      Swal.fire({
+        icon: 'info',
+        title: 'อุปกรณ์ไม่รองรับการแจ้งเตือน Push',
+        text: 'หากใช้ iPhone (iOS) ต้องกดปุ่ม Share แล้วเลือก "เพิ่มไปยังหน้าจอโฮม / Add to Home Screen" ก่อนเพื่อเปิดใช้งานการแจ้งเตือน',
+        confirmButtonColor: '#0284c7'
+      });
+    }
     return false;
   }
 
   try {
-    const perm = await Notification.requestPermission();
+    const res = await callApi('getVapidPublicKey');
+    if (!res || !res.publicKey) {
+      throw new Error('ไม่สามารถดึง VAPID Public Key จากเซิร์ฟเวอร์ได้');
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(res.publicKey)
+    });
+    currentPushSubscription = sub;
+
+    const subJson = sub.toJSON();
+    const p256dh = (subJson.keys && subJson.keys.p256dh) || '';
+    const auth = (subJson.keys && subJson.keys.auth) || '';
+    const empId = currentEmployee ? currentEmployee.empId : (localStorage.getItem('ptntime_last_emp_id') || '');
+
+    await callApi('savePushSubscription', {
+      empId: empId || null,
+      endpoint: sub.endpoint,
+      p256dh,
+      auth,
+      userAgent: navigator.userAgent,
+      appType: 'PTNTIME'
+    });
+
+    updatePushUiStatus(true);
     checkNotificationBanner();
 
-    if (perm === 'granted') {
+    if (!silent) {
       Swal.fire({
         icon: 'success',
-        title: 'เปิดรับการแจ้งเตือนสำเร็จ! 🔔',
-        text: 'คุณจะได้รับการแจ้งเตือนเวลาเข้า-ออกงาน, เตือนเวลาพักเบรก, และผลการอนุมัติคำขอต่างๆ',
+        title: 'เปิดรับแจ้งเตือน Real Web Push สำเร็จ! 🔔',
+        text: 'อุปกรณ์นี้พร้อมรับแจ้งเตือนเวลาเข้า-ออกงาน, เตือนพักเบรก, สลิปเงินเดือน และผลอนุมัติคำขอทันที',
         confirmButtonColor: '#0284c7'
       });
-      sendPushOrLocalNotification(
-        'PTN Time เชื่อมต่อการแจ้งเตือนสำเร็จ 🔔',
-        'ยินดีต้อนรับ! ระบบพร้อมส่งการแจ้งเตือนสำคัญถึงคุณแล้ว',
-        'welcome'
-      );
-      return true;
-    } else if (perm === 'denied') {
+      sendTestWebPushNotification();
+    }
+    return true;
+  } catch (err) {
+    console.error('subscribeWebPush error:', err);
+    if (!silent) {
+      Swal.fire({
+        icon: 'error',
+        title: 'ไม่สามารถเปิดแจ้งเตือนได้',
+        text: err.message || 'กรุณาอนุญาตสิทธิ์การแจ้งเตือนในการตั้งค่าเบราว์เซอร์',
+        confirmButtonColor: '#0284c7'
+      });
+    }
+    return false;
+  }
+}
+
+async function unsubscribeWebPush() {
+  if (!currentPushSubscription) return;
+  try {
+    const endpoint = currentPushSubscription.endpoint;
+    await currentPushSubscription.unsubscribe();
+    currentPushSubscription = null;
+    await callApi('removePushSubscription', { endpoint });
+    updatePushUiStatus(false);
+    checkNotificationBanner();
+    Swal.fire({
+      icon: 'info',
+      title: 'ยกเลิกการแจ้งเตือนแล้ว',
+      text: 'อุปกรณ์นี้จะไม่ได้รับการแจ้งเตือน Push จากระบบอีกต่อไป',
+      confirmButtonColor: '#0284c7'
+    });
+  } catch (e) {
+    console.error('unsubscribeWebPush error:', e);
+  }
+}
+
+async function syncWebPushSubscriptionWithEmployee(empId) {
+  if (!empId) return;
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    const subJson = sub.toJSON();
+    await callApi('savePushSubscription', {
+      empId,
+      endpoint: sub.endpoint,
+      p256dh: (subJson.keys && subJson.keys.p256dh) || '',
+      auth: (subJson.keys && subJson.keys.auth) || '',
+      userAgent: navigator.userAgent,
+      appType: 'PTNTIME'
+    });
+  } catch (e) {
+    console.warn('syncWebPushSubscriptionWithEmployee note:', e);
+  }
+}
+
+async function sendTestWebPushNotification() {
+  try {
+    const reg = await navigator.serviceWorker.ready.catch(() => null);
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    const empId = currentEmployee ? currentEmployee.empId : '';
+    const res = await callApi('sendTestPushNotification', {
+      endpoint: sub ? sub.endpoint : null,
+      empId: empId || null
+    });
+    if (res && res.success) {
+      Swal.fire({
+        icon: 'success',
+        title: '⚡ ส่งการแจ้งเตือนทดสอบแล้ว',
+        text: res.message || 'ข้อความแจ้งเตือนจะเด้งบนหน้าจอของคุณภายใน 1-3 วินาที',
+        timer: 3000,
+        showConfirmButton: false
+      });
+    } else {
       Swal.fire({
         icon: 'warning',
-        title: 'การแจ้งเตือนถูกปิดกั้น',
-        text: 'กรุณาเปิดการอนุญาตการแจ้งเตือนในการตั้งค่าของเบราว์เซอร์/โทรศัพท์',
+        title: 'ยังไม่สามารถส่งแจ้งเตือนได้',
+        text: res ? res.message : 'กรุณากดเปิดรับการแจ้งเตือนก่อน',
         confirmButtonColor: '#0284c7'
       });
-      return false;
     }
-  } catch(e) {
-    console.error('Permission request error:', e);
+  } catch (e) {
+    console.warn('sendTestWebPushNotification error:', e);
   }
+}
+
+function updatePushUiStatus(isSubscribed, state = 'normal') {
+  const statusEl = document.getElementById('pushNotifStatusBadge');
+  const toggleBtn = document.getElementById('btnTogglePushNotif');
+  if (statusEl) {
+    if (state === 'unsupported') {
+      statusEl.className = 'text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold';
+      statusEl.textContent = 'อุปกรณ์ไม่รองรับ (ต้อง Add to Home Screen)';
+    } else if (isSubscribed) {
+      statusEl.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200 flex items-center gap-1';
+      statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> เปิดรับแจ้งเตือนแล้ว';
+    } else {
+      statusEl.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-200';
+      statusEl.textContent = 'ยังไม่เปิดรับแจ้งเตือน';
+    }
+  }
+  if (toggleBtn) {
+    if (isSubscribed) {
+      toggleBtn.className = 'py-1.5 px-3 text-xs font-bold rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 transition border border-rose-200';
+      toggleBtn.textContent = 'ปิดการแจ้งเตือน';
+      toggleBtn.onclick = unsubscribeWebPush;
+    } else {
+      toggleBtn.className = 'py-1.5 px-3 text-xs font-bold rounded-xl bg-sky-600 text-white hover:bg-sky-700 transition shadow-sm';
+      toggleBtn.textContent = 'เปิดรับการแจ้งเตือน';
+      toggleBtn.onclick = () => subscribeWebPush(false);
+    }
+  }
+}
+
+// Request Notification Permission (Banner wrapper)
+async function requestNotificationPermission() {
+  return await subscribeWebPush(false);
 }
 
 function dismissNotifBanner() {
@@ -4615,7 +4783,9 @@ function dismissNotifBanner() {
 function checkNotificationBanner() {
   const banner = document.getElementById('notifPermissionBanner');
   if (!banner) return;
-  if (!('Notification' in window) || Notification.permission === 'granted' || localStorage.getItem('ptn_dismiss_notif_banner') === 'true') {
+  const isGranted = ('Notification' in window) && Notification.permission === 'granted';
+  const isSubscribed = !!currentPushSubscription;
+  if (isSubscribed || (isGranted && localStorage.getItem('ptn_dismiss_notif_banner') === 'true')) {
     banner.classList.add('hidden');
   } else {
     banner.classList.remove('hidden');
@@ -4697,6 +4867,7 @@ function openNotificationDrawer() {
   if (!modal) return;
   modal.classList.remove('hidden');
   renderNotificationList();
+  checkPushSubscriptionStatus().catch(() => {});
   // Mark all as read
   const list = getNotificationHistory();
   list.forEach(x => x.read = true);

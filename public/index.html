@@ -1130,14 +1130,29 @@
           </div>
         </div>
 
+        <!-- Real Web Push Device Status & Toggle Bar -->
+        <div class="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-100 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-sm">
+          <div class="space-y-0.5 min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs font-extrabold text-slate-800">แจ้งเตือนบนมือถือ (Push)</span>
+              <span id="pushNotifStatusBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-semibold">กำลังตรวจสอบ...</span>
+            </div>
+            <p class="text-[11px] text-slate-500 leading-snug">เด้งเตือนทันทีบนหน้าจอล็อก (สลิปเงินเดือน, OT, พักเบรก)</p>
+          </div>
+          <button type="button" id="btnTogglePushNotif" onclick="subscribeWebPush(false)" class="py-1.5 px-3 text-xs font-bold rounded-xl bg-sky-600 text-white hover:bg-sky-700 transition shadow-sm flex-shrink-0 active:scale-95">
+            เปิดรับแจ้งเตือน
+          </button>
+        </div>
+
         <!-- Notification List -->
         <div id="notifListContainer" class="flex-1 overflow-y-auto space-y-2 py-1 text-xs min-h-[160px] max-h-[350px]">
           <!-- Dynamic Items rendered by JS -->
         </div>
 
         <div class="pt-2 border-t flex gap-2">
-          <button type="button" onclick="testSendNotification()" class="flex-1 py-2 text-xs font-bold rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 transition border border-sky-200">
-            🔔 ทดสอบแจ้งเตือน
+          <button type="button" onclick="sendTestWebPushNotification()" class="flex-1 py-2 text-xs font-bold rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 transition border border-sky-200 active:scale-95 flex items-center justify-center gap-1.5">
+            <span>⚡</span>
+            <span>ทดสอบแจ้งเตือน Real Web Push</span>
           </button>
           <button type="button" onclick="closeNotificationDrawer()" class="py-2 px-4 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
             ปิด
