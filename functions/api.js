@@ -233,6 +233,19 @@ async function ensureTables(db) {
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_name TEXT").run().catch(() => {});
   await db.prepare("ALTER TABLE branches ADD COLUMN early_dismissal_full_pay INTEGER DEFAULT 0").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN is_full_pay INTEGER DEFAULT 0").run().catch(() => {});
+  // 7. company_holidays (Company Holidays & Official Holidays)
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS company_holidays (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL UNIQUE,
+      holiday_name TEXT NOT NULL,
+      holiday_type TEXT DEFAULT 'COMPANY',
+      note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run().catch(() => {});
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_company_holidays_date ON company_holidays(date)').run().catch(() => {});
+
   isTablesEnsured = true;
 }
 
@@ -561,6 +574,9 @@ async function handleAction(db, action, params) {
         console.warn('Announcement fetch error:', e);
       }
 
+      const holidaysRows = await db.prepare('SELECT * FROM company_holidays ORDER BY date ASC').all().catch(() => ({ results: [] }));
+      const companyHolidays = holidaysRows.results || [];
+
       return {
         success: true,
         settings: safeSettings,
@@ -572,7 +588,8 @@ async function handleAction(db, action, params) {
         secondsLeft,
         employees,
         devices: deviceRows.results || [],
-        announcement
+        announcement,
+        companyHolidays
       };
     }
 
