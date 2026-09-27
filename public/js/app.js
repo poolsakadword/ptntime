@@ -2843,13 +2843,16 @@ async function loadTodayStatus() {
       // Toggle Break Boxes in Timeline
       const boxBreakOut = document.getElementById('timeBoxBreakOut');
       const boxBreakIn = document.getElementById('timeBoxBreakIn');
+      const timelineContainer = document.getElementById('timelineBoxesContainer');
       if (boxBreakOut && boxBreakIn) {
         if (isBreakMode) {
           boxBreakOut.classList.remove('hidden');
           boxBreakIn.classList.remove('hidden');
+          if (timelineContainer) timelineContainer.className = 'grid grid-cols-4 gap-1 text-center';
         } else {
           boxBreakOut.classList.add('hidden');
           boxBreakIn.classList.add('hidden');
+          if (timelineContainer) timelineContainer.className = 'grid grid-cols-2 gap-1.5 text-center';
         }
       }
 
