@@ -825,6 +825,19 @@ async function restoreSavedEmployee() {
   }
 }
 
+function getCustomAvatarKey(empId) {
+  return 'ptn_custom_avatar_' + (empId || '');
+}
+
+function getCustomAvatarUrl(empId) {
+  if (!empId) return null;
+  try {
+    return localStorage.getItem(getCustomAvatarKey(empId)) || null;
+  } catch(e) {
+    return null;
+  }
+}
+
 function updateHeaderEmployeeView() {
   const btnText = document.getElementById('headerEmpName');
   const avatarEl = document.getElementById('headerEmpAvatar');
@@ -843,9 +856,11 @@ function updateHeaderEmployeeView() {
     if (currentEmployee) {
       const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
       btnText.textContent = `${currentEmployee.empId} ${currentEmployee.fullName}${nick}`;
+      
+      const effectivePhoto = getCustomAvatarUrl(currentEmployee.empId) || currentEmployee.photoUrl;
       if (avatarEl) {
-        if (currentEmployee.photoUrl) {
-          avatarEl.innerHTML = `<img src="${currentEmployee.photoUrl}" alt="Avatar" class="w-full h-full object-cover rounded-xl">`;
+        if (effectivePhoto) {
+          avatarEl.innerHTML = `<img src="${effectivePhoto}" alt="Avatar" class="w-full h-full object-cover rounded-2xl">`;
         } else {
           const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
           avatarEl.textContent = numPart ? numPart.slice(-2) : 'PTN';
@@ -891,8 +906,9 @@ function updateHeaderEmployeeView() {
         : (targetBranch ? ` • ${targetBranch.branch_name}` : '');
       if (stepEmpId) stepEmpId.textContent = `${currentEmployee.empId} • ${currentEmployee.department || 'พนักงาน'}${bTag}`;
       if (stepEmpAvatar) {
-        if (currentEmployee.photoUrl) {
-          stepEmpAvatar.innerHTML = `<img src="${currentEmployee.photoUrl}" alt="Avatar" class="w-full h-full object-cover rounded-xl">`;
+        const stepPhoto = getCustomAvatarUrl(currentEmployee.empId) || currentEmployee.photoUrl;
+        if (stepPhoto) {
+          stepEmpAvatar.innerHTML = `<img src="${stepPhoto}" alt="Avatar" class="w-full h-full object-cover rounded-xl">`;
         } else {
           const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
           stepEmpAvatar.textContent = numPart ? numPart.slice(-2) : '👤';
@@ -999,11 +1015,14 @@ function renderEmployeeCards(filterText = '') {
       ? 'bg-sky-50 border-2 border-sky-500 shadow-sm ring-2 ring-sky-200'
       : 'bg-slate-50/80 hover:bg-slate-100/90 border border-slate-200';
 
+    const customEmpImg = getCustomAvatarUrl(e.empId);
+    const cardImg = customEmpImg || e.photoUrl;
+
     html += `
       <div onclick="selectEmployeeCard('${escapeHtml(e.empId)}')" class="p-2.5 rounded-2xl cursor-pointer transition-all active:scale-[0.98] flex items-center justify-between ${cardClass}">
         <div class="flex items-center gap-2.5 min-w-0">
           <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${isSelected ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-700'}">
-            ${isSelected ? '✓' : (e.photoUrl ? `<img src="${e.photoUrl}" class="w-full h-full rounded-xl object-cover">` : e.empId.replace(/[^0-9]/g, ''))}
+            ${isSelected ? '✓' : (cardImg ? `<img src="${cardImg}" class="w-full h-full rounded-xl object-cover">` : e.empId.replace(/[^0-9]/g, ''))}
           </div>
           <div class="min-w-0">
             <div class="text-xs md:text-sm font-bold text-slate-800 truncate flex items-center gap-1">
@@ -1109,6 +1128,200 @@ function populateEmployeeDropdown() {
   // Always refresh card list
   const search = document.getElementById('empSearchInput')?.value || '';
   renderEmployeeCards(search);
+}
+
+function handleHeaderProfileClick() {
+  if (currentEmployee) {
+    openEmployeeProfileModal();
+  } else {
+    openEmployeePickerModal();
+  }
+}
+
+function openEmployeeProfileModal() {
+  if (!currentEmployee) {
+    openEmployeePickerModal();
+    return;
+  }
+  const modal = document.getElementById('modalEmployeeProfile');
+  if (!modal) return;
+
+  const nick = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
+  const nameEl = document.getElementById('modalProfileName');
+  const idEl = document.getElementById('modalProfileIdBadge');
+  const lockEl = document.getElementById('modalProfileLockBadge');
+  const deptEl = document.getElementById('modalProfileDept');
+  const branchEl = document.getElementById('modalProfileBranch');
+  const shiftEl = document.getElementById('modalProfileShiftTime');
+
+  if (nameEl) nameEl.textContent = `${currentEmployee.fullName}${nick}`;
+  if (idEl) idEl.textContent = `#${currentEmployee.empId}`;
+  if (lockEl) {
+    if (isDeviceLocked) {
+      lockEl.textContent = '🔒 เครื่องนี้ผูกถาวรแล้ว';
+      lockEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+    } else {
+      lockEl.textContent = '🔓 ยังไม่ได้ผูกเครื่อง';
+      lockEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300';
+    }
+  }
+
+  const targetBranch = getCurrentEmployeeTargetBranch();
+  const bTag = (currentEmployee.allowAllBranches === true || currentEmployee.allow_all_branches === 'true') 
+    ? 'ทุกสาขา (Roaming)' 
+    : (targetBranch ? targetBranch.branch_name : 'สำนักงานใหญ่');
+
+  if (deptEl) deptEl.textContent = currentEmployee.department || 'พนักงาน';
+  if (branchEl) branchEl.textContent = bTag;
+  if (shiftEl && window.currentBranchConfig) {
+    const sIn = window.currentBranchConfig.standardClockIn || '09:30';
+    const sOut = window.currentBranchConfig.standardClockOut || '19:00';
+    shiftEl.textContent = `${sIn} - ${sOut} น.`;
+  }
+
+  // Load avatar
+  const customPhoto = getCustomAvatarUrl(currentEmployee.empId);
+  const effectivePhoto = customPhoto || currentEmployee.photoUrl;
+  const avatarImg = document.getElementById('modalEmpAvatarImg');
+  const avatarFallback = document.getElementById('modalEmpAvatarFallback');
+  const btnRemove = document.getElementById('btnRemoveCustomPhoto');
+
+  if (effectivePhoto && avatarImg) {
+    avatarImg.src = effectivePhoto;
+    avatarImg.classList.remove('hidden');
+    if (avatarFallback) avatarFallback.classList.add('hidden');
+  } else {
+    if (avatarImg) {
+      avatarImg.src = '';
+      avatarImg.classList.add('hidden');
+    }
+    if (avatarFallback) {
+      const numPart = currentEmployee.empId.replace(/[^0-9]/g, '');
+      avatarFallback.textContent = numPart ? numPart.slice(-2) : '👤';
+      avatarFallback.classList.remove('hidden');
+    }
+  }
+
+  // Show "Remove" button only if there is a custom photo stored on this device
+  if (btnRemove) {
+    if (customPhoto) {
+      btnRemove.classList.remove('hidden');
+    } else {
+      btnRemove.classList.add('hidden');
+    }
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeEmployeeProfileModal() {
+  const modal = document.getElementById('modalEmployeeProfile');
+  if (modal) modal.classList.add('hidden');
+}
+
+function triggerCustomPhotoInput() {
+  const input = document.getElementById('customPhotoFileInput');
+  if (input) input.click();
+}
+
+function handleCustomPhotoSelected(event) {
+  if (!currentEmployee) return;
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ไฟล์ไม่ถูกต้อง',
+      text: 'กรุณาเลือกไฟล์รูปภาพ (JPG, PNG, WebP) เท่านั้นครับ'
+    });
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const tempImg = new Image();
+    tempImg.onload = function() {
+      // Resize to crisp square avatar (max 320x320)
+      const targetSize = 320;
+      const canvas = document.createElement('canvas');
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
+
+      // Center crop to square
+      const minDim = Math.min(tempImg.width, tempImg.height);
+      const sx = (tempImg.width - minDim) / 2;
+      const sy = (tempImg.height - minDim) / 2;
+
+      ctx.drawImage(tempImg, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+      // Save locally per employee ID (Local Device Storage)
+      try {
+        localStorage.setItem(getCustomAvatarKey(currentEmployee.empId), compressedDataUrl);
+      } catch (err) {
+        console.warn('LocalStorage save avatar error:', err);
+      }
+
+      // Update UI across all views
+      updateHeaderEmployeeView();
+
+      // Update Modal View
+      const avatarImg = document.getElementById('modalEmpAvatarImg');
+      const avatarFallback = document.getElementById('modalEmpAvatarFallback');
+      const btnRemove = document.getElementById('btnRemoveCustomPhoto');
+      if (avatarImg) {
+        avatarImg.src = compressedDataUrl;
+        avatarImg.classList.remove('hidden');
+      }
+      if (avatarFallback) avatarFallback.classList.add('hidden');
+      if (btnRemove) btnRemove.classList.remove('hidden');
+
+      Swal.fire({
+        icon: 'success',
+        title: 'เพิ่มรูปโปรไฟล์สำเร็จ!',
+        html: `<div class="text-xs text-slate-600 leading-relaxed">
+                 บันทึกรูปภาพไว้เฉพาะบนอุปกรณ์เครื่องนี้แล้ว<br>
+                 <span class="text-emerald-600 font-bold">✨ รูปในระบบ PTN Payroll ยังคงเดิม ไม่ถูกเปลี่ยนแปลง</span>
+               </div>`,
+        timer: 2600,
+        showConfirmButton: false
+      });
+    };
+    tempImg.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function removeCustomPhoto() {
+  if (!currentEmployee) return;
+  Swal.fire({
+    title: 'ยืนยันลบรูปภาพเฉพาะเครื่อง?',
+    text: 'ระบบจะกลับไปใช้รูป/ไอคอนดั้งเดิมของพนักงาน',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ยืนยันลบ',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#e11d48'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      try {
+        localStorage.removeItem(getCustomAvatarKey(currentEmployee.empId));
+      } catch(e) {}
+      
+      updateHeaderEmployeeView();
+      openEmployeeProfileModal(); // Refresh modal view
+
+      Swal.fire({
+        icon: 'info',
+        title: 'ใช้รูปดั้งเดิมแล้ว',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  });
 }
 
 function handleHeaderEmployeeCardClick() {
