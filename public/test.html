@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PTN Time Attendant — ระบบบันทึกเวลาทำงาน</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+            }
+          },
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- HTML5 QR Code Scanner CDN -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- QRCode.js CDN for Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Google MediaPipe Tasks Vision for AI Face Detection -->
+  <script type="module">
+    try {
+      const { FilesetResolver, FaceDetector } = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+      window.MediaPipeFaceTasks = { FilesetResolver, FaceDetector };
+      window.dispatchEvent(new CustomEvent('mediapipe-loaded'));
+    } catch(e) {
+      console.warn('MediaPipe load note:', e);
+    }
+  </script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css?v=9.8">
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center">
+
+  <!-- Responsive Wrapper Container (Mobile & Tablet/iPad/Desktop Adaptive) -->
+  <div class="w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white min-h-screen shadow-2xl flex flex-col relative pb-28 transition-all duration-200">
+    
+    <!-- TEST MODE BANNER -->
+    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-2 flex items-center justify-between text-xs font-medium shadow-sm">
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded-full bg-white/20 font-bold text-[10px] tracking-wide">🧪 TEST PAGE</span>
+        <span>หน้าทดสอบ: <strong>แบบที่ 1 Modern Minimalist (Apple Health Style)</strong></span>
+      </div>
+      <a href="/index.html" class="bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded-lg text-white font-bold transition flex items-center gap-1 active:scale-95 text-[11px]">
+        <span>← กลับหน้าหลัก</span>
+      </a>
+    </div>
+
+    <!-- Top App Bar & Profile Card (Apple Modern Clean) -->
+    <header class="bg-white/95 backdrop-blur-md text-slate-800 p-4 md:p-5 border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
+      <div class="flex items-center justify-between">
+        <!-- Employee Avatar & Welcome -->
+        <div onclick="handleHeaderEmployeeCardClick()" class="flex items-center space-x-3 cursor-pointer group min-w-0">
+          <div id="headerEmpAvatar" class="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-bold text-base flex-shrink-0 flex items-center justify-center shadow-md ring-2 ring-white">
+            ⏱️
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span id="headerEmpSub" class="text-xs text-slate-500 font-medium truncate">ยินดีต้อนรับ 👋</span>
+              <span id="headerLockBadge" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">🔒 ล็อกเครื่อง</span>
+            </div>
+            <div id="headerEmpName" class="text-base md:text-lg font-bold text-slate-900 truncate leading-tight group-hover:text-sky-600 transition">
+              กรุณาแตะเพื่อเลือกรหัสพนักงาน
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons: Guide, Notification, Switcher -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button type="button" id="headerEmpBtnTag" onclick="handleHeaderEmployeeCardClick()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1">
+            <span id="headerEmpBtnText">เปลี่ยน</span>
+            <span id="headerEmpBtnIcon">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </span>
+          </button>
+          <a href="/guide.html" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="คู่มือติดตั้ง">
+            <span>📖</span>
+          </a>
+          <button type="button" id="btnOpenNotifications" onclick="openNotificationDrawer()" class="relative p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="การแจ้งเตือน">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span id="notifBadge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
+          </button>
+        </div>
+      </div>
+      <div id="headerCompanyName" class="hidden">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</div>
+    </header>
+
+    <!-- Shift Time Ticker Bar (Minimal Pill) -->
+    <div class="bg-slate-50/90 border-b border-slate-200/80 px-4 md:px-6 py-2 flex items-center justify-between text-xs text-slate-600">
+      <div class="flex items-center space-x-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+        <span class="font-medium text-slate-500">กะงานวันนี้:</span>
+        <strong class="font-mono text-slate-900" id="shiftTickerText">09:30 - 19:00 น.</strong>
+        <span id="shiftBranchBadge" class="text-[11px] bg-sky-100 text-sky-800 font-semibold px-2 py-0.5 rounded-full border border-sky-200">สำนักงานใหญ่</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="shiftLunchText" class="hidden sm:inline text-slate-500">🍱 พัก 13:00 - 14:00 น.</span>
+        <!-- Font Size Switcher -->
+        <div class="inline-flex bg-white border border-slate-300 rounded-lg p-0.5 shadow-2xs text-xs font-bold items-center" title="ปรับขนาดตัวอักษร">
+          <button type="button" onclick="changeAppFontSize('md')" id="btnFontMd" class="px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-100">ก</button>
+          <button type="button" onclick="changeAppFontSize('lg')" id="btnFontLg" class="px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-100">ก+</button>
+          <button type="button" onclick="changeAppFontSize('xl')" id="btnFontXl" class="px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-100">ก++</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Permission Banner -->
+    <div id="notifPermissionBanner" class="hidden bg-gradient-to-r from-sky-600 to-blue-700 text-white px-4 py-2.5 flex items-center justify-between shadow text-xs border-b border-white/20 animate-fadeIn">
+      <div class="flex items-center gap-2">
+        <span class="text-sm">🔔</span>
+        <div>
+          <span class="font-semibold">เปิดรับแจ้งเตือนบนมือถือ:</span>
+          <span class="opacity-90 ml-1 text-[11px]">เตือนเวลาพักเบรก และผลอนุมัติ OT ทันที</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+        <button type="button" onclick="requestNotificationPermission()" class="bg-white text-sky-800 font-bold px-2.5 py-1 rounded-lg shadow-sm hover:bg-sky-50 transition text-[11px] active:scale-95">เปิดใช้งาน</button>
+        <button type="button" onclick="dismissNotifBanner()" class="opacity-70 hover:opacity-100 p-1 text-sm leading-none" title="ปิด">&times;</button>
+      </div>
+    </div>
+
+    <!-- MAIN VIEWS CONTAINER -->
+    <main class="flex-1 p-4 md:p-6 overflow-y-auto space-y-5">
+
+      <!-- ========================================================================= -->
+      <!-- TAB 1: CLOCK IN / OUT (แบบที่ 1: Modern Minimalist Apple Health Style) -->
+      <!-- ========================================================================= -->
+      <section id="tabClock" class="space-y-4">
+
+        <!-- 1. UNIFIED LIVE STATUS CARD (รวมเวลาเดินจริง + สถานะ + GPS + ไทม์ไลน์ 4 สเต็ป) -->
+        <div class="bg-white rounded-3xl p-5 md:p-6 border border-slate-200 shadow-sm relative overflow-hidden space-y-4">
+          <!-- Top row: Clock & Status on left, GPS on right -->
+          <div class="flex items-start justify-between">
+            <div>
+              <!-- Status Badge & Icon -->
+              <div class="flex items-center gap-1.5">
+                <span id="todayStatusIcon" class="text-lg">🌅</span>
+                <span id="todayStatusBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                  พร้อมลงเวลา
+                </span>
+              </div>
+              
+              <!-- Crisp Big Clock -->
+              <div class="text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-900 mt-1 drop-shadow-2xs" id="liveClock">
+                00:00:00
+              </div>
+              <div class="text-xs text-slate-400 font-medium mt-0.5" id="liveDateThai">
+                กำลังโหลดวันที่...
+              </div>
+              <div class="hidden" id="liveClockSubtext">ตัดวิกทุกวันที่ 25</div>
+              <div class="hidden" id="todayStatusText">ยังไม่ได้ลงเวลาวันนี้</div>
+            </div>
+
+            <!-- Right: GPS pill & refresh -->
+            <div class="text-right space-y-1.5 flex-shrink-0">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200/80 shadow-2xs">
+                <span id="gpsPulseDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="gpsBadge">รอตรวจพิกัด</span>
+              </div>
+              <div class="text-[11px] text-slate-500 font-medium" id="gpsDistanceText">
+                ระยะห่าง: รอคำนวณ
+              </div>
+              <div class="hidden" id="gpsStatusText">กำลังค้นหาตำแหน่ง GPS...</div>
+              <div>
+                <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-bold transition shadow-2xs">
+                  <svg id="iconRefreshGps" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  <span>รีเฟรช GPS</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Horizontal 4-Step Attendance Stepper (Apple Health Style) -->
+          <div class="pt-3.5 border-t border-slate-100 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-slate-700 flex items-center gap-1">
+                <span>📋</span> สเต็ปการลงเวลาประจำวัน
+              </span>
+              <span id="todayLateInfo" class="text-xs text-slate-500 font-medium">เกณฑ์ 09:30 น.</span>
+            </div>
+
+            <!-- Horizontal Progress Bar (4 Segments) -->
+            <div class="grid grid-cols-4 gap-1.5" id="horizontalStepperBars">
+              <div id="stepBarMorning" class="h-2 rounded-full bg-slate-200 transition-all duration-300"></div>
+              <div id="stepBarBreakOut" class="h-2 rounded-full bg-slate-200 transition-all duration-300"></div>
+              <div id="stepBarBreakIn" class="h-2 rounded-full bg-slate-200 transition-all duration-300"></div>
+              <div id="stepBarEvening" class="h-2 rounded-full bg-slate-200 transition-all duration-300"></div>
+            </div>
+
+            <!-- Stepper Labels with Actual Punch Times -->
+            <div class="grid grid-cols-4 gap-1.5 text-center" id="timelineBoxesContainer">
+              <!-- Step 1: เข้าเช้า -->
+              <div id="timeBoxMorning" class="p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                <span class="text-[10px] text-slate-500 font-medium">☀️ เข้าเช้า</span>
+                <div id="todayClockInTime" class="text-xs md:text-sm font-bold text-slate-400 font-mono mt-0.5">--:--:--</div>
+              </div>
+              <!-- Step 2: ออกพัก -->
+              <div id="timeBoxBreakOut" class="p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                <span class="text-[10px] text-slate-500 font-medium">☕ เริ่มพัก</span>
+                <div id="todayBreakOutTime" class="text-xs md:text-sm font-bold text-slate-400 font-mono mt-0.5">--:--:--</div>
+              </div>
+              <!-- Step 3: เข้าบ่าย -->
+              <div id="timeBoxBreakIn" class="p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                <span class="text-[10px] text-slate-500 font-medium">💼 เข้าบ่าย</span>
+                <div id="todayBreakInTime" class="text-xs md:text-sm font-bold text-slate-400 font-mono mt-0.5">--:--:--</div>
+              </div>
+              <!-- Step 4: ออกงาน -->
+              <div id="timeBoxEvening" class="p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                <span class="text-[10px] text-slate-500 font-medium">🚪 ออกงาน</span>
+                <div id="todayClockOutTime" class="text-xs md:text-sm font-bold text-slate-400 font-mono mt-0.5">--:--:--</div>
+              </div>
+            </div>
+
+            <div id="todayWorkSummary" class="text-center text-[11px] text-slate-500 font-medium pt-0.5">
+              ปกติ 0 ชม.
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. HERO ACTION BUTTON (Modern Rounded Card with Elevated Shadow) -->
+        <div class="space-y-2.5 pt-1">
+          <!-- Hero Button Element -->
+          <button id="heroActionButton" type="button" class="w-full py-6 md:py-7 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex items-center justify-between bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse group">
+            <div class="flex items-center space-x-4 text-left">
+              <div id="heroActionIconBox" class="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl md:text-4xl shadow-inner border border-white/25 group-hover:scale-105 transition-transform flex-shrink-0">
+                <span id="heroActionIcon">☀️</span>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-white/80 uppercase tracking-wider">แตะปุ่มนี้เพื่อทำรายการ</div>
+                <div id="heroActionTitle" class="text-xl md:text-2xl font-bold tracking-tight text-white mt-0.5">
+                  แตะเพื่อลงเวลาเข้างาน
+                </div>
+                <div id="heroActionSubtitle" class="text-xs md:text-sm font-medium text-emerald-100 mt-0.5">
+                  สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
+                </div>
+              </div>
+            </div>
+            <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-white text-xl shadow-xs group-hover:translate-x-1 transition-transform flex-shrink-0">
+              &rarr;
+            </div>
+          </button>
+
+          <!-- Secondary Actions & Direct GPS Options -->
+          <div id="heroSecondaryContainer" class="space-y-2">
+            <!-- Alternative button -->
+            <div id="heroSecondaryActionBox" class="hidden">
+              <button type="button" id="btnHeroSecondaryAction" class="w-full py-3.5 px-4 bg-gradient-to-r from-rose-50 via-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 active:scale-[0.98] border-2 border-dashed border-rose-300 rounded-2xl flex items-center justify-between text-rose-800 transition-all shadow-sm group">
+                <div class="flex items-center space-x-3 text-left">
+                  <span id="iconHeroSecondaryAction" class="text-2xl p-2 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">🚪</span>
+                  <div>
+                    <div id="titleHeroSecondaryAction" class="text-xs md:text-sm font-bold text-rose-900">
+                      หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)
+                    </div>
+                    <div id="subHeroSecondaryAction" class="text-[11px] md:text-xs text-rose-700/80 font-normal">
+                      แตะที่นี่หากไม่ได้สแกนพัก หรือต้องการออกงานทันที
+                    </div>
+                  </div>
+                </div>
+                <div id="badgeWrapperHeroSecondaryAction" class="flex items-center space-x-1 text-rose-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-rose-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0">
+                  <span id="badgeTextHeroSecondaryAction">สแกนออกงาน</span>
+                  <span>&rarr;</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Direct GPS Button (shown when allow_direct_gps === 'true') -->
+            <div id="containerHeroDirectGps" class="text-center hidden">
+              <button type="button" id="btnHeroDirectGps" class="w-full py-2.5 px-4 bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-700 font-medium text-xs md:text-sm rounded-2xl border border-slate-200 flex items-center justify-center space-x-2 transition shadow-2xs">
+                <span class="text-base">📸</span>
+                <span id="txtHeroDirectGps">ถ่ายรูปด้วย GPS โดยตรง (ไม่ต้องใช้ QR)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Quick Access Shortcuts (บริการตนเอง: ประวัติ / เบิกเงิน / ลางาน / สลิปเงินเดือน) -->
+        <div class="grid grid-cols-4 gap-2 pt-1">
+          <button type="button" onclick="switchTab('history')" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-xl sm:text-2xl">📅</div>
+            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">ประวัติเวลา</div>
+          </button>
+          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-xl sm:text-2xl">💵</div>
+            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">ขอเบิกเงิน</div>
+          </button>
+          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
+            <div class="text-xl sm:text-2xl">🏖️</div>
+            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">แจ้งลางาน</div>
+          </button>
+          <button type="button" id="quickBtnPayslip" onclick="switchTab('payslip')" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95 relative">
+            <div class="text-xl sm:text-2xl">💰</div>
+            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">สลิปเงิน</div>
+            <span id="quickPayslipBadge" class="hidden absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+          </button>
+        </div>
+
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- TAB 2: HISTORY (ประวัติการลงเวลา รอบ 26 - 25) -->
+      <!-- ========================================================================= -->
+      <section id="tabHistory" class="space-y-4 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">ประวัติการลงเวลาย้อนหลัง</h2>
+            <p id="historyCutoffLabel" class="text-xs text-slate-500 font-medium">รอบตัดวิก 26 ถึง 25 ประจำเดือน</p>
+          </div>
+          <input type="month" id="historyMonthPicker" onchange="loadEmployeeHistory()" class="text-sm bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-700 focus:ring-2 focus:ring-sky-500 outline-none shadow-sm">
+        </div>
+
+        <!-- Monthly KPI Badges -->
+        <div class="grid grid-cols-4 gap-2">
+          <div class="bg-white p-3 rounded-2xl border border-slate-200 text-center shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold">วันทำงาน</div>
+            <div id="statWorkDays" class="text-xl font-black text-sky-600 mt-1">0</div>
+          </div>
+          <div class="bg-white p-3 rounded-2xl border border-slate-200 text-center shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold">มาสาย(นาที)</div>
+            <div id="statLateMin" class="text-xl font-black text-amber-600 mt-1">0</div>
+          </div>
+          <div class="bg-white p-3 rounded-2xl border border-slate-200 text-center shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold">OT (ชม.)</div>
+            <div id="statOtHours" class="text-xl font-black text-indigo-600 mt-1">0.0</div>
+          </div>
+          <div class="bg-white p-3 rounded-2xl border border-slate-200 text-center shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold">เบิกเงิน(บ.)</div>
+            <div id="statAdvance" class="text-xl font-black text-emerald-600 mt-1">0</div>
+          </div>
+        </div>
+
+        <!-- History List Container -->
+        <div class="space-y-2.5" id="historyListContainer">
+          <div class="text-center py-8 text-sm text-slate-400 font-medium">กำลังโหลดข้อมูลประวัติ...</div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- TAB 3: REQUESTS (ขอลา / ขอ OT / ขอเบิกเงินล่วงหน้า) -->
+      <!-- ========================================================================= -->
+      <section id="tabRequests" class="space-y-4 hidden">
+        <!-- Sub-tabs: Leave / OT / Advance / Status -->
+        <div class="flex p-1.5 bg-slate-200/90 rounded-2xl">
+          <button id="subTabBtnAdvance" onclick="switchSubTab('advance')" class="flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-emerald-700 transition">
+            💵 ขอเบิกเงิน
+          </button>
+          <button id="subTabBtnLeave" onclick="switchSubTab('leave')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
+            🏖️ ขอลางาน
+          </button>
+          <button id="subTabBtnOt" onclick="switchSubTab('ot')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition hidden">
+            ⏱️ ขอ OT
+          </button>
+          <button id="subTabBtnStatus" onclick="switchSubTab('status')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
+            📋 สถานะ
+          </button>
+        </div>
+
+        <!-- Sub Tab 1: Salary Advance Form -->
+        <div id="subTabAdvanceContent" class="space-y-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between border-b pb-3">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-800 flex items-center space-x-1.5">
+                <span id="advanceHeaderTitle">💵 ขอเบิกเงินล่วงหน้า</span>
+              </h3>
+              <p id="advanceWindowInfo" class="text-xs text-slate-500 mt-0.5 font-medium">สิทธิ์ตามวันทำงานจริง • เปิดรับตามช่วงเวลาที่กำหนด</p>
+            </div>
+            <span id="advanceDayBadge" class="px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900">กำลังตรวจสิทธิ์</span>
+          </div>
+
+          <!-- Eligibility Calculation Banner -->
+          <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-600 font-medium">วันทำงานจริงสัปดาห์นี้:</span>
+              <span class="font-bold text-slate-900 font-mono text-sm"><span id="advDaysWorked">0</span> วัน</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-600 font-medium">อัตราต่อวัน:</span>
+              <span class="font-bold text-slate-900 font-mono text-sm"><span id="advDailyRate">250</span> บาท</span>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-emerald-200">
+              <span class="font-bold text-emerald-900 text-sm">ยอดที่เบิกได้สูงสุด:</span>
+              <span class="text-2xl font-black text-emerald-700 font-mono"><span id="advMaxAllowed">0</span> <span class="text-sm font-bold">บาท</span></span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">ระบุจำนวนเงินที่ต้องการขอเบิก (บาท)</label>
+            <input type="number" id="advRequestAmount" placeholder="เช่น 500, 1000" class="w-full text-base font-bold p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">เหตุผลความจำเป็น</label>
+            <textarea id="advReason" rows="2" placeholder="ระบุเหตุผลความจำเป็นในการเบิกเงินล่วงหน้า..." class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none"></textarea>
+          </div>
+
+          <button id="btnSubmitAdvance" onclick="submitAdvanceRequest()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-bold rounded-2xl shadow-md transition disabled:opacity-50">
+            ยื่นขอเบิกเงินล่วงหน้า
+          </button>
+        </div>
+
+        <!-- Sub Tab 2: Leave Request Form -->
+        <div id="subTabLeaveContent" class="space-y-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hidden">
+          <div class="text-sm font-extrabold text-slate-800">🏖️ แบบฟอร์มขอลางาน</div>
+          
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">ประเภทการลา</label>
+            <select id="leaveType" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+              <option value="SICK_WITH_CERT">ลาป่วยมีใบรับรองแพทย์</option>
+              <option value="SICK_NO_CERT">ลาป่วยไม่มีใบรับรองแพทย์</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">ตั้งแต่วันที่</label>
+              <input type="date" id="leaveStartDate" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">ถึงวันที่</label>
+              <input type="date" id="leaveEndDate" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">จำนวนวันลา (เช่น 0.5 หรือ 1.0)</label>
+            <input type="number" step="0.5" id="leaveDaysCount" value="1.0" class="w-full text-sm font-bold p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">เหตุผลการลา</label>
+            <textarea id="leaveReason" rows="2" placeholder="ระบุเหตุผลความจำเป็น..." class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">แนบรูปใบรับรองแพทย์ / เอกสาร (ถ้ามี)</label>
+            <input type="file" id="leaveCertFile" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
+          </div>
+
+          <button onclick="submitLeaveRequest()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white text-sm font-bold rounded-2xl shadow-md transition">
+            ส่งคำขอลางาน
+          </button>
+        </div>
+
+        <!-- Sub Tab 3: OT Request Form -->
+        <div id="subTabOtContent" class="space-y-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hidden">
+          <div class="text-sm font-extrabold text-slate-800">⏱️ แบบฟอร์มขอทำงานล่วงเวลา (OT)</div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">วันที่ทำ OT</label>
+            <input type="date" id="otDate" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">จำนวนชั่วโมงที่ขอ</label>
+              <input type="number" step="0.5" id="otPlannedHours" value="2.0" class="w-full text-sm font-bold p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">อัตราค่าล่วงเวลา</label>
+              <select id="otType" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none font-medium">
+                <option value="1.5">1.5 เท่า (วันทำงานปกติ จันทร์-เสาร์)</option>
+                <option value="1.0">1.0 เท่า (วันอาทิตย์ อัตราเริ่มต้น)</option>
+                <option value="3.0">3.0 เท่า (วันหยุดนักขัตฤกษ์)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">รายละเอียดงานที่ทำ OT</label>
+            <textarea id="otReason" rows="2" placeholder="ระบุงานที่ต้องดำเนินการล่วงเวลา..." class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none"></textarea>
+          </div>
+
+          <button onclick="submitOtRequest()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-bold rounded-2xl shadow-md transition">
+            ส่งคำขอทำ OT
+          </button>
+        </div>
+
+        <!-- Sub Tab 4: Requests Status List -->
+        <div id="subTabStatusContent" class="space-y-3 hidden">
+          <div id="myRequestsList" class="space-y-2.5 text-xs">
+            <div class="text-center py-8 text-slate-400 font-medium text-sm">กำลังโหลดรายการคำขอ...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- TAB 4: PAYSLIP (สลิปเงินเดือนออนไลน์ e-Payslip) -->
+      <!-- ========================================================================= -->
+      <section id="tabPayslip" class="space-y-4 hidden">
+
+        <!-- Disabled notice (when enable_payslip is false) -->
+        <div id="payslipDisabledNotice" class="hidden bg-amber-50 border border-amber-200 rounded-3xl p-6 text-center space-y-3">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-3xl">
+            🔒
+          </div>
+          <h3 class="text-base font-bold text-slate-800">ฟังก์ชันสลิปเงินเดือนปิดให้บริการชั่วคราว</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            ผู้ดูแลระบบกำลังอยู่ในช่วงประมวลผลเงินเดือน หรือปิดการแสดงสลิปชั่วคราว กรุณาตรวจสอบอีกครั้งภายหลัง
+          </p>
+        </div>
+
+        <!-- Payslip PIN Gate -->
+        <div id="payslipPinGate" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 text-center">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center text-3xl shadow-inner">
+            🔐
+          </div>
+          <div>
+            <h3 class="text-base md:text-lg font-bold text-slate-800">ยืนยันตัวตนเพื่อดูสลิปเงินเดือน</h3>
+            <p class="text-xs text-slate-500 mt-0.5">กรุณาระบุรหัส PIN เพื่อความปลอดภัยของข้อมูลการเงินส่วนบุคคล</p>
+          </div>
+
+          <div class="max-w-xs mx-auto space-y-3">
+            <input type="password" id="payslipPinInput" maxlength="8" placeholder="••••" class="w-full text-center text-3xl tracking-widest font-mono p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+            <p class="text-[11px] text-slate-400">ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์</p>
+            <button type="button" onclick="verifyAndUnlockPayslip()" class="w-full py-3.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 active:scale-95 text-white font-bold rounded-2xl shadow-md text-sm transition">
+              🔓 ปลดล็อกดูสลิปเงินเดือน
+            </button>
+          </div>
+        </div>
+
+        <!-- Payslip Content (Shown after PIN unlock) -->
+        <div id="payslipDetailContainer" class="space-y-4 hidden">
+          
+          <!-- Period Selector Bar & Print Button -->
+          <div class="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm gap-2">
+            <div class="flex items-center gap-2 flex-1">
+              <span class="text-xs font-bold text-slate-700 flex-shrink-0">📅 งวด:</span>
+              <select id="payslipPeriodSelect" onchange="onPayslipPeriodChange(this.value)" class="text-xs font-bold text-sky-800 bg-sky-50 border border-sky-200 rounded-xl px-2.5 py-1.5 outline-none flex-1 max-w-[170px]">
+                <option value="">กำลังโหลดงวด...</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="printPayslipDocument()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition active:scale-95 flex items-center gap-1" title="พิมพ์หรือบันทึก PDF">
+                <span>🖨️</span>
+                <span class="hidden sm:inline">พิมพ์/PDF</span>
+              </button>
+              <button type="button" onclick="lockPayslip()" class="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition" title="ล็อกหน้าจอ">
+                🔒
+              </button>
+            </div>
+          </div>
+
+          <!-- Payslip Printable Voucher Container -->
+          <div id="payslipPrintArea" class="space-y-4 bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm">
+
+            <!-- Employee & Company Card -->
+            <div class="bg-gradient-to-r from-sky-700 via-sky-800 to-indigo-900 text-white rounded-2xl p-4 shadow-md">
+              <div class="flex items-center justify-between border-b border-white/20 pb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">💵</span>
+                  <div>
+                    <h2 class="text-sm md:text-base font-extrabold tracking-tight">ใบจ่ายเงินเดือน (e-Payslip)</h2>
+                    <p class="text-[11px] text-sky-200" id="slipCompanyDisplay">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</p>
+                  </div>
+                </div>
+                <span id="slipPeriodBadge" class="text-xs bg-white/20 border border-white/30 px-2.5 py-1 rounded-full font-bold">-</span>
+              </div>
+
+              <div class="mt-3 flex items-center justify-between text-xs">
+                <div>
+                  <div class="text-[11px] text-sky-200">รหัส: <strong id="slipEmpIdDisplay" class="text-white font-mono font-bold">-</strong></div>
+                  <div class="text-sm font-bold text-white mt-0.5" id="slipEmpNameDisplay">-</div>
+                  <div class="text-[11px] text-sky-100 opacity-90" id="slipDeptDisplay">-</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] text-sky-200">สถานะงวด</div>
+                  <div id="slipPeriodStatusBadge" class="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">
+                    ปิดงวดแล้ว
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Net Pay Highlight Card -->
+            <div class="bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700 rounded-2xl p-4 text-white shadow-lg text-center relative overflow-hidden">
+              <div class="text-xs font-bold text-emerald-100 tracking-wider uppercase">เงินรับสุทธิ (Net Pay)</div>
+              <div class="text-3xl md:text-4xl font-black font-mono tracking-tight my-1.5 drop-shadow" id="slipNetPayDisplay">฿ 0.00</div>
+              <div class="inline-flex items-center gap-1.5 text-[11px] bg-black/25 backdrop-blur-sm px-3.5 py-1 rounded-full text-emerald-100 mt-1">
+                <span>🏦 โอนเข้า:</span>
+                <span id="slipBankDisplay" class="font-bold">-</span>
+                <span id="slipAccountDisplay" class="font-mono font-bold">***-*-*----</span>
+              </div>
+            </div>
+
+            <!-- Earnings Breakdown Card -->
+            <div class="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-200 text-xs font-bold text-slate-800">
+                <span class="flex items-center gap-1.5 text-blue-600">
+                  <span>📈</span> รายการได้ (Earnings)
+                </span>
+                <span class="font-mono text-blue-700 font-bold" id="slipTotalEarningsDisplay">฿ 0.00</span>
+              </div>
+              <div class="divide-y divide-slate-200/60 text-xs text-slate-600">
+                <div class="py-1.5 flex justify-between">
+                  <span>เงินเดือนฐาน</span>
+                  <span class="font-mono font-bold text-slate-900" id="slipBaseSalaryDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span id="slipOtLabel">ค่าล่วงเวลา (OT)</span>
+                  <span class="font-mono font-bold text-slate-900" id="slipOtPayDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>เบี้ยขยัน</span>
+                  <span class="font-mono font-bold text-slate-900" id="slipAllowanceDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>โบนัส / เงินพิเศษ</span>
+                  <span class="font-mono font-bold text-slate-900" id="slipBonusDisplay">0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Deductions Breakdown Card -->
+            <div class="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-200 text-xs font-bold text-slate-800">
+                <span class="flex items-center gap-1.5 text-rose-600">
+                  <span>📉</span> รายการหัก (Deductions)
+                </span>
+                <span class="font-mono text-rose-700 font-bold" id="slipTotalDeductionsDisplay">- ฿ 0.00</span>
+              </div>
+              <div class="divide-y divide-slate-200/60 text-xs text-slate-600">
+                <div class="py-1.5 flex justify-between">
+                  <span>ประกันสังคม (SSO)</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipSsoDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>กองทุนสำรองเลี้ยงชีพ (PF)</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipPfDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>ภาษีหัก ณ ที่จ่าย</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipTaxDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>หักเงินเบิกล่วงหน้า (Advance)</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipAdvanceDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>หักมาสาย / ออกก่อนเวลา</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipLateDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between">
+                  <span>หักขาดงาน / ลาไม่ได้รับค่าจ้าง</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipLeaveDedDisplay">0.00</span>
+                </div>
+                <div class="py-1.5 flex justify-between" id="slipOtherDedRow">
+                  <span>หักอื่นๆ</span>
+                  <span class="font-mono font-bold text-rose-600" id="slipOtherDisplay">0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attendance Stats Badge in Period -->
+            <div class="bg-slate-100 rounded-2xl p-3 text-xs text-slate-600 flex items-center justify-around text-center">
+              <div>
+                <div class="text-[10px] text-slate-400">ขาดงาน</div>
+                <div class="font-bold text-slate-800" id="slipAbsentDays">0 วัน</div>
+              </div>
+              <div class="h-6 w-px bg-slate-300"></div>
+              <div>
+                <div class="text-[10px] text-slate-400">ลากิจ</div>
+                <div class="font-bold text-slate-800" id="slipLeaveDays">0 วัน</div>
+              </div>
+              <div class="h-6 w-px bg-slate-300"></div>
+              <div>
+                <div class="text-[10px] text-slate-400">ลาป่วยมีใบฯ</div>
+                <div class="font-bold text-slate-800" id="slipSickDays">0 วัน</div>
+              </div>
+              <div class="h-6 w-px bg-slate-300"></div>
+              <div>
+                <div class="text-[10px] text-slate-400">ลาป่วยไม่มีใบฯ</div>
+                <div class="font-bold text-slate-800" id="slipUnpaidSickDays">0 วัน</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Security Reminder -->
+          <div class="text-center text-[11px] text-slate-400 py-1">
+            🔒 เอกสารนี้เป็นข้อมูลลับเฉพาะบุคคล ออกโดยระบบอัตโนมัติ PTN Payroll
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (4 Tabs for Employee Portal) -->
+    <nav class="fixed bottom-0 w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-3 px-3 z-40 shadow-2xl safe-bottom transition-all">
+      <button onclick="switchTab('clock')" id="navBtnClock" class="flex-1 flex flex-col items-center justify-center py-1 text-sky-600 transition">
+        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="text-xs md:text-sm font-extrabold mt-1">ลงเวลา</span>
+      </button>
+
+      <button onclick="switchTab('history')" id="navBtnHistory" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
+        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+        <span class="text-xs md:text-sm font-semibold mt-1">ประวัติ</span>
+      </button>
+
+      <button onclick="switchTab('requests')" id="navBtnRequests" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
+        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="text-xs md:text-sm font-semibold mt-1">ขอเบิก/ลา</span>
+      </button>
+
+      <button onclick="switchTab('payslip')" id="navBtnPayslip" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition relative">
+        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path></svg>
+        <span class="text-xs md:text-sm font-semibold mt-1">สลิปเงิน</span>
+        <span id="badgePayslipNew" class="hidden absolute top-1 right-3.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+      </button>
+    </nav>
+
+    <!-- EMPLOYEE PICKER MODAL (Upgraded: Searchable & Interactive Card List) -->
+    <div id="modalEmployeePicker" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 md:p-4 hidden backdrop-blur-sm">
+      <div class="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-5 md:p-6 shadow-2xl space-y-3.5 max-h-[92vh] flex flex-col">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg">👤</span>
+            <div>
+              <h3 class="text-base md:text-lg font-black text-slate-800">เลือกรหัสพนักงาน</h3>
+              <p class="text-[11px] text-slate-500">แตะเลือกชื่อของคุณ หรือพิมพ์ค้นหา</p>
+            </div>
+          </div>
+          <button onclick="closeEmployeePickerModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">&times;</button>
+        </div>
+        
+        <!-- Search Input -->
+        <div class="relative flex-shrink-0">
+          <input type="text" id="empSearchInput" placeholder="🔍 ค้นหาชื่อเล่น, ชื่อ-สกุล, หรือรหัส..." oninput="filterEmployeePicker(this.value)" class="w-full pl-9 pr-9 py-2.5 text-xs md:text-sm border border-slate-300 rounded-2xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none font-medium">
+          <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔎</span>
+          <button type="button" onclick="clearEmployeeSearch()" id="btnClearEmpSearch" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center">&times;</button>
+        </div>
+
+        <!-- Hidden Synchronized Select for backward compatibility -->
+        <select id="empSelectDropdown" onchange="onSelectEmployeeDropdown(this.value)" class="hidden">
+          <option value="">-- กรุณาเลือกพนักงาน --</option>
+        </select>
+
+        <!-- Selected Employee Preview Banner -->
+        <div id="selectedEmpBanner" class="hidden p-2.5 bg-sky-50 border border-sky-200 rounded-2xl flex items-center justify-between flex-shrink-0 animate-fadeIn">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span id="selectedEmpAvatar" class="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">✓</span>
+            <div class="min-w-0">
+              <div id="selectedEmpName" class="text-xs md:text-sm font-bold text-slate-800 truncate">นาย...</div>
+              <div id="selectedEmpDept" class="text-[11px] text-sky-700 truncate">แผนก...</div>
+            </div>
+          </div>
+          <button type="button" onclick="resetSelectedEmployee()" class="text-[11px] text-sky-600 hover:text-sky-800 font-bold ml-2 underline flex-shrink-0">เปลี่ยน</button>
+        </div>
+
+        <!-- Interactive Scrollable Employee Cards List -->
+        <div id="empCardsScrollArea" class="flex-1 overflow-y-auto space-y-1.5 pr-1 min-h-[160px] max-h-[260px] md:max-h-[300px]">
+          <!-- Loaded dynamically by renderEmployeeCards() -->
+          <div class="py-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+            <span class="animate-spin text-xl">⏳</span>
+            <span>กำลังโหลดรายชื่อพนักงาน...</span>
+          </div>
+        </div>
+
+        <!-- PIN Entry Section (Appears when employee is selected) -->
+        <div id="pinEntrySection" class="hidden space-y-2 pt-1 border-t border-slate-100 flex-shrink-0 animate-fadeIn">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold text-slate-700">รหัสยืนยัน (เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทร)</label>
+            <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">🔒 ปลอดภัย</span>
+          </div>
+          <input type="password" id="empPinInput" placeholder="••••" maxlength="8" class="w-full text-center text-2xl tracking-widest font-mono py-2.5 px-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-sky-500 outline-none bg-slate-50">
+          <p class="text-[11px] text-slate-400 text-center">ระบบจะผูกเครื่องของคุณไว้โดยอัตโนมัติ</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex space-x-2.5 pt-1 flex-shrink-0">
+          <button type="button" onclick="closeEmployeePickerModal()" class="flex-1 py-3 text-xs md:text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95 transition">ยกเลิก</button>
+          <button type="button" onclick="confirmEmployeeLogin()" class="flex-1 py-3 text-xs md:text-sm font-black rounded-2xl bg-sky-600 hover:bg-sky-700 text-white shadow-md active:scale-95 transition">ยืนยัน</button>
+        </div>
+
+        <!-- Guide Link -->
+        <div class="text-center pt-0.5 flex-shrink-0">
+          <a href="/guide.html" class="inline-flex items-center gap-1 text-[11px] text-sky-700 hover:text-sky-900 font-medium">
+            <span>📖</span>
+            <span>คู่มือวิธีติดตั้งแอปลงมือถือ (iOS & Android)</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR CODE SCANNER MODAL -->
+    <div id="modalQrScanner" class="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-4 hidden backdrop-blur-md">
+      <div class="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-5 md:p-6 shadow-2xl space-y-3.5 relative text-center">
+        <button onclick="closeQrScannerModal()" class="absolute right-4 top-4 text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 flex items-center justify-center">&times;</button>
+        <h3 class="text-base md:text-xl font-black text-slate-800" id="qrScannerTitle">สแกน QR Code เข้างาน</h3>
+        <p class="text-xs md:text-sm text-slate-500 font-medium">ส่องกล้องไปที่หน้าจอแท็บเล็ต Kiosk หรือป้าย QR Code ประจำสาขา</p>
+
+        <!-- HTML5 QR Reader Target -->
+        <div id="qrReader" class="w-full overflow-hidden rounded-2xl bg-black min-h-[260px] md:min-h-[300px] flex items-center justify-center"></div>
+
+        <button onclick="closeQrScannerModal()" class="w-full py-3.5 text-sm md:text-base font-bold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+          ยกเลิก
+        </button>
+      </div>
+    </div>
+
+    <!-- FULLSCREEN SELFIE CAMERA MODAL -->
+    <div id="modalCameraFullscreen" class="fixed inset-0 bg-black z-50 flex flex-col justify-between hidden select-none overflow-hidden">
+      <!-- Top Bar -->
+      <div class="relative z-20 flex items-center justify-between px-5 pt-5 pb-3 bg-gradient-to-b from-black/90 via-black/50 to-transparent text-white">
+        <button type="button" onclick="closeFullscreenCamera()" class="w-11 h-11 rounded-full bg-white/20 hover:bg-white/30 active:scale-90 flex items-center justify-center text-2xl font-bold backdrop-blur-md transition shadow-lg">
+          &times;
+        </button>
+        <div class="text-center">
+          <h3 id="camModalTitle" class="text-base md:text-lg font-black tracking-wide text-white drop-shadow">📸 ถ่ายรูปเซลฟี่เข้างาน</h3>
+          <p id="camModalSubtitle" class="text-xs text-slate-200 font-medium drop-shadow">จัดใบหน้าให้อยู่ในกรอบ แล้วกดปุ่มถ่ายรูป</p>
+        </div>
+        <button type="button" onclick="toggleCameraFacing()" id="btnFlipCam" class="w-11 h-11 rounded-full bg-white/20 hover:bg-white/30 active:scale-90 flex items-center justify-center text-xl backdrop-blur-md transition shadow-lg" title="สลับกล้องหน้า/หลัง">
+          🔄
+        </button>
+      </div>
+
+      <!-- Viewport with Face Oval Guide & Smile Meter -->
+      <div class="relative flex-1 flex items-center justify-center overflow-hidden bg-black cursor-pointer" id="camViewportContainer">
+        <!-- Camera Loading Spinner / Placeholder -->
+        <div id="camLoadingSpinner" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 space-y-3 pointer-events-none z-0">
+          <div class="w-10 h-10 border-3 border-white/20 border-t-white rounded-full animate-spin"></div>
+          <span class="text-xs md:text-sm font-medium text-slate-300 tracking-wide">กำลังเชื่อมต่อกล้อง...</span>
+        </div>
+
+        <video id="fsVideoPreview" autoplay playsinline webkit-playsinline muted class="absolute inset-0 w-full h-full object-cover cam-video-mirrored"></video>
+        
+        <!-- SMILE METER & CELEBRATION FLOATING BADGE (TOP OVERLAY) -->
+        <div id="camSmileMeterContainer" class="pointer-events-none absolute top-3 inset-x-0 z-30 flex flex-col items-center px-4 transition-all duration-300 opacity-0 transform -translate-y-2">
+          <div id="camSmileMeterBadge" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-amber-300 shadow-xl text-amber-950 transition-all duration-300">
+            <span id="camSmileIcon" class="text-base select-none">😊</span>
+            <span id="camSmileScoreText" class="text-xs font-black tracking-wide">Smile Score: 85%</span>
+            <span id="camSmileMoodTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">ยิ้มเข้าไว้ ✨</span>
+          </div>
+
+          <!-- SPECIAL CELEBRATION BANNER (BIRTHDAY / SATURDAY) -->
+          <div id="camSpecialEventBanner" class="mt-1.5 hidden flex items-center gap-2 px-3.5 py-1 rounded-2xl bg-gradient-to-r from-pink-500/90 via-purple-500/90 to-amber-500/90 backdrop-blur-md border border-white/50 shadow-lg text-white text-[11px] font-black animate-pulse">
+            <span id="camSpecialEventEmoji">🎂</span>
+            <span id="camSpecialEventText">สุขสันต์วันเกิด! ขอให้มีความสุข สดใสตลอดปีนะคะ ✨</span>
+          </div>
+        </div>
+
+        <!-- Enlarged Oval Face Guide with AI Detection Cues -->
+        <div id="camFaceOval" class="pointer-events-none relative z-10 w-[295px] h-[400px] sm:w-[335px] sm:h-[450px] md:w-[375px] md:h-[490px] rounded-[50%] border-2.5 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300">
+          <span id="camGuideTopHint" class="text-white text-xs md:text-sm font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-4 py-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md">
+            🔍 ส่องใบหน้าให้อยู่ในกรอบ...
+          </span>
+          <span id="camGuideBottomHint" class="text-white/95 text-xs font-bold drop-shadow bg-black/60 border border-white/20 px-4 py-1.5 rounded-full backdrop-blur-sm">
+            ✨ ถือระดับสายตา • ระยะ 1 ช่วงแขน
+          </span>
+        </div>
+
+        <!-- Shutter Flash Overlay -->
+        <div id="camFlashOverlay" class="pointer-events-none absolute inset-0 bg-white opacity-0 transition-opacity duration-150 z-20"></div>
+      </div>
+
+      <!-- Bottom Bar with Positive Greeting Bubble & Shutter Button -->
+      <div class="relative z-20 pb-6 pt-2 px-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex flex-col items-center justify-center space-y-2">
+        
+        <!-- POSITIVE GREETINGS BUBBLE OVERLAY -->
+        <div id="camGreetingBubbleContainer" class="pointer-events-none w-full max-w-sm px-2 transition-all duration-300 opacity-0 transform translate-y-2">
+          <div id="camGreetingCard" class="relative rounded-2xl p-2.5 bg-white/95 backdrop-blur-md border border-amber-300/80 shadow-2xl text-slate-800 text-center transition-all">
+            <div id="camGreetingEventPill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 mb-1">
+              <span id="camGreetingEventIcon">🌅</span>
+              <span id="camGreetingEventTitle">ข้อความทักทายตอนเข้างาน</span>
+            </div>
+            <p id="camGreetingMessage" class="text-xs md:text-sm font-extrabold text-slate-800 leading-snug drop-shadow-sm px-1">
+              "สวัสดีตอนเช้าค่ะ วันนี้ยิ้มสดใสมาก ขอให้เป็นวันที่ราบรื่นและมีความสุขนะคะ 🌸"
+            </p>
+            <p id="camGreetingSub" class="text-[9.5px] text-slate-500 font-semibold mt-0.5">
+              PTN Time • พร้อมส่งพลังบวกให้คุณทุกวัน ✨
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-center w-full">
+          <!-- Shutter Button (Locked until face detected) -->
+          <button type="button" id="btnShutterTrigger" onclick="triggerShutterCapture()" disabled class="w-18 h-18 md:w-22 md:h-22 rounded-full border-4 border-white bg-transparent flex items-center justify-center active:scale-90 transition p-1 group shadow-2xl shutter-btn-outer disabled:opacity-40 disabled:cursor-not-allowed">
+            <span id="btnShutterInner" class="w-full h-full rounded-full bg-white group-active:bg-slate-200 shadow-inner flex items-center justify-center text-slate-800 text-3xl font-bold transition-all">
+              📸
+            </span>
+          </button>
+        </div>
+        <span id="camShutterHintText" class="text-xs text-amber-200 font-bold tracking-wider drop-shadow transition-colors">
+          ⚠️ ส่องใบหน้าให้อยู่ในกรอบเพื่อปลดล็อกชัตเตอร์
+        </span>
+      </div>
+
+      <!-- Hidden canvas for capturing and compression -->
+      <canvas id="fsPhotoCanvas" class="hidden"></canvas>
+    </div>
+    <!-- DEVICE UNLOCK MODAL (3 METHODS) -->
+    <div id="modalDeviceUnlock" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-md">
+      <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-3.5 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b pb-2.5">
+          <div class="flex items-center space-x-2">
+            <span class="text-2xl">🔒</span>
+            <div>
+              <h3 class="text-base font-extrabold text-slate-800">ปลดล็อกเครื่อง</h3>
+              <p class="text-[11px] text-slate-500">ต้องได้รับการยืนยันจากหัวหน้างาน/HR</p>
+            </div>
+          </div>
+          <button onclick="closeDeviceUnlockModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 flex items-center justify-center">&times;</button>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 space-y-1">
+          <p class="font-bold flex items-center gap-1">📱 เครื่องนี้ผูกอยู่กับ:</p>
+          <p id="unlockCurrentEmpName" class="font-extrabold text-amber-950 text-sm">-</p>
+          <p class="text-[11px] text-amber-700 leading-tight">ป้องกันการลงเวลาแทนกัน หากเปลี่ยนเครื่องหรือสลับผู้ใช้ กรุณาเลือกวิธีปลดล็อกด้านล่าง:</p>
+        </div>
+
+        <!-- Method 1: Supervisor Password -->
+        <div id="unlockMethodPasswordContainer" class="border border-slate-200 rounded-2xl p-3 hover:border-sky-400 transition bg-slate-50/70 space-y-2">
+          <div class="font-bold text-xs text-slate-800 flex items-center justify-between">
+            <span class="flex items-center gap-1">🔑 <b>วิธีที่ 1:</b> รหัสผ่านหัวหน้างาน</span>
+            <span class="text-[10px] bg-sky-100 text-sky-700 font-bold px-1.5 py-0.5 rounded">บนเครื่องนี้</span>
+          </div>
+          <input type="text" id="unlockSupervisorUser" placeholder="ชื่อผู้ใช้หัวหน้า (เช่น admin)" value="admin" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-sky-500">
+          <input type="password" id="unlockSupervisorPass" placeholder="รหัสผ่านหัวหน้างาน/HR" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-sky-500">
+          <button onclick="submitSupervisorPasswordUnlock()" class="w-full py-2.5 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition active:scale-95">
+            ยืนยันรหัสผ่านเพื่อปลดล็อก
+          </button>
+        </div>
+
+        <!-- Method 2: Scan Master QR -->
+        <div id="unlockMethodQrContainer" class="border border-slate-200 rounded-2xl p-3 hover:border-emerald-400 transition bg-slate-50/70 space-y-1.5">
+          <div class="font-bold text-xs text-slate-800 flex items-center justify-between">
+            <span class="flex items-center gap-1">📷 <b>วิธีที่ 2:</b> สแกน QR ของหัวหน้า</span>
+            <span class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded">สแกนจากจอหัวหน้า</span>
+          </div>
+          <p class="text-[11px] text-slate-500">ให้หัวหน้างานเปิดหน้าจอแสดง "QR ปลดล็อก" แล้วกดปุ่มสแกน</p>
+          <button onclick="startScanMasterQrToUnlock()" class="w-full py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+            <span>เปิดกล้องสแกน QR หัวหน้างาน</span>
+          </button>
+        </div>
+
+        <!-- Method 3: Remote Reset Info -->
+        <div id="unlockMethodRemoteContainer" class="bg-indigo-50 border border-indigo-100 rounded-2xl p-2.5 text-center">
+          <p class="text-[11px] font-bold text-indigo-900">🌐 วิธีที่ 3: ปลดล็อกระยะไกลผ่านระบบ Payroll</p>
+          <p class="text-[10px] text-indigo-700 mt-0.5 leading-tight">ฝ่ายบุคคลสามารถกดปุ่ม "ปลดล็อกเครื่อง" ที่หน้ารายชื่อพนักงานในระบบ PTN Payroll ได้ทันที</p>
+        </div>
+
+        <!-- Notice when all unlock methods are disabled -->
+        <div id="unlockNoMethodNotice" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-3 text-center text-xs text-rose-800 font-bold">
+          ⛔ ระบบปิดการปลดล็อกอัตโนมัติ กรุณาติดต่อฝ่ายบุคคล (HR) เพื่อปลดล็อก
+        </div>
+
+        <button onclick="closeDeviceUnlockModal()" class="w-full py-2.5 text-xs font-bold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600">
+          ยกเลิก
+        </button>
+      </div>
+    </div>
+
+    <!-- SUPERVISOR MASTER QR DISPLAY MODAL -->
+    <div id="modalMasterQrDisplay" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-md">
+      <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-3 relative">
+        <button onclick="closeMasterQrModal()" class="absolute right-4 top-4 text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 flex items-center justify-center">&times;</button>
+        
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 text-2xl">
+          🔑
+        </div>
+        <div>
+          <h3 class="text-base font-black text-slate-800">Admin Master QR</h3>
+          <p class="text-xs text-slate-500">แสดงหน้าจอนี้ให้พนักงานสแกนเพื่อปลดล็อกเครื่อง</p>
+        </div>
+
+        <!-- QR Box -->
+        <div class="p-3 bg-white border-2 border-dashed border-emerald-300 rounded-2xl flex flex-col items-center justify-center">
+          <div id="masterQrBox" class="w-[200px] h-[200px] flex items-center justify-center bg-slate-50 rounded-xl overflow-hidden shadow-inner">
+            <span class="text-xs text-slate-400">กำลังสร้าง QR Code...</span>
+          </div>
+          <div class="mt-2 text-[11px] font-mono font-bold text-slate-600" id="masterQrTokenText">-</div>
+          <div class="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            <span>หมุนเวียนอัตโนมัติทุก 60 วินาที (<span id="masterQrCountdown">60</span>s)</span>
+          </div>
+        </div>
+
+        <button onclick="closeMasterQrModal()" class="w-full py-2.5 text-xs font-bold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+
+    <!-- SUPERVISOR / ADMIN SETTINGS & PAYSLIP CONTROL MODAL -->
+    <div id="modalSupervisorSettings" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-md">
+      <div class="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        
+        <div class="flex items-center justify-between border-b pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl font-bold">
+              ⚙️
+            </div>
+            <div>
+              <h3 class="font-extrabold text-slate-800 text-base">ตั้งค่าระบบ (Super Admin)</h3>
+              <p class="text-[11px] text-slate-500">จัดการสิทธิ์และควบคุมสลิปเงินเดือน</p>
+            </div>
+          </div>
+          <button type="button" onclick="closeSupervisorModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 flex items-center justify-center">&times;</button>
+        </div>
+
+        <!-- Supervisor Login Gate -->
+        <div id="supGateForm" class="space-y-3">
+          <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 text-xs text-indigo-900">
+            🔒 เฉพาะผู้ดูแลระบบ (Admin / HR) เท่านั้น กรุณากรอกรหัสผ่านเพื่อเข้าสู่ระบบ
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อผู้ใช้</label>
+            <input type="text" id="supUsernameInput" value="admin" class="w-full text-xs p-3 border border-slate-300 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">รหัสผ่าน</label>
+            <input type="password" id="supPasswordInput" placeholder="กรอกรหัสผ่าน..." class="w-full text-xs p-3 border border-slate-300 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <button type="button" onclick="submitSupervisorAuth()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow transition">
+            เข้าสู่ระบบจัดการ
+          </button>
+        </div>
+
+        <!-- Supervisor Settings Panel (Shown after Auth) -->
+        <div id="supSettingsPanel" class="space-y-4 hidden">
+          
+          <!-- Payslip Feature Toggle Card -->
+          <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                  <span>💵</span> ฟังก์ชันสลิปเงินเดือน (e-Payslip)
+                </h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">เปิดให้พนักงานดูสลิปของตนเองผ่านแอป</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="toggleAdminPayslip" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div class="border-t border-emerald-200/60 pt-2.5 space-y-1.5">
+              <label class="block text-[11px] font-bold text-slate-700">เงื่อนไขการแสดงสลิป:</label>
+              <select id="selectPayslipReleaseMode" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="CLOSED_PERIODS_ONLY">🔒 แสดงเฉพาะงวดที่สรุปและปิดงวดแล้ว (แนะนำ)</option>
+                <option value="ALL_CALCULATED">🌐 แสดงทุกงวดที่มีการคำนวณในระบบ</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Broadcast Notification Section -->
+          <div class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 space-y-3">
+            <div>
+              <h4 class="text-xs font-extrabold text-indigo-950 flex items-center gap-1.5">
+                <span>📢</span> ส่งแจ้งเตือนสลิปออกแล้วให้พนักงาน
+              </h4>
+              <p class="text-[11px] text-indigo-700 mt-0.5">ส่ง Push Notification และแจ้งเตือนในแอปให้พนักงานทุกคน</p>
+            </div>
+
+            <div class="space-y-2">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">งวดเงินเดือนที่ต้องการแจ้งเตือน</label>
+                <input type="text" id="broadcastPeriodInput" placeholder="เช่น 2026-09 หรือ กันยายน 2569" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+              <button type="button" onclick="triggerBroadcastPayslip()" class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow transition flex items-center justify-center gap-1.5">
+                <span>🔔</span>
+                <span>ส่งแจ้งเตือนสลิปเงินเดือนทันที</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2 pt-2 border-t">
+            <button type="button" onclick="saveSupervisorPayslipSettings()" class="flex-1 py-3 bg-slate-900 hover:bg-black active:scale-95 text-white text-xs font-bold rounded-xl shadow transition">
+              💾 บันทึกการตั้งค่า
+            </button>
+            <button type="button" onclick="closeSupervisorModal()" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-bold rounded-xl transition">
+              ปิด
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- NOTIFICATION DRAWER / MODAL -->
+    <div id="modalNotifications" class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center hidden backdrop-blur-sm">
+      <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between border-b pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg font-bold shadow-inner">
+              🔔
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">การแจ้งเตือนของฉัน</h3>
+              <p class="text-[11px] text-slate-500">ประวัติการแจ้งเตือนและเตือนเวลา</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="clearAllNotifications()" class="text-[11px] text-slate-400 hover:text-rose-600 transition font-medium">ล้างทั้งหมด</button>
+            <button type="button" onclick="closeNotificationDrawer()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 flex items-center justify-center">&times;</button>
+          </div>
+        </div>
+
+        <!-- Notification List -->
+        <div id="notifListContainer" class="flex-1 overflow-y-auto space-y-2 py-1 text-xs min-h-[160px] max-h-[350px]">
+          <!-- Dynamic Items rendered by JS -->
+        </div>
+
+        <div class="pt-2 border-t flex gap-2">
+          <button type="button" onclick="testSendNotification()" class="flex-1 py-2 text-xs font-bold rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 transition border border-sky-200">
+            🔔 ทดสอบแจ้งเตือน
+          </button>
+          <button type="button" onclick="closeNotificationDrawer()" class="py-2 px-4 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+            ปิด
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATTENDANCE HISTORY DETAIL MODAL (TAP FROM HISTORY LIST) -->
+    <div id="modalHistoryDetail" class="fixed inset-0 bg-black/75 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 hidden backdrop-blur-sm">
+      <div class="bg-white w-full max-w-sm sm:max-w-md rounded-t-[32px] sm:rounded-[32px] p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+        
+        <!-- Header -->
+        <div class="flex items-start justify-between border-b pb-3.5">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="hModalBadge" class="px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
+                ✨ โหมดงานเสร็จ (เต็มวัน)
+              </span>
+              <span id="hModalBranch" class="text-slate-600 text-xs sm:text-sm font-semibold flex items-center gap-1">
+                🏬 ประจำสาขา
+              </span>
+            </div>
+            <div id="hModalDate" class="text-base sm:text-lg font-black text-slate-900">
+              วันที่ --/--/----
+            </div>
+          </div>
+          <button type="button" onclick="closeHistoryDetailModal()" class="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 text-xl font-bold flex items-center justify-center transition active:scale-95">&times;</button>
+        </div>
+
+        <!-- 4-PHOTO GRID 2x2 (CONCEPT 2) -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-700 px-0.5">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-camera text-sky-600"></i> ภาพถ่ายสแกนใบหน้า (4 จุดตรวจ)</span>
+            <span class="text-[11px] font-normal text-slate-400">แตะรูปเพื่อขยาย</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            
+            <!-- 1. รูปเข้างาน -->
+            <div class="relative bg-slate-100 rounded-2xl overflow-hidden aspect-[4/3] group shadow-sm border border-emerald-300">
+              <div id="hModalPhotoInContainer" class="w-full h-full flex items-center justify-center text-slate-400 cursor-pointer overflow-hidden">
+                <!-- img or placeholder -->
+              </div>
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white pointer-events-none">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold flex items-center gap-1 text-emerald-400"><i class="fa-solid fa-arrow-right-to-bracket"></i> เข้างาน</span>
+                  <span id="hModalPhotoInTime" class="font-chakra font-bold text-emerald-300">--:--</span>
+                </div>
+              </div>
+              <span id="hModalPhotoInBadge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-600/90 text-white shadow pointer-events-none">
+                ① เข้างาน
+              </span>
+            </div>
+
+            <!-- 2. รูปออกพัก -->
+            <div class="relative bg-slate-100 rounded-2xl overflow-hidden aspect-[4/3] group shadow-sm border border-amber-300">
+              <div id="hModalPhotoBreakOutContainer" class="w-full h-full flex items-center justify-center text-slate-400 cursor-pointer overflow-hidden">
+                <!-- img or placeholder -->
+              </div>
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white pointer-events-none">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold flex items-center gap-1 text-amber-400"><i class="fa-solid fa-mug-hot"></i> ออกพัก</span>
+                  <span id="hModalPhotoBreakOutTime" class="font-chakra font-bold text-amber-300">--:--</span>
+                </div>
+              </div>
+              <span id="hModalPhotoBreakOutBadge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-600/90 text-white shadow pointer-events-none">
+                ② ออกพัก
+              </span>
+            </div>
+
+            <!-- 3. รูปกลับจากพัก -->
+            <div class="relative bg-slate-100 rounded-2xl overflow-hidden aspect-[4/3] group shadow-sm border border-blue-300">
+              <div id="hModalPhotoBreakInContainer" class="w-full h-full flex items-center justify-center text-slate-400 cursor-pointer overflow-hidden">
+                <!-- img or placeholder -->
+              </div>
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white pointer-events-none">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold flex items-center gap-1 text-blue-400"><i class="fa-solid fa-rotate-left"></i> เข้าจากพัก</span>
+                  <span id="hModalPhotoBreakInTime" class="font-chakra font-bold text-blue-300">--:--</span>
+                </div>
+              </div>
+              <span id="hModalPhotoBreakInBadge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-600/90 text-white shadow pointer-events-none">
+                ③ เข้าจากพัก
+              </span>
+            </div>
+
+            <!-- 4. รูปออกงาน -->
+            <div class="relative bg-slate-100 rounded-2xl overflow-hidden aspect-[4/3] group shadow-sm border border-rose-300">
+              <div id="hModalPhotoOutContainer" class="w-full h-full flex items-center justify-center text-slate-400 cursor-pointer overflow-hidden">
+                <!-- img or placeholder -->
+              </div>
+              <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white pointer-events-none">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold flex items-center gap-1 text-rose-400"><i class="fa-solid fa-arrow-right-from-bracket"></i> เลิกงาน</span>
+                  <span id="hModalPhotoOutTime" class="font-chakra font-bold text-rose-300">--:--</span>
+                </div>
+              </div>
+              <span id="hModalPhotoOutBadge" class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-rose-600/90 text-white shadow pointer-events-none">
+                ④ เลิกงาน
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Timeline Info -->
+        <div class="space-y-2.5 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs sm:text-sm">
+          <div class="flex justify-between items-center py-1 border-b border-slate-200">
+            <span class="text-slate-500 font-medium flex items-center gap-2">
+              <span class="text-emerald-600 font-bold">🟢</span> เวลาเข้างาน:
+            </span>
+            <span id="hModalClockIn" class="font-bold text-emerald-700 text-sm sm:text-base">--:--:--</span>
+          </div>
+          <div id="hModalBreakRow" class="flex justify-between items-center py-1 border-b border-slate-200 hidden">
+            <span class="text-slate-500 font-medium flex items-center gap-2">
+              <span class="text-amber-600 font-bold">☕</span> พักกลางวัน:
+            </span>
+            <span id="hModalBreak" class="font-bold text-slate-700 text-sm">--</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-200">
+            <span class="text-slate-500 font-medium flex items-center gap-2">
+              <span class="text-rose-600 font-bold">🔴</span> เวลาออกงาน:
+            </span>
+            <span id="hModalClockOut" class="font-bold text-rose-700 text-sm sm:text-base">--:--:--</span>
+          </div>
+          <div class="flex justify-between items-center py-1">
+            <span class="text-slate-500 font-medium flex items-center gap-2">
+              <span class="text-sky-600 font-bold">⏱️</span> เวลางานรวม:
+            </span>
+            <span id="hModalHours" class="font-extrabold text-slate-900 text-sm sm:text-base">-- ชม.</span>
+          </div>
+        </div>
+
+        <!-- Wage & Deduction Highlights Box -->
+        <div id="hModalWageBox" class="border rounded-2xl p-3.5 space-y-1 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-900">
+          <div class="font-bold text-xs sm:text-sm flex items-center gap-1.5" id="hModalWageTitle">
+            ✨ การคิดค่าจ้างของวันนี้:
+          </div>
+          <div class="text-xs sm:text-sm leading-relaxed" id="hModalWageDesc">
+            --
+          </div>
+        </div>
+
+        <!-- Remarks Box -->
+        <div id="hModalRemarkBox" class="bg-white p-3 rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-600 space-y-1">
+          <span class="font-bold text-slate-700">📝 หมายเหตุ:</span>
+          <div id="hModalRemarkText" class="text-slate-600 leading-normal">-</div>
+        </div>
+
+        <!-- Close Button -->
+        <button type="button" onclick="closeHistoryDetailModal()" class="w-full py-3.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold text-sm sm:text-base rounded-2xl shadow-lg transition">
+          ปิดหน้าต่าง
+        </button>
+
+      </div>
+    </div>
+
+    <!-- 📢 POPUP ANNOUNCEMENT MODAL (GRAPHIC BANNER CARD - DESIGN 2) -->
+    <div id="modalAppAnnouncement" class="fixed inset-0 bg-black/65 z-50 flex items-center justify-center p-3.5 sm:p-4 hidden backdrop-blur-sm transition-all duration-300">
+      <div class="bg-white w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-slate-100 animate-pop flex flex-col text-left">
+        <!-- Top Graphic Banner with Gradient & Illustration -->
+        <div class="h-36 sm:h-40 bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 p-5 relative flex flex-col justify-between text-white select-none">
+          <div class="flex items-center justify-between">
+            <span id="popupAnnTag" class="px-3 py-1 rounded-full text-xs font-extrabold bg-white/25 backdrop-blur-md border border-white/40 tracking-wide uppercase flex items-center gap-1.5">
+              <i class="fa-solid fa-sparkles text-amber-300"></i> <span id="popupAnnTagText">อัปเดตใหม่</span>
+            </span>
+            <button type="button" onclick="closeAppAnnouncementModal()" class="w-8 h-8 rounded-full bg-black/35 hover:bg-black/55 active:scale-90 text-white flex items-center justify-center text-sm transition-colors font-bold" title="ปิด">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="relative z-10">
+            <div class="text-xs text-blue-100 font-medium">ประกาศจากบริษัทฯ</div>
+            <div id="popupAnnBannerTitle" class="text-xl sm:text-2xl font-black leading-tight tracking-tight drop-shadow-sm">PTN TIME GO LIVE!</div>
+          </div>
+          <!-- Decorative Watermark Icon -->
+          <i class="fa-solid fa-bullhorn absolute -bottom-3 -right-2 text-7xl text-white/10 pointer-events-none"></i>
+        </div>
+
+        <!-- Card Body -->
+        <div class="p-5 sm:p-6 flex flex-col space-y-4">
+          <div>
+            <h4 id="popupAnnTitle" class="text-base sm:text-lg font-extrabold text-slate-900 leading-snug mb-2">
+              --
+            </h4>
+            <div id="popupAnnBody" class="text-sm text-slate-700 leading-relaxed whitespace-pre-line max-h-56 overflow-y-auto pr-1">
+              --
+            </div>
+          </div>
+
+          <!-- Highlight / Subnote Box (optional) -->
+          <div id="popupAnnSubnoteBox" class="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs sm:text-sm font-semibold">
+            <i class="fa-solid fa-bell text-amber-600 text-base shrink-0"></i>
+            <span id="popupAnnSubnoteText">--</span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-2.5 pt-1">
+            <button type="button" onclick="closeAppAnnouncementModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 rounded-2xl font-bold text-sm transition-all text-center">
+              ปิดหน้าต่าง
+            </button>
+            <button type="button" onclick="handleAppAnnouncementConfirm()" class="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white rounded-2xl font-bold text-sm shadow-md shadow-blue-500/25 transition-all text-center">
+              รับทราบประกาศ
+            </button>
+          </div>
+
+          <!-- Checkbox: Don't show again today -->
+          <div class="text-center pt-1">
+            <label class="inline-flex items-center gap-2 text-xs sm:text-sm text-slate-500 select-none cursor-pointer font-medium hover:text-slate-700">
+              <input type="checkbox" id="chkDontShowAnnouncement" class="rounded text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer">
+              <span>รับทราบแล้ว ไม่ต้องแสดงเตือนซ้ำในวันนี้</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAINTENANCE MODE SCREEN (Shown when system_maintenance_mode is true) -->
+    <div id="maintenanceScreen" class="hidden fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white">
+      <div class="max-w-md w-full bg-white rounded-3xl p-6 md:p-8 text-slate-800 shadow-2xl space-y-6 animate-fade-in border border-slate-100">
+        <div class="w-20 h-20 mx-auto rounded-3xl bg-rose-50 text-rose-600 flex items-center justify-center text-4xl shadow-inner border border-rose-200">
+          🛠️
+        </div>
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-bold">
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            อยู่ระหว่างปรับปรุงระบบ
+          </div>
+          <h2 class="text-xl md:text-2xl font-black text-slate-900">ระบบปิดปรับปรุงชั่วคราว</h2>
+          <p id="maintenanceMessageDisplay" class="text-slate-600 text-sm md:text-base font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left">
+            ระบบลงเวลา PTN Time อยู่ระหว่างปิดปรับปรุงชั่วคราว เพื่อเพิ่มประสิทธิภาพการทำงาน ขออภัยในความไม่สะดวก
+          </p>
+        </div>
+        <div class="space-y-2.5 pt-2">
+          <button type="button" onclick="location.reload()" class="w-full py-3 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold rounded-2xl shadow-md transition flex items-center justify-center gap-2 text-sm">
+            <span>🔄</span> โหลดหน้าเว็บใหม่อีกครั้ง
+          </button>
+          <button type="button" onclick="promptAdminMaintenanceBypass()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold rounded-2xl text-xs transition flex items-center justify-center gap-2">
+            <span>🔑</span> ล็อกอินผู้ดูแลระบบ (Admin / Supervisor)
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Main JavaScript -->
+  <script src="js/app.js?v=10.0"></script>
+
+  <!-- Stepper Visual Synchronizer for Concept 1 (Apple Health Style) -->
+  <script>
+    (function() {
+      function syncStepperProgress() {
+        const tIn = document.getElementById('todayClockInTime')?.textContent?.trim() || '';
+        const tBOut = document.getElementById('todayBreakOutTime')?.textContent?.trim() || '';
+        const tBIn = document.getElementById('todayBreakInTime')?.textContent?.trim() || '';
+        const tOut = document.getElementById('todayClockOutTime')?.textContent?.trim() || '';
+
+        const hasIn = tIn && tIn !== '--:--:--';
+        const hasBOut = tBOut && tBOut !== '--:--:--';
+        const hasBIn = tBIn && tBIn !== '--:--:--';
+        const hasOut = tOut && tOut !== '--:--:--';
+
+        // Stepper Progress Bars
+        const b1 = document.getElementById('stepBarMorning');
+        const b2 = document.getElementById('stepBarBreakOut');
+        const b3 = document.getElementById('stepBarBreakIn');
+        const b4 = document.getElementById('stepBarEvening');
+
+        if (b1) b1.className = hasIn ? 'h-2 rounded-full bg-emerald-500 shadow-xs' : 'h-2 rounded-full bg-slate-200 transition-all duration-300';
+        if (b2) b2.className = hasBOut ? 'h-2 rounded-full bg-amber-500 shadow-xs' : 'h-2 rounded-full bg-slate-200 transition-all duration-300';
+        if (b3) b3.className = hasBIn ? 'h-2 rounded-full bg-sky-500 shadow-xs' : 'h-2 rounded-full bg-slate-200 transition-all duration-300';
+        if (b4) b4.className = hasOut ? 'h-2 rounded-full bg-rose-500 shadow-xs' : 'h-2 rounded-full bg-slate-200 transition-all duration-300';
+
+        // Time boxes active styling
+        const box1 = document.getElementById('timeBoxMorning');
+        const box2 = document.getElementById('timeBoxBreakOut');
+        const box3 = document.getElementById('timeBoxBreakIn');
+        const box4 = document.getElementById('timeBoxEvening');
+
+        if (box1) box1.className = hasIn ? 'p-1.5 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col justify-between transition-colors' : 'p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between transition-colors';
+        if (box2) box2.className = hasBOut ? 'p-1.5 rounded-xl bg-amber-50 border border-amber-200 flex flex-col justify-between transition-colors' : 'p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between transition-colors';
+        if (box3) box3.className = hasBIn ? 'p-1.5 rounded-xl bg-sky-50 border border-sky-200 flex flex-col justify-between transition-colors' : 'p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between transition-colors';
+        if (box4) box4.className = hasOut ? 'p-1.5 rounded-xl bg-rose-50 border border-rose-200 flex flex-col justify-between transition-colors' : 'p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between transition-colors';
+      }
+
+      setInterval(syncStepperProgress, 600);
+      window.addEventListener('DOMContentLoaded', syncStepperProgress);
+      window.addEventListener('load', syncStepperProgress);
+    })();
+  </script>
+</body>
+</html>
