@@ -3227,64 +3227,52 @@ async function loadTodayStatus() {
           const secBadgeTextEl = document.getElementById('badgeTextHeroSecondaryAction');
 
           if (secAction === 'OUT') {
-            secBtn.className = 'w-full py-3.5 px-4 bg-gradient-to-r from-rose-50 via-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 active:scale-[0.98] border-2 border-dashed border-rose-300 rounded-2xl flex items-center justify-between text-rose-800 transition-all shadow-sm group';
+            secBtn.className = 'w-full py-2 px-3 bg-gradient-to-r from-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 active:scale-[0.98] border border-dashed border-rose-300 rounded-xl flex items-center justify-between text-rose-800 transition-all shadow-xs group';
             if (secIconEl) secIconEl.textContent = '🚪';
             if (secTitleEl) {
-              secTitleEl.className = 'text-xs md:text-sm font-bold text-rose-900';
-              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)';
+              secTitleEl.className = 'text-xs font-bold text-rose-900 truncate';
+              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลาออกงานทันที';
             }
-            if (secSubEl) {
-              secSubEl.className = 'text-[11px] md:text-xs text-rose-700/80 font-normal';
-              secSubEl.textContent = 'แตะที่นี่หากไม่ได้สแกนพัก หรือต้องการออกงานทันที';
-            }
+            if (secSubEl) secSubEl.className = 'hidden';
             if (secBadgeWrapEl) {
-              secBadgeWrapEl.className = 'flex items-center space-x-1 text-rose-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-rose-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0';
+              secBadgeWrapEl.className = 'flex items-center space-x-1 text-rose-600 font-bold text-xs bg-white px-2 py-0.5 rounded-lg border border-rose-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-2';
             }
             if (secBadgeTextEl) secBadgeTextEl.textContent = 'สแกนออกงาน';
           } else if (secAction === 'BREAK_OUT') {
-            secBtn.className = 'w-full py-3.5 px-4 bg-gradient-to-r from-amber-50 via-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 active:scale-[0.98] border-2 border-dashed border-amber-300 rounded-2xl flex items-center justify-between text-amber-800 transition-all shadow-sm group';
+            secBtn.className = 'w-full py-2 px-3 bg-gradient-to-r from-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 active:scale-[0.98] border border-dashed border-amber-300 rounded-xl flex items-center justify-between text-amber-800 transition-all shadow-xs group';
             if (secIconEl) secIconEl.textContent = '☕';
             if (secTitleEl) {
-              secTitleEl.className = 'text-xs md:text-sm font-bold text-amber-900';
-              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลาเริ่มพัก (Break OUT)';
+              secTitleEl.className = 'text-xs font-bold text-amber-900 truncate';
+              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลาเริ่มพัก';
             }
-            if (secSubEl) {
-              secSubEl.className = 'text-[11px] md:text-xs text-amber-700/80 font-normal';
-              secSubEl.textContent = 'แตะที่นี่หากต้องการบันทึกเวลาเริ่มพักผ่อน';
-            }
+            if (secSubEl) secSubEl.className = 'hidden';
             if (secBadgeWrapEl) {
-              secBadgeWrapEl.className = 'flex items-center space-x-1 text-amber-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-amber-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0';
+              secBadgeWrapEl.className = 'flex items-center space-x-1 text-amber-600 font-bold text-xs bg-white px-2 py-0.5 rounded-lg border border-amber-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-2';
             }
             if (secBadgeTextEl) secBadgeTextEl.textContent = 'สแกนเริ่มพัก';
           } else if (secAction === 'BREAK_IN') {
-            secBtn.className = 'w-full py-3.5 px-4 bg-gradient-to-r from-sky-50 via-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100 active:scale-[0.98] border-2 border-dashed border-sky-300 rounded-2xl flex items-center justify-between text-sky-800 transition-all shadow-sm group';
+            secBtn.className = 'w-full py-2 px-3 bg-gradient-to-r from-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100 active:scale-[0.98] border border-dashed border-sky-300 rounded-xl flex items-center justify-between text-sky-800 transition-all shadow-xs group';
             if (secIconEl) secIconEl.textContent = '💼';
             if (secTitleEl) {
-              secTitleEl.className = 'text-xs md:text-sm font-bold text-sky-900';
-              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลากลับเข้าทำงาน (Break IN)';
+              secTitleEl.className = 'text-xs font-bold text-sky-900 truncate';
+              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลากลับเข้าทำงาน';
             }
-            if (secSubEl) {
-              secSubEl.className = 'text-[11px] md:text-xs text-sky-700/80 font-normal';
-              secSubEl.textContent = 'แตะที่นี่เพื่อบันทึกเวลาสิ้นสุดพักผ่อน';
-            }
+            if (secSubEl) secSubEl.className = 'hidden';
             if (secBadgeWrapEl) {
-              secBadgeWrapEl.className = 'flex items-center space-x-1 text-sky-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-sky-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0';
+              secBadgeWrapEl.className = 'flex items-center space-x-1 text-sky-600 font-bold text-xs bg-white px-2 py-0.5 rounded-lg border border-sky-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-2';
             }
             if (secBadgeTextEl) secBadgeTextEl.textContent = 'สแกนเข้าบ่าย';
           } else {
             // Default / Other (e.g. IN)
-            secBtn.className = 'w-full py-3.5 px-4 bg-gradient-to-r from-emerald-50 via-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 active:scale-[0.98] border-2 border-dashed border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-800 transition-all shadow-sm group';
+            secBtn.className = 'w-full py-2 px-3 bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 active:scale-[0.98] border border-dashed border-emerald-300 rounded-xl flex items-center justify-between text-emerald-800 transition-all shadow-xs group';
             if (secIconEl) secIconEl.textContent = '☀️';
             if (secTitleEl) {
-              secTitleEl.className = 'text-xs md:text-sm font-bold text-emerald-900';
-              secTitleEl.textContent = secText || 'หรือแตะเพื่อลงเวลาเข้างาน (IN)';
+              secTitleEl.className = 'text-xs font-bold text-emerald-900 truncate';
+              secTitleEl.textContent = secText || 'หรือแตะเพื่อลงเวลาเข้างาน';
             }
-            if (secSubEl) {
-              secSubEl.className = 'text-[11px] md:text-xs text-emerald-700/80 font-normal';
-              secSubEl.textContent = 'แตะที่นี่เพื่อบันทึกเวลาเข้างาน';
-            }
+            if (secSubEl) secSubEl.className = 'hidden';
             if (secBadgeWrapEl) {
-              secBadgeWrapEl.className = 'flex items-center space-x-1 text-emerald-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0';
+              secBadgeWrapEl.className = 'flex items-center space-x-1 text-emerald-600 font-bold text-xs bg-white px-2 py-0.5 rounded-lg border border-emerald-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-2';
             }
             if (secBadgeTextEl) secBadgeTextEl.textContent = 'สแกนเข้างาน';
           }

@@ -177,49 +177,61 @@
           </div>
         </div>
 
-        <!-- 3. HERO ACTION BUTTON (ปุ่มยักษ์ปุ่มเดียวตามสถานะปัจจุบัน แตะง่าย ชัดเจน ไม่หนาเกินไป) -->
-        <div class="space-y-3 pt-1">
-          <div class="text-center">
-            <span class="text-xs md:text-sm font-medium text-slate-400 uppercase tracking-wider">
-              แตะปุ่มด้านล่างนี้เพื่อทำรายการ
-            </span>
+        <!-- 2. Location & GPS Status Bar (กะทัดรัด อยู่เหนือปุ่มลงเวลา เพรียวบาง) -->
+        <div class="px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs shadow-xs">
+          <div class="flex items-center gap-2 text-slate-700 min-w-0">
+            <span class="text-base flex-shrink-0">📍</span>
+            <div class="min-w-0 truncate text-xs">
+              <span class="font-semibold text-slate-900" id="gpsStatusText">กำลังค้นหาตำแหน่ง GPS...</span>
+              <span class="text-slate-400 mx-1">•</span>
+              <span class="text-slate-500 font-normal" id="gpsDistanceText">ระยะห่าง: รอคำนวณ</span>
+            </div>
           </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            <span id="gpsBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+              รอตรวจพิกัด
+            </span>
+            <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="p-1 px-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-[11px] transition shadow-2xs flex items-center gap-0.5" title="แตะเพื่อจับพิกัด GPS ใหม่">
+              <svg id="iconRefreshGps" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </button>
+          </div>
+        </div>
 
+        <!-- 3. HERO ACTION BUTTON (ปุ่มหลักลงเวลาตามสถานะปัจจุบัน แตะง่าย ชัดเจน) -->
+        <div class="space-y-2 pt-1">
           <!-- Hero Button Element -->
-          <button id="heroActionButton" type="button" class="w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse">
+          <button id="heroActionButton" type="button" class="w-full py-6 md:py-8 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse">
             <!-- Icon Box -->
-            <div id="heroActionIconBox" class="w-18 h-18 md:w-20 md:h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl md:text-4xl shadow-inner border border-white/25">
+            <div id="heroActionIconBox" class="w-16 h-16 md:w-18 md:h-18 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl md:text-4xl shadow-inner border border-white/25">
               <span id="heroActionIcon">☀️</span>
             </div>
             
-            <!-- Big Clean Text (ขนาด 26px - 30px ชัดมาก ไม่หนาเกินไป) -->
+            <!-- Big Clean Text -->
             <div class="text-center">
               <div id="heroActionTitle" class="text-2xl md:text-3xl font-semibold tracking-normal text-white">
                 แตะเพื่อลงเวลาเข้างาน
               </div>
-              <div id="heroActionSubtitle" class="text-sm md:text-base font-normal text-emerald-100 mt-1">
+              <div id="heroActionSubtitle" class="text-xs md:text-sm font-normal text-emerald-100 mt-0.5">
                 สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
               </div>
             </div>
           </button>
 
-          <!-- Secondary Actions & Direct GPS Options -->
-          <div id="heroSecondaryContainer" class="space-y-2 pt-1">
-            <!-- Alternative button (e.g. In 4-punch mode, or alternative action) -->
+          <!-- Secondary Actions & Direct GPS Options (กะทัดรัด เพรียวบาง) -->
+          <div id="heroSecondaryContainer" class="space-y-1.5 pt-0.5">
+            <!-- Alternative button (e.g. In 4-punch mode, or alternative action: กะทัดรัด 1 บรรทัด) -->
             <div id="heroSecondaryActionBox" class="hidden">
-              <button type="button" id="btnHeroSecondaryAction" class="w-full py-3 px-4 bg-gradient-to-r from-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 active:scale-[0.98] border-2 border-dashed border-rose-300 rounded-2xl flex items-center justify-between text-rose-800 transition-all shadow-sm group">
-                <div class="flex items-center space-x-3 text-left">
-                  <span id="iconHeroSecondaryAction" class="text-2xl p-2 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">🚪</span>
-                  <div>
-                    <div id="titleHeroSecondaryAction" class="text-xs md:text-sm font-bold text-rose-900">
+              <button type="button" id="btnHeroSecondaryAction" class="w-full py-2 px-3 bg-gradient-to-r from-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 active:scale-[0.98] border border-dashed border-rose-300 rounded-xl flex items-center justify-between text-rose-800 transition-all shadow-xs group">
+                <div class="flex items-center space-x-2 text-left min-w-0">
+                  <span id="iconHeroSecondaryAction" class="text-base flex-shrink-0">🚪</span>
+                  <div class="truncate">
+                    <span id="titleHeroSecondaryAction" class="text-xs font-bold text-rose-900">
                       หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)
-                    </div>
-                    <div id="subHeroSecondaryAction" class="text-[11px] md:text-xs text-rose-700/80 font-normal">
-                      แตะที่นี่หากไม่ได้สแกนพัก หรือต้องการออกงานทันที
-                    </div>
+                    </span>
+                    <span id="subHeroSecondaryAction" class="hidden"></span>
                   </div>
                 </div>
-                <div id="badgeWrapperHeroSecondaryAction" class="flex items-center space-x-1 text-rose-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-rose-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0">
+                <div id="badgeWrapperHeroSecondaryAction" class="flex items-center space-x-1 text-rose-600 font-bold text-xs bg-white px-2 py-0.5 rounded-lg border border-rose-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-2">
                   <span id="badgeTextHeroSecondaryAction">สแกนออกงาน</span>
                   <span>&rarr;</span>
                 </div>
@@ -227,34 +239,12 @@
             </div>
 
             <!-- Direct GPS Button (shown when allow_direct_gps === 'true') -->
-            <div id="containerHeroDirectGps" class="text-center hidden pt-1">
-              <button type="button" id="btnHeroDirectGps" class="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-700 font-medium text-xs md:text-sm rounded-2xl border border-slate-200 flex items-center justify-center space-x-2 transition shadow-sm">
-                <span class="text-base">📸</span>
+            <div id="containerHeroDirectGps" class="text-center hidden pt-0.5">
+              <button type="button" id="btnHeroDirectGps" class="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-600 font-medium text-xs rounded-xl border border-slate-200 flex items-center justify-center space-x-1.5 transition shadow-2xs">
+                <span class="text-sm">📸</span>
                 <span id="txtHeroDirectGps">ถ่ายรูปด้วย GPS โดยตรง (ไม่ต้องใช้ QR)</span>
               </button>
             </div>
-          </div>
-        </div>
-
-        <!-- 4. Location & GPS Status Card (ชัดเจน ตัวหนังสือขนาดพอดี อ่านง่าย) -->
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs md:text-sm shadow-sm">
-          <div class="flex items-center gap-3 text-slate-700">
-            <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg flex-shrink-0">
-              📍
-            </div>
-            <div>
-              <div class="font-medium text-slate-900" id="gpsStatusText">กำลังค้นหาตำแหน่ง GPS...</div>
-              <div class="text-xs text-slate-500 font-normal" id="gpsDistanceText">ระยะห่าง: รอคำนวณ</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <span id="gpsBadge" class="px-2.5 py-1 rounded-xl text-xs font-medium bg-slate-200 text-slate-700">
-              รอตรวจพิกัด
-            </span>
-            <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-normal transition flex items-center gap-1 shadow-sm" title="แตะเพื่อจับพิกัด GPS ใหม่">
-              <svg id="iconRefreshGps" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-              <span>รีเฟรช</span>
-            </button>
           </div>
         </div>
 
