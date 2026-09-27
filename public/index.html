@@ -155,32 +155,26 @@
       <!-- ========================================================================= -->
       <section id="tabClock" class="space-y-5">
 
-        <!-- 1. Big Digital Clock & Server Sync (ขนาดใหญ่พิเศษ ตัวเลขอ่านง่าย สบายตา) -->
-        <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-5 md:p-7 text-white shadow-xl text-center relative overflow-hidden flex flex-col justify-center">
+        <!-- 1. Big Digital Clock & Integrated Status (แบบที่ 3: กระชับ รวมสถานะในตัว ไม่เกะกะ) -->
+        <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-5 md:p-6 text-white shadow-xl text-center relative overflow-hidden flex flex-col justify-center">
           <div class="absolute -right-6 -top-6 w-36 h-36 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
-          <div class="text-sm md:text-base font-normal text-slate-300" id="liveDateThai">กำลังโหลดวันที่...</div>
+          <div class="text-xs sm:text-sm md:text-base font-normal text-slate-300" id="liveDateThai">กำลังโหลดวันที่...</div>
           <div class="text-5xl md:text-6xl font-normal font-mono tracking-tight my-1 text-white drop-shadow" id="liveClock">00:00:00</div>
           
-          <div class="mt-1 flex items-center justify-center">
-            <span class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs md:text-sm font-normal bg-white/10 text-sky-200 border border-white/10">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span id="liveClockSubtext">ตัดวิกทุกวันที่ 25</span>
-            </span>
-          </div>
-        </div>
+          <span id="liveClockSubtext" class="hidden">ระบบพร้อมลงเวลา</span>
 
-        <!-- 2. Current Status Banner (สรุปสถานะปัจจุบัน) -->
-        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center justify-between shadow-sm" id="todayStatusCard">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl md:text-3xl" id="todayStatusIcon">🌅</span>
-            <div>
-              <div class="text-xs text-slate-500 font-normal">สถานะล่าสุดของคุณ</div>
-              <div class="text-base md:text-lg font-medium text-slate-800" id="todayStatusText">ยังไม่ได้ลงเวลาวันนี้</div>
+          <!-- 2. Integrated Status Row (แบบที่ 3: แถบสถานะกะทัดรัด ตัวหนังสือน้อย ประหยัดพื้นที่) -->
+          <div id="todayStatusCard" class="mt-2.5 pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 px-1 text-xs md:text-sm">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-base sm:text-lg flex-shrink-0" id="todayStatusIcon">🌅</span>
+              <span class="font-medium text-slate-200 truncate text-left" id="todayStatusText">ยังไม่ได้ลงเวลาวันนี้</span>
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <span id="todayStatusBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 shadow-xs">
+                ยังไม่ลงเวลา
+              </span>
             </div>
           </div>
-          <span id="todayStatusBadge" class="px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-slate-100 text-slate-700 border border-slate-200">
-            ยังไม่ลงเวลา
-          </span>
         </div>
 
         <!-- 3. HERO ACTION BUTTON (ปุ่มยักษ์ปุ่มเดียวตามสถานะปัจจุบัน แตะง่าย ชัดเจน ไม่หนาเกินไป) -->
