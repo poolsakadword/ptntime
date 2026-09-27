@@ -6,6 +6,40 @@
 
 const API_URL = '/api';
 
+/**
+ * Generic API Client for PTN Time (with retry capability for transient network/server issues)
+ */
+async function callApi(action, payload = {}, retryCount = 0) {
+  if (typeof action === 'object' && action !== null) {
+    payload = action;
+    action = payload.action;
+  }
+  payload = payload || {};
+  const bodyData = { action, ...payload };
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyData)
+    });
+    if (!res.ok) {
+      if ((res.status === 502 || res.status === 503 || res.status === 504) && retryCount < 3) {
+        await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
+        return callApi(action, payload, retryCount + 1);
+      }
+      throw new Error(`HTTP Error: ${res.status}`);
+    }
+    return await res.json();
+  } catch (err) {
+    if (retryCount < 3 && err && err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('503'))) {
+      await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
+      return callApi(action, payload, retryCount + 1);
+    }
+    throw err;
+  }
+}
+window.callApi = callApi;
+
 // Global State
 let currentEmployee = null;
 let employeeList = [];
