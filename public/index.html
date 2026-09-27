@@ -58,7 +58,7 @@
   </script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=9.8">
+  <link rel="stylesheet" href="css/style.css?v=9.9">
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center">
 
@@ -238,25 +238,22 @@
           </div>
         </div>
 
-        <!-- 4. HERO ACTION BUTTON (ปุ่มหลักลงเวลาตามสถานะปัจจุบัน แตะง่าย ชัดเจน) -->
+        <!-- 4. HERO ACTION BUTTON (สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนสัมผัส Circular Radar Ring) -->
         <div class="space-y-2 pt-1">
-          <!-- Hero Button Element -->
-          <button id="heroActionButton" type="button" class="w-full py-6 md:py-8 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse">
-            <!-- Icon Box -->
-            <div id="heroActionIconBox" class="w-16 h-16 md:w-18 md:h-18 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl md:text-4xl shadow-inner border border-white/25">
-              <span id="heroActionIcon">☀️</span>
-            </div>
+          <!-- Circular Radar Button Wrapper -->
+          <div class="py-2.5 flex flex-col items-center justify-center text-center">
+            <button id="heroActionButton" type="button" class="radar-circle radar-emerald w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-xl shadow-emerald-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer">
+              <div id="heroActionIconBox" class="flex items-center justify-center">
+                <span id="heroActionIcon" class="text-3xl sm:text-4xl">☀️</span>
+              </div>
+              <span id="heroActionTitle" class="text-xs sm:text-sm font-bold tracking-tight text-white mt-1">แตะลงเวลาเข้า</span>
+              <span id="heroActionBadge" class="text-[10px] text-white/90 font-medium px-2 py-0.5 rounded-full bg-white/20 mt-0.5">สแกน QR</span>
+            </button>
             
-            <!-- Big Clean Text -->
-            <div class="text-center">
-              <div id="heroActionTitle" class="text-2xl md:text-3xl font-semibold tracking-normal text-white">
-                แตะเพื่อลงเวลาเข้างาน
-              </div>
-              <div id="heroActionSubtitle" class="text-xs md:text-sm font-normal text-emerald-100 mt-0.5">
-                สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
-              </div>
+            <div id="heroActionSubtitle" class="text-[11px] sm:text-xs text-slate-500 font-normal max-w-[280px] leading-tight mt-2.5">
+              สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
             </div>
-          </button>
+          </div>
 
           <!-- Secondary Actions & Direct GPS Options (กะทัดรัด เพรียวบาง) -->
           <div id="heroSecondaryContainer" class="space-y-1.5 pt-0.5">

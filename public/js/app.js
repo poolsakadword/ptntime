@@ -2883,6 +2883,7 @@ async function loadTodayStatus() {
       const heroIcon = document.getElementById('heroActionIcon');
       const heroTitle = document.getElementById('heroActionTitle');
       const heroSub = document.getElementById('heroActionSubtitle');
+      const heroBadge = document.getElementById('heroActionBadge');
       const statusText = document.getElementById('todayStatusText');
       const statusIcon = document.getElementById('todayStatusIcon');
       const secBox = document.getElementById('heroSecondaryActionBox');
@@ -2890,6 +2891,15 @@ async function loadTodayStatus() {
       const directGpsContainer = document.getElementById('containerHeroDirectGps');
       const directGpsBtn = document.getElementById('btnHeroDirectGps');
       const directGpsText = document.getElementById('txtHeroDirectGps');
+
+      const heroBtnClasses = {
+        IN: 'radar-circle radar-emerald w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-xl shadow-emerald-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        OUT: 'radar-circle radar-rose w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 text-white shadow-xl shadow-rose-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        BREAK_OUT: 'radar-circle radar-amber w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 text-white shadow-xl shadow-amber-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        BREAK_IN: 'radar-circle radar-sky w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-sky-600 via-cyan-500 to-sky-400 text-white shadow-xl shadow-sky-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        DONE: 'radar-done w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-slate-700 via-slate-600 to-slate-500 text-white shadow-lg shadow-slate-500/25 flex flex-col items-center justify-center transition-all duration-200 cursor-default',
+        LOCKED: 'radar-done w-28 h-28 sm:w-32 sm:h-32 rounded-full text-slate-300 shadow-lg flex flex-col items-center justify-center bg-slate-700/90 border-2 border-slate-600/80 cursor-pointer'
+      };
 
       let currentAction = 'IN';
       let secAction = null;
@@ -2906,11 +2916,12 @@ async function loadTodayStatus() {
             badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
             badge.textContent = 'พร้อมลงเวลา';
           }
-          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเข้างาน';
+          if (heroTitle) heroTitle.textContent = 'แตะลงเวลาเข้า';
+          if (heroBadge) heroBadge.textContent = 'สแกน QR';
           if (heroSub) heroSub.textContent = 'สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่';
           if (heroIcon) heroIcon.textContent = '☀️';
           if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse';
+            heroBtn.className = heroBtnClasses.IN;
             heroBtn.disabled = false;
             heroBtn.onclick = () => openQrScannerModal('IN');
           }
@@ -2936,7 +2947,8 @@ async function loadTodayStatus() {
               badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
               badge.textContent = 'ปฏิบัติงานช่วงบ่าย/เย็น';
             }
-            if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเลิกงาน';
+            if (heroTitle) heroTitle.textContent = 'แตะลงเวลาออก';
+            if (heroBadge) heroBadge.textContent = 'สแกน QR';
             if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สรุปเวลางาน (Clock OUT)';
             if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
               if (badge) {
@@ -2947,7 +2959,7 @@ async function loadTodayStatus() {
             }
             if (heroIcon) heroIcon.textContent = '🚪';
             if (heroBtn) {
-              heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
+              heroBtn.className = heroBtnClasses.OUT;
               heroBtn.disabled = false;
               heroBtn.onclick = () => openQrScannerModal('OUT');
             }
@@ -2964,11 +2976,12 @@ async function loadTodayStatus() {
               badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
               badge.textContent = 'กำลังปฏิบัติงาน';
             }
-            if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเริ่มพัก';
+            if (heroTitle) heroTitle.textContent = 'แตะเริ่มพัก';
+            if (heroBadge) heroBadge.textContent = 'สแกน QR';
             if (heroSub) heroSub.textContent = 'บันทึกเวลาพักกลางวัน (Break OUT - 2/4)';
             if (heroIcon) heroIcon.textContent = '☕';
             if (heroBtn) {
-              heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-amber-600 hover:bg-amber-700 shadow-amber-600/30 hero-pulse-amber';
+              heroBtn.className = heroBtnClasses.BREAK_OUT;
               heroBtn.disabled = false;
               heroBtn.onclick = () => openQrScannerModal('BREAK_OUT');
             }
@@ -2994,7 +3007,8 @@ async function loadTodayStatus() {
               badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
               badge.textContent = 'พร้อมลงเวลาเลิกงาน';
             }
-            if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเลิกงาน';
+            if (heroTitle) heroTitle.textContent = 'แตะลงเวลาออก';
+            if (heroBadge) heroBadge.textContent = 'สแกน QR';
             if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / ปิดเวลาพักให้อัตโนมัติ (Clock OUT)';
             if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
               if (badge) {
@@ -3005,7 +3019,7 @@ async function loadTodayStatus() {
             }
             if (heroIcon) heroIcon.textContent = '🚪';
             if (heroBtn) {
-              heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
+              heroBtn.className = heroBtnClasses.OUT;
               heroBtn.disabled = false;
               heroBtn.onclick = () => openQrScannerModal('OUT');
             }
@@ -3022,11 +3036,12 @@ async function loadTodayStatus() {
               badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
               badge.textContent = 'กำลังพักผ่อน';
             }
-            if (heroTitle) heroTitle.textContent = 'แตะเพื่อกลับเข้าทำงานบ่าย';
+            if (heroTitle) heroTitle.textContent = 'แตะกลับงาน';
+            if (heroBadge) heroBadge.textContent = 'สแกน QR';
             if (heroSub) heroSub.textContent = 'สิ้นสุดเวลาพัก พร้อมปฏิบัติงานช่วงบ่าย (Break IN - 3/4)';
             if (heroIcon) heroIcon.textContent = '💼';
             if (heroBtn) {
-              heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-sky-600 hover:bg-sky-700 shadow-sky-600/30 hero-pulse-sky';
+              heroBtn.className = heroBtnClasses.BREAK_IN;
               heroBtn.disabled = false;
               heroBtn.onclick = () => openQrScannerModal('BREAK_IN');
             }
@@ -3043,7 +3058,8 @@ async function loadTodayStatus() {
             badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
             badge.textContent = 'ปฏิบัติงานช่วงบ่าย';
           }
-          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเลิกงาน';
+          if (heroTitle) heroTitle.textContent = 'แตะลงเวลาออก';
+          if (heroBadge) heroBadge.textContent = 'สแกน QR';
           if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สรุปเวลางาน (Clock OUT - 4/4)';
           if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
             if (badge) {
@@ -3054,7 +3070,7 @@ async function loadTodayStatus() {
           }
           if (heroIcon) heroIcon.textContent = '🚪';
           if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
+            heroBtn.className = heroBtnClasses.OUT;
             heroBtn.disabled = false;
             heroBtn.onclick = () => openQrScannerModal('OUT');
           }
@@ -3070,7 +3086,8 @@ async function loadTodayStatus() {
             badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-emerald-100 text-emerald-800 border border-emerald-200';
             badge.textContent = 'เสร็จสมบูรณ์';
           }
-          if (heroTitle) heroTitle.textContent = 'ลงเวลาครบทุกขั้นตอนแล้ว';
+          if (heroTitle) heroTitle.textContent = 'ลงเวลาครบ';
+          if (heroBadge) heroBadge.textContent = 'เรียบร้อย';
           if (heroSub) heroSub.textContent = 'บันทึกเวลาทำงานของวันนี้เรียบร้อยแล้ว พักผ่อนได้เลยครับ';
           const isBranchEarly = (log.remark && log.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
           if (isBranchEarly) {
@@ -3082,7 +3099,7 @@ async function loadTodayStatus() {
           }
           if (heroIcon) heroIcon.textContent = '✅';
           if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-lg flex flex-col items-center justify-center space-y-2.5 bg-slate-700 hover:bg-slate-800 cursor-default';
+            heroBtn.className = heroBtnClasses.DONE;
             heroBtn.disabled = false;
             heroBtn.onclick = () => {
               Swal.fire({
@@ -3109,11 +3126,12 @@ async function loadTodayStatus() {
             badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
             badge.textContent = 'พร้อมลงเวลา';
           }
-          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเข้างาน';
+          if (heroTitle) heroTitle.textContent = 'แตะลงเวลาเข้า';
+          if (heroBadge) heroBadge.textContent = 'สแกน QR';
           if (heroSub) heroSub.textContent = 'สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่';
           if (heroIcon) heroIcon.textContent = '☀️';
           if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse';
+            heroBtn.className = heroBtnClasses.IN;
             heroBtn.disabled = false;
             heroBtn.onclick = () => openQrScannerModal('IN');
           }
@@ -3131,7 +3149,8 @@ async function loadTodayStatus() {
             badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
             badge.textContent = 'กำลังปฏิบัติงาน';
           }
-          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาออกงาน';
+          if (heroTitle) heroTitle.textContent = 'แตะลงเวลาออก';
+          if (heroBadge) heroBadge.textContent = 'สแกน QR';
           if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สิ้นสุดการทำงาน (Clock OUT)';
           if (data.branchConfig && data.branchConfig.earlyDismissalFullPay && !data.branchConfig.isUndertimeExempt) {
             if (badge) {
@@ -3144,7 +3163,7 @@ async function loadTodayStatus() {
           }
           if (heroIcon) heroIcon.textContent = '🚪';
           if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
+            heroBtn.className = heroBtnClasses.OUT;
             heroBtn.disabled = false;
             heroBtn.onclick = () => openQrScannerModal('OUT');
           }
@@ -3159,7 +3178,8 @@ async function loadTodayStatus() {
             badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-emerald-100 text-emerald-800 border border-emerald-200';
             badge.textContent = 'บันทึกครบถ้วนแล้ว';
           }
-          if (heroTitle) heroTitle.textContent = 'ลงเวลาครบถ้วนแล้ว';
+          if (heroTitle) heroTitle.textContent = 'ลงเวลาครบ';
+          if (heroBadge) heroBadge.textContent = 'เรียบร้อย';
           if (heroSub) heroSub.textContent = `บันทึกเวลาของวันนี้เรียบร้อยแล้ว (ออกงานเวลา ${log.clock_out})`;
           const isBranchEarly = (log.remark && log.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
           if (isBranchEarly) {
@@ -3173,7 +3193,7 @@ async function loadTodayStatus() {
           }
           if (heroIcon) heroIcon.textContent = '✅';
           if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-lg flex flex-col items-center justify-center space-y-2.5 bg-slate-700 hover:bg-slate-800 cursor-default';
+            heroBtn.className = heroBtnClasses.DONE;
             heroBtn.disabled = false;
             heroBtn.onclick = () => {
               Swal.fire({
@@ -3193,7 +3213,7 @@ async function loadTodayStatus() {
         const winCheck = isActionWithinTimeWindow(currentAction);
         if (!winCheck.allowed) {
           if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-slate-300 shadow-lg flex flex-col items-center justify-center space-y-2.5 bg-slate-700/85 border-2 border-slate-600/80 cursor-pointer';
+            heroBtn.className = heroBtnClasses.LOCKED;
             heroBtn.disabled = false;
             heroBtn.onclick = () => {
               Swal.fire({
@@ -3211,7 +3231,8 @@ async function loadTodayStatus() {
               });
             };
           }
-          if (heroTitle) heroTitle.innerHTML = `<span class="flex items-center justify-center gap-2"><span class="text-amber-400">🔒</span> อยู่นอกช่วงเวลา (${winCheck.start}-${winCheck.end})</span>`;
+          if (heroTitle) heroTitle.innerHTML = `<span class="flex items-center justify-center gap-1 text-[11px]"><span class="text-amber-400">🔒</span> นอกเวลา</span>`;
+          if (heroBadge) heroBadge.textContent = `${winCheck.start}-${winCheck.end}`;
           if (heroSub) heroSub.textContent = `ระบบเปิดให้ลงเวลา ${winCheck.label} ช่วง ${winCheck.start} - ${winCheck.end} น. (ขณะนี้ ${winCheck.curTime} น.)`;
           if (heroIcon) heroIcon.textContent = '⏳';
         }
