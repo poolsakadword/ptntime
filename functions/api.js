@@ -1310,11 +1310,6 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'ยังไม่พบบันทึกเวลาเข้างานของวันนี้ กรุณาบันทึกเข้างานก่อน' };
       }
 
-      // In BREAK_PUNCH mode, prevent clocking out while still on break without punch back
-      if (existing.break_out && !existing.break_in) {
-        return { success: false, message: 'คุณกำลังอยู่ในช่วงพัก (ยังไม่ได้บันทึกกลับเข้าทำงาน Break IN) กรุณาบันทึกเข้าทำงานหลังพักก่อนลงเวลาออกงาน' };
-      }
-
       // Determine branch configuration: if recorded at clock-in, use that branch's settings
       let effectiveBranchCfg = await getEmployeeBranchConfig(db, empId, lat, lng, settings);
       if (existing.branch_id) {
@@ -1335,6 +1330,26 @@ async function handleAction(db, action, params) {
             earlyDismissalFullPay: (recordedBranch.early_dismissal_full_pay === 1 || recordedBranch.early_dismissal_full_pay === '1' || recordedBranch.early_dismissal_full_pay === 'true' || recordedBranch.early_dismissal_full_pay === true)
           };
         }
+      }
+
+      // In BREAK_PUNCH mode, if employee forgot Break IN before clocking out, auto-close break gracefully
+      let autoBreakRemark = '';
+      if (existing.break_out && !existing.break_in) {
+        const bOutMins = timeToMinutes(existing.break_out);
+        const lEndMins = effectiveBranchCfg ? timeToMinutes(effectiveBranchCfg.lunchEndTime) : (bOutMins + 60);
+        const resolvedEndMins = (lEndMins > bOutMins) ? lEndMins : (bOutMins + 60);
+        const autoClosedBreakIn = minutesToTime(resolvedEndMins);
+        const autoBreakMins = Math.max(0, resolvedEndMins - bOutMins) || 60;
+
+        await db.prepare(`
+          UPDATE time_logs 
+          SET break_in = ?, break_minutes = ?
+          WHERE id = ?
+        `).bind(autoClosedBreakIn, autoBreakMins, existing.id).run();
+
+        existing.break_in = autoClosedBreakIn;
+        existing.break_minutes = autoBreakMins;
+        autoBreakRemark = ' [ระบบบันทึกจบพักอัตโนมัติเมื่อลงเวลาออกงาน]';
       }
 
       // Check Time Window Lock (Skip OUT restriction if branch is in early dismissal full pay mode or employee is undertime exempt)
@@ -1463,7 +1478,7 @@ async function handleAction(db, action, params) {
             status = CASE WHEN ? = 1 AND COALESCE(late_minutes, 0) = 0 THEN 'NORMAL' ELSE status END,
             remark = COALESCE(remark, '') || ?
         WHERE id = ?
-      `).bind(timeStr, lat || null, lng || null, photoUrl || null, totalWorkHours, calculatedOtHours, finalIsFullPay, finalIsFullPay, (remark ? ' ' + remark : '') + earlyDismissalRemark, existing.id).run();
+      `).bind(timeStr, lat || null, lng || null, photoUrl || null, totalWorkHours, calculatedOtHours, finalIsFullPay, finalIsFullPay, (remark ? ' ' + remark : '') + earlyDismissalRemark + autoBreakRemark, existing.id).run();
 
       // If OT occurred and employee is eligible, record or update in ot_requests automatically
       if (calculatedOtHours > 0) {

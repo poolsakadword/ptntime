@@ -2878,47 +2878,121 @@ async function loadTodayStatus() {
           if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
 
         } else if (log.clock_in && !log.break_out && !log.clock_out) {
-          // State 2: Working morning shift -> ready to Break Out
-          currentAction = 'BREAK_OUT';
-          secAction = 'OUT';
-          secText = 'หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)';
+          // State 2: Clocked in morning, no break out yet
+          // Check current time: if past break window (>= 14:30), smartly promote Hero Button to OUT (Clock OUT)
+          const nowObj = new Date();
+          const curHM = String(nowObj.getHours()).padStart(2, '0') + ':' + String(nowObj.getMinutes()).padStart(2, '0');
+          const breakOutLimit = appSettings.window_break_out_end || '14:30';
+          const isAfternoon = (curHM >= breakOutLimit);
 
-          if (statusText) statusText.textContent = `กำลังทำงาน (เข้างานเมื่อ ${log.clock_in})`;
-          if (statusIcon) statusIcon.textContent = '💼';
-          if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
-            badge.textContent = 'กำลังปฏิบัติงาน';
+          if (isAfternoon) {
+            currentAction = 'OUT';
+            secAction = 'BREAK_OUT';
+            secText = 'หรือแตะเพื่อลงเวลาเริ่มพัก (Break OUT)';
+
+            if (statusText) statusText.textContent = `ปฏิบัติงานช่วงบ่าย (เข้างานเมื่อ ${log.clock_in})`;
+            if (statusIcon) statusIcon.textContent = '💼';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
+              badge.textContent = 'ปฏิบัติงานช่วงบ่าย/เย็น';
+            }
+            if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเลิกงาน';
+            if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / สรุปเวลางาน (Clock OUT)';
+            if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
+              if (badge) {
+                badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
+                badge.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
+              }
+              if (heroSub) heroSub.textContent = '⚡ โหมดงานเสร็จประจำสาขา (ได้รับค่าแรงเต็มวัน ไม่หักเงิน)';
+            }
+            if (heroIcon) heroIcon.textContent = '🚪';
+            if (heroBtn) {
+              heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('OUT');
+            }
+            if (directGpsText) directGpsText.textContent = 'ถ่ายรูปออกงานด้วย GPS โดยตรง (Clock OUT)';
+            if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('OUT');
+          } else {
+            currentAction = 'BREAK_OUT';
+            secAction = 'OUT';
+            secText = 'หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)';
+
+            if (statusText) statusText.textContent = `กำลังทำงาน (เข้างานเมื่อ ${log.clock_in})`;
+            if (statusIcon) statusIcon.textContent = '💼';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
+              badge.textContent = 'กำลังปฏิบัติงาน';
+            }
+            if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเริ่มพัก';
+            if (heroSub) heroSub.textContent = 'บันทึกเวลาพักกลางวัน (Break OUT - 2/4)';
+            if (heroIcon) heroIcon.textContent = '☕';
+            if (heroBtn) {
+              heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-amber-600 hover:bg-amber-700 shadow-amber-600/30 hero-pulse-amber';
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('BREAK_OUT');
+            }
+            if (directGpsText) directGpsText.textContent = 'ถ่ายรูปออกไปพักด้วย GPS โดยตรง (Break OUT)';
+            if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('BREAK_OUT');
           }
-          if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเริ่มพัก';
-          if (heroSub) heroSub.textContent = 'บันทึกเวลาพักกลางวัน (Break OUT - 2/4)';
-          if (heroIcon) heroIcon.textContent = '☕';
-          if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-amber-600 hover:bg-amber-700 shadow-amber-600/30 hero-pulse-amber';
-            heroBtn.disabled = false;
-            heroBtn.onclick = () => openQrScannerModal('BREAK_OUT');
-          }
-          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปออกไปพักด้วย GPS โดยตรง (Break OUT)';
-          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('BREAK_OUT');
 
         } else if (log.break_out && !log.break_in && !log.clock_out) {
-          // State 3: On Break -> ready to Break In
-          currentAction = 'BREAK_IN';
-          if (statusText) statusText.textContent = `กำลังอยู่ในช่วงพักผ่อน (เริ่มพัก ${log.break_out})`;
-          if (statusIcon) statusIcon.textContent = '☕';
-          if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
-            badge.textContent = 'กำลังพักผ่อน';
+          // State 3: On Break -> ready to Break In (or transition to OUT if past break-in window)
+          const nowObj = new Date();
+          const curHM = String(nowObj.getHours()).padStart(2, '0') + ':' + String(nowObj.getMinutes()).padStart(2, '0');
+          const breakInLimit = appSettings.window_break_in_end || '15:30';
+          const isPastBreakInWindow = (curHM >= breakInLimit);
+
+          if (isPastBreakInWindow) {
+            currentAction = 'OUT';
+            secAction = 'BREAK_IN';
+            secText = 'หรือแตะเพื่อลงเวลากลับเข้าทำงาน (Break IN)';
+
+            if (statusText) statusText.textContent = `กำลังทำงาน (เริ่มพักเมื่อ ${log.break_out})`;
+            if (statusIcon) statusIcon.textContent = '🏢';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-sky-100 text-sky-800 border border-sky-200';
+              badge.textContent = 'พร้อมลงเวลาเลิกงาน';
+            }
+            if (heroTitle) heroTitle.textContent = 'แตะเพื่อลงเวลาเลิกงาน';
+            if (heroSub) heroSub.textContent = 'เลิกงานประจำวัน / ปิดเวลาพักให้อัตโนมัติ (Clock OUT)';
+            if (data.branchConfig && data.branchConfig.earlyDismissalFullPay) {
+              if (badge) {
+                badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
+                badge.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
+              }
+              if (heroSub) heroSub.textContent = '⚡ โหมดงานเสร็จประจำสาขา (ได้รับค่าแรงเต็มวัน ไม่หักเงิน)';
+            }
+            if (heroIcon) heroIcon.textContent = '🚪';
+            if (heroBtn) {
+              heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 hero-pulse-rose';
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('OUT');
+            }
+            if (directGpsText) directGpsText.textContent = 'ถ่ายรูปออกงานด้วย GPS โดยตรง (Clock OUT)';
+            if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('OUT');
+          } else {
+            currentAction = 'BREAK_IN';
+            secAction = 'OUT';
+            secText = 'หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)';
+
+            if (statusText) statusText.textContent = `กำลังอยู่ในช่วงพักผ่อน (เริ่มพัก ${log.break_out})`;
+            if (statusIcon) statusIcon.textContent = '☕';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
+              badge.textContent = 'กำลังพักผ่อน';
+            }
+            if (heroTitle) heroTitle.textContent = 'แตะเพื่อกลับเข้าทำงานบ่าย';
+            if (heroSub) heroSub.textContent = 'สิ้นสุดเวลาพัก พร้อมปฏิบัติงานช่วงบ่าย (Break IN - 3/4)';
+            if (heroIcon) heroIcon.textContent = '💼';
+            if (heroBtn) {
+              heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-sky-600 hover:bg-sky-700 shadow-sky-600/30 hero-pulse-sky';
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('BREAK_IN');
+            }
+            if (directGpsText) directGpsText.textContent = 'ถ่ายรูปกลับเข้าทำงานด้วย GPS โดยตรง (Break IN)';
+            if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('BREAK_IN');
           }
-          if (heroTitle) heroTitle.textContent = 'แตะเพื่อกลับเข้าทำงานบ่าย';
-          if (heroSub) heroSub.textContent = 'สิ้นสุดเวลาพัก พร้อมปฏิบัติงานช่วงบ่าย (Break IN - 3/4)';
-          if (heroIcon) heroIcon.textContent = '💼';
-          if (heroBtn) {
-            heroBtn.className = 'w-full py-7 md:py-9 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex flex-col items-center justify-center space-y-2.5 bg-sky-600 hover:bg-sky-700 shadow-sky-600/30 hero-pulse-sky';
-            heroBtn.disabled = false;
-            heroBtn.onclick = () => openQrScannerModal('BREAK_IN');
-          }
-          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปกลับเข้าทำงานด้วย GPS โดยตรง (Break IN)';
-          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('BREAK_IN');
 
         } else if (log.break_in && !log.clock_out) {
           // State 4: Afternoon shift -> ready to Clock Out
@@ -3103,12 +3177,80 @@ async function loadTodayStatus() {
         }
       }
 
-      // Secondary Action Button Toggle
+      // Secondary Action Button Toggle & Dynamic Styling
       if (secBox && secBtn) {
         if (secAction && currentAction !== 'DONE') {
           secBox.classList.remove('hidden');
-          secBtn.textContent = secText;
           secBtn.onclick = () => openQrScannerModal(secAction);
+
+          const secIconEl = document.getElementById('iconHeroSecondaryAction');
+          const secTitleEl = document.getElementById('titleHeroSecondaryAction');
+          const secSubEl = document.getElementById('subHeroSecondaryAction');
+          const secBadgeWrapEl = document.getElementById('badgeWrapperHeroSecondaryAction');
+          const secBadgeTextEl = document.getElementById('badgeTextHeroSecondaryAction');
+
+          if (secAction === 'OUT') {
+            secBtn.className = 'w-full py-3.5 px-4 bg-gradient-to-r from-rose-50 via-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 active:scale-[0.98] border-2 border-dashed border-rose-300 rounded-2xl flex items-center justify-between text-rose-800 transition-all shadow-sm group';
+            if (secIconEl) secIconEl.textContent = '🚪';
+            if (secTitleEl) {
+              secTitleEl.className = 'text-xs md:text-sm font-bold text-rose-900';
+              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)';
+            }
+            if (secSubEl) {
+              secSubEl.className = 'text-[11px] md:text-xs text-rose-700/80 font-normal';
+              secSubEl.textContent = 'แตะที่นี่หากไม่ได้สแกนพัก หรือต้องการออกงานทันที';
+            }
+            if (secBadgeWrapEl) {
+              secBadgeWrapEl.className = 'flex items-center space-x-1 text-rose-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-rose-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0';
+            }
+            if (secBadgeTextEl) secBadgeTextEl.textContent = 'สแกนออกงาน';
+          } else if (secAction === 'BREAK_OUT') {
+            secBtn.className = 'w-full py-3.5 px-4 bg-gradient-to-r from-amber-50 via-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 active:scale-[0.98] border-2 border-dashed border-amber-300 rounded-2xl flex items-center justify-between text-amber-800 transition-all shadow-sm group';
+            if (secIconEl) secIconEl.textContent = '☕';
+            if (secTitleEl) {
+              secTitleEl.className = 'text-xs md:text-sm font-bold text-amber-900';
+              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลาเริ่มพัก (Break OUT)';
+            }
+            if (secSubEl) {
+              secSubEl.className = 'text-[11px] md:text-xs text-amber-700/80 font-normal';
+              secSubEl.textContent = 'แตะที่นี่หากต้องการบันทึกเวลาเริ่มพักผ่อน';
+            }
+            if (secBadgeWrapEl) {
+              secBadgeWrapEl.className = 'flex items-center space-x-1 text-amber-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-amber-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0';
+            }
+            if (secBadgeTextEl) secBadgeTextEl.textContent = 'สแกนเริ่มพัก';
+          } else if (secAction === 'BREAK_IN') {
+            secBtn.className = 'w-full py-3.5 px-4 bg-gradient-to-r from-sky-50 via-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100 active:scale-[0.98] border-2 border-dashed border-sky-300 rounded-2xl flex items-center justify-between text-sky-800 transition-all shadow-sm group';
+            if (secIconEl) secIconEl.textContent = '💼';
+            if (secTitleEl) {
+              secTitleEl.className = 'text-xs md:text-sm font-bold text-sky-900';
+              secTitleEl.textContent = 'หรือแตะเพื่อลงเวลากลับเข้าทำงาน (Break IN)';
+            }
+            if (secSubEl) {
+              secSubEl.className = 'text-[11px] md:text-xs text-sky-700/80 font-normal';
+              secSubEl.textContent = 'แตะที่นี่เพื่อบันทึกเวลาสิ้นสุดพักผ่อน';
+            }
+            if (secBadgeWrapEl) {
+              secBadgeWrapEl.className = 'flex items-center space-x-1 text-sky-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-sky-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0';
+            }
+            if (secBadgeTextEl) secBadgeTextEl.textContent = 'สแกนเข้าบ่าย';
+          } else {
+            // Default / Other (e.g. IN)
+            secBtn.className = 'w-full py-3.5 px-4 bg-gradient-to-r from-emerald-50 via-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 active:scale-[0.98] border-2 border-dashed border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-800 transition-all shadow-sm group';
+            if (secIconEl) secIconEl.textContent = '☀️';
+            if (secTitleEl) {
+              secTitleEl.className = 'text-xs md:text-sm font-bold text-emerald-900';
+              secTitleEl.textContent = secText || 'หรือแตะเพื่อลงเวลาเข้างาน (IN)';
+            }
+            if (secSubEl) {
+              secSubEl.className = 'text-[11px] md:text-xs text-emerald-700/80 font-normal';
+              secSubEl.textContent = 'แตะที่นี่เพื่อบันทึกเวลาเข้างาน';
+            }
+            if (secBadgeWrapEl) {
+              secBadgeWrapEl.className = 'flex items-center space-x-1 text-emerald-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0';
+            }
+            if (secBadgeTextEl) secBadgeTextEl.textContent = 'สแกนเข้างาน';
+          }
         } else {
           secBox.classList.add('hidden');
         }
