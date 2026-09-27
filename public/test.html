@@ -225,95 +225,103 @@
       <!-- ========================================================================= -->
 
       <!-- [แบบที่ 1: Frosted Glass Pill Card - กระจกฝ้าโมเดิร์น แนะนำ ⭐] -->
-      <div id="wrapperEmp1" onclick="openTestEmpPickerModal()" class="mt-3.5 bg-white/15 hover:bg-white/25 active:scale-[0.99] backdrop-blur-md rounded-2xl p-3 border border-white/30 flex items-center justify-between cursor-pointer transition shadow-sm group">
-        <div class="flex items-center space-x-3 min-w-0">
+      <div id="wrapperEmp1" class="mt-3.5 bg-white/15 hover:bg-white/25 active:scale-[0.99] backdrop-blur-md rounded-2xl p-3 border border-white/30 flex items-center justify-between transition shadow-sm group">
+        <div onclick="openTestEmpProfileModal()" class="flex items-center space-x-3 min-w-0 cursor-pointer flex-1 group/item" title="แตะเพื่อดูโปรไฟล์และเพิ่มรูปส่วนตัว">
           <div class="relative flex-shrink-0">
-            <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 text-white font-bold text-base flex items-center justify-center shadow-md border-2 border-white/40">
-              👤
+            <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 text-white font-bold text-base flex items-center justify-center shadow-md border-2 border-white/40 overflow-hidden">
+              <span id="testEmp1AvatarFallback">👤</span>
+              <img id="testEmp1AvatarImg" src="" alt="Avatar" class="hidden w-full h-full object-cover">
             </div>
             <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white ring-1 ring-black/10"></span>
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-sky-400/30 text-white border border-white/25">#24590</span>
+              <span class="text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-sky-400/30 text-white border border-white/25 testEmpIdDisplay">#24590</span>
               <span class="text-[10px] text-sky-200 font-medium">ฝ่ายบุคคล • สนง.ใหญ่</span>
               <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-400 text-slate-900 shadow-2xs">🔒 ล็อกเครื่อง</span>
             </div>
-            <div class="text-sm sm:text-base font-bold text-white truncate mt-0.5">
-              คุณพูลศักดิ์ ใจดี
+            <div class="text-sm sm:text-base font-bold text-white truncate mt-0.5 flex items-center gap-1">
+              <span class="testEmpNameDisplay">คุณพูลศักดิ์ ใจดี</span>
+              <span class="text-xs text-sky-200">🪪</span>
             </div>
           </div>
         </div>
-        <div class="bg-white/20 group-hover:bg-white/30 px-2.5 py-1 rounded-xl text-xs font-semibold text-white flex items-center gap-1 flex-shrink-0 ml-2 shadow-2xs">
+        <button type="button" onclick="openTestEmpPickerModal()" class="bg-white/20 hover:bg-white/30 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white flex items-center gap-1 flex-shrink-0 ml-2 shadow-2xs active:scale-95 transition" title="สลับพนักงาน">
           <span>สลับ</span>
           <i class="fa-solid fa-chevron-right text-[10px] opacity-70"></i>
-        </div>
+        </button>
       </div>
 
       <!-- [แบบที่ 2: Slim Compact Strip - เพรียวบาง 1 แถว ประหยัดพื้นที่ 35%] -->
-      <div id="wrapperEmp2" onclick="openTestEmpPickerModal()" class="hidden mt-3 bg-black/20 hover:bg-black/30 active:scale-[0.99] backdrop-blur-md rounded-xl px-3 py-2 border border-white/20 flex items-center justify-between cursor-pointer transition shadow-2xs">
-        <div class="flex items-center space-x-2.5 min-w-0">
-          <div class="w-7 h-7 rounded-lg bg-sky-500 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-xs">
-            👤
+      <div id="wrapperEmp2" class="hidden mt-3 bg-black/20 hover:bg-black/30 active:scale-[0.99] backdrop-blur-md rounded-xl px-3 py-2 border border-white/20 flex items-center justify-between transition shadow-2xs">
+        <div onclick="openTestEmpProfileModal()" class="flex items-center space-x-2.5 min-w-0 cursor-pointer flex-1" title="แตะเพื่อดูโปรไฟล์และเพิ่มรูปส่วนตัว">
+          <div class="w-7 h-7 rounded-lg bg-sky-500 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-xs overflow-hidden">
+            <span id="testEmp2AvatarFallback">👤</span>
+            <img id="testEmp2AvatarImg" src="" alt="Avatar" class="hidden w-full h-full object-cover">
           </div>
           <div class="flex items-center gap-1.5 min-w-0 truncate">
-            <span class="text-xs font-bold text-white truncate">คุณพูลศักดิ์ ใจดี</span>
-            <span class="text-[10px] text-sky-200 font-mono">#24590</span>
+            <span class="text-xs font-bold text-white truncate testEmpNameDisplay">คุณพูลศักดิ์ ใจดี</span>
+            <span class="text-[10px] text-sky-200 font-mono testEmpIdDisplay">#24590</span>
             <span class="text-[10px] text-slate-300">•</span>
             <span class="text-[10px] text-sky-200 truncate">ฝ่ายบุคคล</span>
           </div>
         </div>
-        <div class="flex items-center gap-1 flex-shrink-0 text-[11px] text-sky-200 font-semibold bg-white/10 px-2 py-0.5 rounded-lg ml-1">
-          <span>🔒 ล็อก</span>
+        <button type="button" onclick="openTestEmpPickerModal()" class="flex items-center gap-1 flex-shrink-0 text-[11px] text-sky-200 font-semibold bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg ml-1 active:scale-95 transition">
+          <span>สลับ</span>
           <i class="fa-solid fa-chevron-down text-[9px] opacity-80"></i>
-        </div>
+        </button>
       </div>
 
       <!-- [แบบที่ 3: Digital VIP ID Badge - สไตล์บัตรพนักงานดิจิทัลหรูหรา] -->
-      <div id="wrapperEmp3" onclick="openTestEmpPickerModal()" class="hidden mt-3.5 bg-gradient-to-br from-white to-sky-50 rounded-2xl p-3 border border-sky-200/80 shadow-md text-slate-800 flex items-center justify-between cursor-pointer transition active:scale-[0.99] group">
-        <div class="flex items-center space-x-3 min-w-0">
-          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-600 to-blue-700 text-white font-bold text-base flex items-center justify-center shadow-md flex-shrink-0">
-            👤
+      <div id="wrapperEmp3" class="mt-3.5 bg-gradient-to-br from-white to-sky-50 rounded-2xl p-3 border border-sky-200/80 shadow-md text-slate-800 flex items-center justify-between transition group hover:shadow-lg hover:border-sky-300">
+        <!-- คลิกที่ชื่อ/โปรไฟล์เพื่อเปิด Popup ดูข้อมูล + แนบรูปส่วนตัว -->
+        <div onclick="openTestEmpProfileModal()" class="flex items-center space-x-3 min-w-0 cursor-pointer flex-1 group/item active:scale-[0.99] transition pr-1" title="แตะเพื่อดูโปรไฟล์และเพิ่มรูปส่วนตัว">
+          <div id="testEmp3AvatarBox" class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-600 to-blue-700 text-white font-bold text-base flex items-center justify-center shadow-md flex-shrink-0 border-2 border-white overflow-hidden relative">
+            <span id="testEmp3AvatarFallback">👤</span>
+            <img id="testEmp3AvatarImg" src="" alt="Avatar" class="hidden w-full h-full object-cover">
           </div>
           <div class="min-w-0">
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">✓ ผูกเครื่องแล้ว</span>
-              <span class="text-[10px] text-slate-500 font-mono">#24590</span>
+              <span class="text-[10px] text-slate-500 font-mono testEmpIdDisplay">#24590</span>
             </div>
-            <div class="text-sm sm:text-base font-extrabold text-slate-900 truncate mt-0.5">
-              คุณพูลศักดิ์ ใจดี
+            <div class="text-sm sm:text-base font-extrabold text-slate-900 truncate mt-0.5 group-hover/item:text-sky-600 transition flex items-center gap-1">
+              <span class="testEmpNameDisplay">คุณพูลศักดิ์ ใจดี</span>
+              <span class="text-[11px] text-sky-500 opacity-70 group-hover/item:opacity-100">🪪</span>
             </div>
-            <div class="text-[10px] text-slate-500 truncate">
+            <div class="text-[10px] text-slate-500 truncate testEmpDeptDisplay">
               ฝ่ายบุคคล • สำนักงานใหญ่ (PTN-HQ)
             </div>
           </div>
         </div>
-        <div class="flex flex-col items-center justify-center p-1.5 rounded-xl bg-slate-100 group-hover:bg-sky-100 text-sky-700 transition flex-shrink-0 ml-2">
+        <!-- ปุ่มสลับเปลี่ยนพนักงาน -->
+        <button type="button" onclick="openTestEmpPickerModal()" class="flex flex-col items-center justify-center p-2 px-2.5 rounded-xl bg-slate-100 hover:bg-sky-100 text-sky-700 transition flex-shrink-0 ml-1.5 shadow-2xs border border-slate-200/60 active:scale-95" title="แตะเพื่อสลับรหัสพนักงาน">
           <i class="fa-solid fa-id-card text-base"></i>
           <span class="text-[9px] font-bold mt-0.5">เปลี่ยน</span>
-        </div>
+        </button>
       </div>
 
       <!-- [แบบเดิม: Original Header Profile Box] -->
-      <div id="wrapperEmpOld" onclick="openTestEmpPickerModal()" class="hidden mt-3.5 bg-white/15 hover:bg-white/25 active:scale-[0.99] backdrop-blur-md rounded-2xl p-3 border border-white/25 flex items-center justify-between cursor-pointer transition shadow-sm">
-        <div class="flex items-center space-x-3 min-w-0">
-          <div class="w-11 h-11 rounded-xl bg-sky-500 text-white font-medium text-base flex-shrink-0 flex items-center justify-center shadow-md">
-            ⏱️
+      <div id="wrapperEmpOld" class="hidden mt-3.5 bg-white/15 hover:bg-white/25 active:scale-[0.99] backdrop-blur-md rounded-2xl p-3 border border-white/25 flex items-center justify-between transition shadow-sm">
+        <div onclick="openTestEmpProfileModal()" class="flex items-center space-x-3 min-w-0 cursor-pointer flex-1" title="แตะเพื่อดูโปรไฟล์และเพิ่มรูปส่วนตัว">
+          <div class="w-11 h-11 rounded-xl bg-sky-500 text-white font-medium text-base flex-shrink-0 flex items-center justify-center shadow-md overflow-hidden">
+            <span id="testEmpOldAvatarFallback">⏱️</span>
+            <img id="testEmpOldAvatarImg" src="" alt="Avatar" class="hidden w-full h-full object-cover">
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-1.5">
-              <div class="text-xs text-sky-200 font-normal truncate">แตะเพื่อระบุตัวตนเข้าใช้งาน</div>
+              <div class="text-xs text-sky-200 font-normal truncate">แตะเพื่อดูโปรไฟล์และรูปภาพ</div>
               <span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-400 text-slate-900 shadow-sm">🔒 ล็อกเครื่อง</span>
             </div>
-            <div class="text-sm sm:text-base font-medium text-white truncate mt-0.5">
+            <div class="text-sm sm:text-base font-medium text-white truncate mt-0.5 testEmpNameDisplay">
               คุณพูลศักดิ์ ใจดี
             </div>
           </div>
         </div>
-        <div class="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl text-xs font-normal text-sky-100 flex items-center space-x-1.5 flex-shrink-0 ml-2 shadow-sm">
+        <button type="button" onclick="openTestEmpPickerModal()" class="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl text-xs font-normal text-sky-100 flex items-center space-x-1.5 flex-shrink-0 ml-2 shadow-sm active:scale-95 transition">
           <span>เปลี่ยน</span>
           <i class="fa-solid fa-chevron-down text-xs"></i>
-        </div>
+        </button>
       </div>
     </header>
 
@@ -640,7 +648,103 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 4. TEST EMPLOYEE PICKER MODAL (จำลองหน้าต่างเลือกรายชื่อพนักงาน) -->
+  <!-- 4. TEST EMPLOYEE PROFILE MODAL (โปรไฟล์พนักงาน + แนบรูปส่วนตัวเฉพาะเครื่อง) -->
+  <!-- ========================================================================= -->
+  <div id="modalTestEmpProfile" class="fixed inset-0 bg-black/65 z-50 flex items-center justify-center p-3 md:p-4 hidden backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-3.5 my-auto relative border border-slate-100 animate-fadeIn">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-sm font-bold">🪪</span>
+          <div>
+            <h3 class="text-sm md:text-base font-black text-slate-800">โปรไฟล์บัตรพนักงาน</h3>
+            <p class="text-[10px] text-slate-400">ข้อมูลประจำตัวบนแอป PTN Time</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeTestEmpProfileModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">&times;</button>
+      </div>
+
+      <!-- Avatar & Photo Upload / Change Section -->
+      <div class="flex flex-col items-center justify-center text-center pt-1">
+        <div class="relative group">
+          <!-- Main Profile Avatar Preview Container -->
+          <div id="modalEmpAvatarPreview" class="w-24 h-24 rounded-3xl bg-gradient-to-tr from-sky-600 to-blue-700 text-white font-black text-3xl flex items-center justify-center shadow-xl border-4 border-white overflow-hidden ring-4 ring-sky-100 transition">
+            <span id="modalEmpAvatarFallback">👤</span>
+            <img id="modalEmpAvatarImg" src="" alt="Custom Avatar" class="hidden w-full h-full object-cover">
+          </div>
+
+          <!-- Camera Badge Button -->
+          <button type="button" onclick="triggerCustomPhotoInput()" class="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-full bg-sky-600 hover:bg-sky-700 active:scale-90 text-white flex items-center justify-center shadow-lg border-2 border-white transition text-xs cursor-pointer" title="แตะเพื่อเปลี่ยนรูปถ่าย">
+            📷
+          </button>
+        </div>
+
+        <!-- Hidden File Input for Custom Photo -->
+        <input type="file" id="customPhotoFileInput" accept="image/*" class="hidden" onchange="handleCustomPhotoSelected(event)">
+
+        <div class="mt-2.5">
+          <h4 id="modalProfileName" class="text-base font-extrabold text-slate-900 testEmpNameDisplay">คุณพูลศักดิ์ ใจดี</h4>
+          <div class="flex items-center justify-center gap-1.5 mt-0.5">
+            <span id="modalProfileIdBadge" class="text-[11px] font-mono font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200 testEmpIdDisplay">#24590</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">✓ ผูกเครื่องนี้แล้ว</span>
+          </div>
+        </div>
+
+        <!-- Custom Photo Action Buttons -->
+        <div class="mt-3 w-full flex flex-col gap-1.5">
+          <button type="button" onclick="triggerCustomPhotoInput()" class="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>📷</span>
+            <span>เพิ่ม/เปลี่ยนรูปตัวเอง (ถ่ายหรือเลือกจากเครื่อง)</span>
+          </button>
+          
+          <button type="button" id="btnRemoveCustomPhoto" onclick="removeCustomPhoto()" class="hidden w-full py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-[11px] border border-rose-200 transition active:scale-95 flex items-center justify-center gap-1 cursor-pointer">
+            <span>🗑️</span>
+            <span>ใช้รูปดั้งเดิม (ลบรูปเฉพาะเครื่อง)</span>
+          </button>
+        </div>
+
+        <!-- Disclaimer Note Box -->
+        <div class="mt-2.5 p-2.5 rounded-2xl bg-amber-50/90 border border-amber-200/80 text-left flex items-start gap-2">
+          <span class="text-amber-600 text-sm mt-0.5 flex-shrink-0">💡</span>
+          <p class="text-[11px] text-amber-900 leading-relaxed">
+            <strong>หมายเหตุ:</strong> รูปที่เพิ่มนี้จะถูกบันทึกและแสดง<strong>เฉพาะบนเครื่องนี้เท่านั้น</strong> เพื่อความสะดวก ไม่กระทบหรือเปลี่ยนแปลงรูปพนักงานในระบบ <em>PTN Payroll</em> ครับ
+          </p>
+        </div>
+      </div>
+
+      <!-- Employee Information Rows -->
+      <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200/80 space-y-2 text-xs">
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
+          <span class="text-slate-500">แผนก / ตำแหน่ง</span>
+          <span id="modalProfileDept" class="font-bold text-slate-800 testEmpDeptDisplay">ฝ่ายบุคคล (HR)</span>
+        </div>
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
+          <span class="text-slate-500">สาขาประจำ</span>
+          <span id="modalProfileBranch" class="font-bold text-slate-800">สำนักงานใหญ่ (PTN-HQ)</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500">เวลาทำงานปกติ</span>
+          <span class="font-bold text-slate-800">09:30 - 19:00 น.</span>
+        </div>
+      </div>
+
+      <!-- Bottom Action Buttons -->
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="closeTestEmpProfileModal(); openTestEmpPickerModal();" class="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition active:scale-95 flex items-center justify-center gap-1">
+          <span>🔄</span>
+          <span>สลับรหัสพนักงาน</span>
+        </button>
+        <button type="button" onclick="closeTestEmpProfileModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition active:scale-95">
+          ปิด
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 5. TEST EMPLOYEE PICKER MODAL (จำลองหน้าต่างเลือกรายชื่อพนักงาน) -->
   <!-- ========================================================================= -->
   <div id="modalTestEmpPicker" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 md:p-4 hidden backdrop-blur-sm">
     <div class="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-5 shadow-2xl space-y-3.5 max-h-[90vh] flex flex-col my-auto">
@@ -735,6 +839,192 @@
     let lastRawPhotoData = null;
     let currentClockType = 'IN';
 
+    // Current Test Employee Model
+    let testCurrentEmp = {
+      empId: '24590',
+      name: 'คุณพูลศักดิ์ ใจดี',
+      dept: 'ฝ่ายบุคคล',
+      branch: 'สำนักงานใหญ่ (PTN-HQ)',
+      isLocked: true
+    };
+
+    function getCustomAvatarKey(empId) {
+      return 'ptn_custom_avatar_' + (empId || testCurrentEmp.empId);
+    }
+
+    // 0. EMPLOYEE PROFILE & CUSTOM PHOTO MODAL
+    function openTestEmpProfileModal() {
+      // 1. Populate texts
+      const nameEl = document.getElementById('modalProfileName');
+      const idEl = document.getElementById('modalProfileIdBadge');
+      const deptEl = document.getElementById('modalProfileDept');
+      const branchEl = document.getElementById('modalProfileBranch');
+
+      if (nameEl) nameEl.textContent = testCurrentEmp.name;
+      if (idEl) idEl.textContent = '#' + testCurrentEmp.empId;
+      if (deptEl) deptEl.textContent = testCurrentEmp.dept;
+      if (branchEl) branchEl.textContent = testCurrentEmp.branch;
+
+      // 2. Load custom avatar for this employee if exists
+      const savedPhoto = localStorage.getItem(getCustomAvatarKey(testCurrentEmp.empId));
+      const avatarImg = document.getElementById('modalEmpAvatarImg');
+      const avatarFallback = document.getElementById('modalEmpAvatarFallback');
+      const btnRemove = document.getElementById('btnRemoveCustomPhoto');
+
+      if (savedPhoto) {
+        avatarImg.src = savedPhoto;
+        avatarImg.classList.remove('hidden');
+        avatarFallback.classList.add('hidden');
+        btnRemove.classList.remove('hidden');
+      } else {
+        avatarImg.src = '';
+        avatarImg.classList.add('hidden');
+        avatarFallback.classList.remove('hidden');
+        btnRemove.classList.add('hidden');
+      }
+
+      document.getElementById('modalTestEmpProfile').classList.remove('hidden');
+    }
+
+    function closeTestEmpProfileModal() {
+      document.getElementById('modalTestEmpProfile').classList.add('hidden');
+    }
+
+    function triggerCustomPhotoInput() {
+      const input = document.getElementById('customPhotoFileInput');
+      if (input) input.click();
+    }
+
+    function handleCustomPhotoSelected(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ไฟล์ไม่ถูกต้อง',
+          text: 'กรุณาเลือกไฟล์รูปภาพ (JPG, PNG, WebP) เท่านั้นครับ'
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const tempImg = new Image();
+        tempImg.onload = function() {
+          // Resize to crisp square avatar (max 320x320)
+          const targetSize = 320;
+          const canvas = document.createElement('canvas');
+          canvas.width = targetSize;
+          canvas.height = targetSize;
+          const ctx = canvas.getContext('2d');
+
+          // Center crop to square
+          const minDim = Math.min(tempImg.width, tempImg.height);
+          const sx = (tempImg.width - minDim) / 2;
+          const sy = (tempImg.height - minDim) / 2;
+
+          ctx.drawImage(tempImg, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+          // Save locally per employee ID (Local Device Storage)
+          localStorage.setItem(getCustomAvatarKey(testCurrentEmp.empId), compressedDataUrl);
+
+          // Update UI across all card styles
+          applyTestCustomAvatar();
+
+          // Update Modal View
+          const avatarImg = document.getElementById('modalEmpAvatarImg');
+          const avatarFallback = document.getElementById('modalEmpAvatarFallback');
+          const btnRemove = document.getElementById('btnRemoveCustomPhoto');
+          if (avatarImg) {
+            avatarImg.src = compressedDataUrl;
+            avatarImg.classList.remove('hidden');
+          }
+          if (avatarFallback) avatarFallback.classList.add('hidden');
+          if (btnRemove) btnRemove.classList.remove('hidden');
+
+          Swal.fire({
+            icon: 'success',
+            title: 'เพิ่มรูปโปรไฟล์สำเร็จ!',
+            html: `<div class="text-xs text-slate-600 leading-relaxed">
+                     บันทึกรูปภาพไว้เฉพาะบนอุปกรณ์เครื่องนี้แล้ว<br>
+                     <span class="text-emerald-600 font-bold">✨ รูปในระบบ PTN Payroll ยังคงเดิม ไม่ถูกเปลี่ยนแปลง</span>
+                   </div>`,
+            timer: 2600,
+            showConfirmButton: false
+          });
+        };
+        tempImg.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    }
+
+    function removeCustomPhoto() {
+      Swal.fire({
+        title: 'ยืนยันลบรูปภาพเฉพาะเครื่อง?',
+        text: 'ระบบจะกลับไปใช้รูป/ไอคอนดั้งเดิมของพนักงาน',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันลบ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#e11d48'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          localStorage.removeItem(getCustomAvatarKey(testCurrentEmp.empId));
+          applyTestCustomAvatar();
+
+          const avatarImg = document.getElementById('modalEmpAvatarImg');
+          const avatarFallback = document.getElementById('modalEmpAvatarFallback');
+          const btnRemove = document.getElementById('btnRemoveCustomPhoto');
+          if (avatarImg) {
+            avatarImg.src = '';
+            avatarImg.classList.add('hidden');
+          }
+          if (avatarFallback) avatarFallback.classList.remove('hidden');
+          if (btnRemove) btnRemove.classList.add('hidden');
+
+          Swal.fire({
+            icon: 'info',
+            title: 'ใช้รูปดั้งเดิมแล้ว',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
+    }
+
+    function applyTestCustomAvatar() {
+      const savedPhoto = localStorage.getItem(getCustomAvatarKey(testCurrentEmp.empId));
+      
+      // Update image elements across cards
+      ['testEmp3AvatarImg', 'testEmp1AvatarImg', 'testEmp2AvatarImg', 'testEmpOldAvatarImg'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (savedPhoto) {
+            el.src = savedPhoto;
+            el.classList.remove('hidden');
+          } else {
+            el.src = '';
+            el.classList.add('hidden');
+          }
+        }
+      });
+
+      // Update fallback icon elements
+      ['testEmp3AvatarFallback', 'testEmp1AvatarFallback', 'testEmp2AvatarFallback', 'testEmpOldAvatarFallback'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (savedPhoto) {
+            el.classList.add('hidden');
+          } else {
+            el.classList.remove('hidden');
+          }
+        }
+      });
+    }
+
     // 0. EMPLOYEE CARD STYLE SWITCHER
     function selectEmpCardStyle(style) {
       currentEmpStyle = style;
@@ -761,6 +1051,18 @@
 
     function selectTestEmp(name, id, dept) {
       closeTestEmpPickerModal();
+      testCurrentEmp.name = name;
+      testCurrentEmp.empId = id;
+      testCurrentEmp.dept = dept;
+
+      // Update name/id across cards
+      document.querySelectorAll('.testEmpNameDisplay').forEach(el => el.textContent = name);
+      document.querySelectorAll('.testEmpIdDisplay').forEach(el => el.textContent = '#' + id);
+      document.querySelectorAll('.testEmpDeptDisplay').forEach(el => el.textContent = dept + ' • สำนักงานใหญ่ (PTN-HQ)');
+
+      // Apply custom photo for selected employee if already exists
+      applyTestCustomAvatar();
+
       Swal.fire({
         icon: 'success',
         title: 'เลือกพนักงานสำเร็จ',
@@ -1111,6 +1413,7 @@
     selectEmpCardStyle('emp3');
     selectBtnStyle('style3');
     setSimState('IN');
+    applyTestCustomAvatar();
   </script>
 </body>
 </html>
