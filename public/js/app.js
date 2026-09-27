@@ -3127,12 +3127,12 @@ async function loadTodayStatus() {
       const directGpsText = document.getElementById('txtHeroDirectGps');
 
       const heroBtnClasses = {
-        IN: 'radar-circle radar-emerald w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-xl shadow-emerald-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
-        OUT: 'radar-circle radar-rose w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 text-white shadow-xl shadow-rose-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
-        BREAK_OUT: 'radar-circle radar-amber w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 text-white shadow-xl shadow-amber-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
-        BREAK_IN: 'radar-circle radar-sky w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-sky-600 via-cyan-500 to-sky-400 text-white shadow-xl shadow-sky-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
-        DONE: 'radar-done w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-slate-700 via-slate-600 to-slate-500 text-white shadow-lg shadow-slate-500/25 flex flex-col items-center justify-center transition-all duration-200 cursor-default',
-        LOCKED: 'radar-done w-28 h-28 sm:w-32 sm:h-32 rounded-full text-slate-300 shadow-lg flex flex-col items-center justify-center bg-slate-700/90 border-2 border-slate-600/80 cursor-pointer'
+        IN: 'radar-circle radar-emerald w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-2xl shadow-emerald-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        OUT: 'radar-circle radar-rose w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 text-white shadow-2xl shadow-rose-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        BREAK_OUT: 'radar-circle radar-amber w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 text-white shadow-2xl shadow-amber-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        BREAK_IN: 'radar-circle radar-sky w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-sky-600 via-cyan-500 to-sky-400 text-white shadow-2xl shadow-sky-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        DONE: 'radar-done w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-slate-700 via-slate-600 to-slate-500 text-white shadow-xl shadow-slate-500/30 flex flex-col items-center justify-center transition-all duration-200 cursor-default',
+        LOCKED: 'radar-done w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full text-slate-300 shadow-xl flex flex-col items-center justify-center bg-slate-700/90 border-2 border-slate-600/80 cursor-pointer'
       };
 
       let currentAction = 'IN';
@@ -4584,22 +4584,55 @@ function switchTab(tab) {
     tab = 'clock';
   }
 
+  const tabStyles = {
+    clock: {
+      pillActive: 'w-12 h-8 rounded-xl flex items-center justify-center bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/35 scale-105 ring-2 ring-sky-300 transition-all',
+      pillInactive: 'w-12 h-8 rounded-xl flex items-center justify-center bg-sky-50 text-sky-600 hover:bg-sky-100 transition-all',
+      textActive: 'text-[11px] md:text-xs mt-1 text-sky-600 font-extrabold transition',
+      textInactive: 'text-[11px] md:text-xs mt-1 text-slate-600 font-medium transition'
+    },
+    history: {
+      pillActive: 'w-12 h-8 rounded-xl flex items-center justify-center bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/35 scale-105 ring-2 ring-indigo-300 transition-all',
+      pillInactive: 'w-12 h-8 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all',
+      textActive: 'text-[11px] md:text-xs mt-1 text-indigo-600 font-extrabold transition',
+      textInactive: 'text-[11px] md:text-xs mt-1 text-slate-600 font-medium transition'
+    },
+    requests: {
+      pillActive: 'w-12 h-8 rounded-xl flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/35 scale-105 ring-2 ring-emerald-300 transition-all',
+      pillInactive: 'w-12 h-8 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all',
+      textActive: 'text-[11px] md:text-xs mt-1 text-emerald-600 font-extrabold transition',
+      textInactive: 'text-[11px] md:text-xs mt-1 text-slate-600 font-medium transition'
+    },
+    payslip: {
+      pillActive: 'w-12 h-8 rounded-xl flex items-center justify-center bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/35 scale-105 ring-2 ring-amber-300 transition-all relative',
+      pillInactive: 'w-12 h-8 rounded-xl flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all relative',
+      textActive: 'text-[11px] md:text-xs mt-1 text-amber-600 font-extrabold transition',
+      textInactive: 'text-[11px] md:text-xs mt-1 text-slate-600 font-medium transition'
+    }
+  };
+
   const tabs = ['clock', 'history', 'requests', 'payslip'];
   tabs.forEach(t => {
     const section = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
     const navBtn = document.getElementById('navBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+    const pill = document.getElementById('navPill' + t.charAt(0).toUpperCase() + t.slice(1));
+    const text = document.getElementById('navText' + t.charAt(0).toUpperCase() + t.slice(1));
     if (section) section.classList.add('hidden');
     if (navBtn) {
-      navBtn.className = 'flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-600 transition';
+      navBtn.className = 'flex-1 flex flex-col items-center justify-center py-1 transition group';
+    }
+    const isCurrent = (t === tab);
+    const style = tabStyles[t];
+    if (pill && style) {
+      pill.className = isCurrent ? style.pillActive : style.pillInactive;
+    }
+    if (text && style) {
+      text.className = isCurrent ? style.textActive : style.textInactive;
     }
   });
 
   const activeSection = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
-  const activeNavBtn = document.getElementById('navBtn' + tab.charAt(0).toUpperCase() + tab.slice(1));
   if (activeSection) activeSection.classList.remove('hidden');
-  if (activeNavBtn) {
-    activeNavBtn.className = 'flex-1 flex flex-col items-center justify-center py-1 text-sky-600 transition font-semibold';
-  }
 
   if (tab === 'history') {
     loadEmployeeHistory();

@@ -395,14 +395,14 @@
       <!-- 4. HERO BUTTON (แตะเพื่อเปิดกล้องทดสอบได้เลย) -->
       <!-- ========================================================================= -->
 
-      <!-- [สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนลายนิ้วมือ/QR - Circular Radar Ring (เลือกใช้ในหน้าจริง)] -->
-      <div id="wrapperStyle3" class="py-2.5 flex flex-col items-center justify-center text-center space-y-2">
-        <button type="button" onclick="openTestCamera()" id="btnStyle3" class="radar-circle radar-emerald w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-xl shadow-emerald-500/35 flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer">
-          <span class="text-3xl sm:text-4xl" id="s3Icon">☀️</span>
-          <span class="text-xs sm:text-sm font-bold tracking-tight text-white mt-1" id="s3Title">แตะลงเวลาเข้า</span>
-          <span class="text-[10px] text-white/90 font-medium px-2 py-0.5 rounded-full bg-white/20 mt-0.5" id="s3Badge">สแกน QR</span>
+      <!-- [สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนลายนิ้วมือ/QR - Circular Radar Ring (เลือกใช้ในหน้าจริง - ขยายใหญ่)] -->
+      <div id="wrapperStyle3" class="py-3 flex flex-col items-center justify-center text-center space-y-2">
+        <button type="button" onclick="openTestCamera()" id="btnStyle3" class="radar-circle radar-emerald w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-2xl shadow-emerald-500/40 flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer">
+          <span class="text-4xl sm:text-5xl" id="s3Icon">☀️</span>
+          <span class="text-sm sm:text-base font-extrabold tracking-tight text-white mt-1.5" id="s3Title">แตะลงเวลาเข้า</span>
+          <span class="text-[11px] sm:text-xs text-white/95 font-semibold px-2.5 py-0.5 rounded-full bg-white/20 mt-1 border border-white/20" id="s3Badge">สแกน QR</span>
         </button>
-        <span class="text-[11px] text-slate-500 font-medium" id="s3Sub">✨ แตะปุ่มเพื่อเปิดกล้องเซลฟี่หน้าเนียน (ไม่เช็ค GPS)</span>
+        <span class="text-xs sm:text-sm text-slate-500 font-medium" id="s3Sub">✨ แตะปุ่มเพื่อเปิดกล้องเซลฟี่หน้าเนียน (ไม่เช็ค GPS)</span>
       </div>
 
       <!-- [สไตล์ที่ 1: แคปซูลแนวนอน โมเดิร์น สไตล์ iOS] -->
@@ -480,25 +480,7 @@
         </button>
       </div>
 
-      <!-- 5. Quick Shortcuts (4 ช่อง) -->
-      <div class="grid grid-cols-4 gap-2 pt-0.5 text-center">
-        <div class="p-2 rounded-xl bg-white border border-slate-200 shadow-xs">
-          <div class="text-xl">📅</div>
-          <div class="text-[11px] font-medium text-slate-700 mt-0.5">ประวัติ</div>
-        </div>
-        <div class="p-2 rounded-xl bg-white border border-slate-200 shadow-xs">
-          <div class="text-xl">💵</div>
-          <div class="text-[11px] font-medium text-slate-700 mt-0.5">เบิกเงิน</div>
-        </div>
-        <div class="p-2 rounded-xl bg-white border border-slate-200 shadow-xs">
-          <div class="text-xl">🏖️</div>
-          <div class="text-[11px] font-medium text-slate-700 mt-0.5">ลางาน</div>
-        </div>
-        <div class="p-2 rounded-xl bg-white border border-slate-200 shadow-xs">
-          <div class="text-xl">📄</div>
-          <div class="text-[11px] font-medium text-slate-700 mt-0.5">สลิป</div>
-        </div>
-      </div>
+
 
     </main>
 
@@ -1105,7 +1087,7 @@
 
       // Style 3 (Radar)
       const b3 = document.getElementById('btnStyle3');
-      b3.className = 'radar-circle ' + (isIn ? 'radar-emerald' : 'radar-rose') + ' w-28 h-28 sm:w-32 sm:h-32 rounded-full ' + (isIn ? 'bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 shadow-emerald-500/35' : 'bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 shadow-rose-500/35') + ' text-white shadow-xl flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer';
+      b3.className = 'radar-circle ' + (isIn ? 'radar-emerald' : 'radar-rose') + ' w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full ' + (isIn ? 'bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 shadow-emerald-500/40' : 'bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 shadow-rose-500/40') + ' text-white shadow-2xl flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer';
       document.getElementById('s3Icon').textContent = isIn ? '☀️' : '🚪';
       document.getElementById('s3Title').textContent = isIn ? 'แตะลงเวลาเข้า' : 'แตะลงเวลาออก';
 

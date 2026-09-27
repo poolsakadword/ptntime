@@ -58,7 +58,7 @@
   </script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=10.2">
+  <link rel="stylesheet" href="css/style.css?v=10.3">
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center">
 
@@ -241,19 +241,19 @@
           </div>
         </div>
 
-        <!-- 4. HERO ACTION BUTTON (สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนสัมผัส Circular Radar Ring) -->
-        <div class="space-y-2 pt-1">
+        <!-- 4. HERO ACTION BUTTON (สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนสัมผัส Circular Radar Ring - ขยายใหญ่พิเศษ) -->
+        <div class="space-y-2 pt-2">
           <!-- Circular Radar Button Wrapper -->
-          <div class="py-2.5 flex flex-col items-center justify-center text-center">
-            <button id="heroActionButton" type="button" class="radar-circle radar-emerald w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-xl shadow-emerald-500/35 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer">
+          <div class="py-3 flex flex-col items-center justify-center text-center">
+            <button id="heroActionButton" type="button" class="radar-circle radar-emerald w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-2xl shadow-emerald-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer">
               <div id="heroActionIconBox" class="flex items-center justify-center">
-                <span id="heroActionIcon" class="text-3xl sm:text-4xl">☀️</span>
+                <span id="heroActionIcon" class="text-4xl sm:text-5xl">☀️</span>
               </div>
-              <span id="heroActionTitle" class="text-xs sm:text-sm font-bold tracking-tight text-white mt-1">แตะลงเวลาเข้า</span>
-              <span id="heroActionBadge" class="text-[10px] text-white/90 font-medium px-2 py-0.5 rounded-full bg-white/20 mt-0.5">สแกน QR</span>
+              <span id="heroActionTitle" class="text-sm sm:text-base font-extrabold tracking-tight text-white mt-1.5">แตะลงเวลาเข้า</span>
+              <span id="heroActionBadge" class="text-[11px] sm:text-xs text-white/95 font-semibold px-2.5 py-0.5 rounded-full bg-white/20 mt-1 border border-white/20">สแกน QR</span>
             </button>
             
-            <div id="heroActionSubtitle" class="text-[11px] sm:text-xs text-slate-500 font-normal max-w-[280px] leading-tight mt-2.5">
+            <div id="heroActionSubtitle" class="text-xs sm:text-sm text-slate-500 font-normal max-w-[300px] leading-relaxed mt-3">
               สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
             </div>
           </div>
@@ -287,27 +287,6 @@
               </button>
             </div>
           </div>
-        </div>
-
-        <!-- 6. Quick Access Shortcuts (บริการตนเอง: ประวัติ / เบิกเงิน / ลางาน / สลิปเงินเดือน) -->
-        <div class="grid grid-cols-4 gap-2 pt-1">
-          <button type="button" onclick="switchTab('history')" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-xl sm:text-2xl">📅</div>
-            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">ประวัติเวลา</div>
-          </button>
-          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-xl sm:text-2xl">💵</div>
-            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">ขอเบิกเงิน</div>
-          </button>
-          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-xl sm:text-2xl">🏖️</div>
-            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">แจ้งลางาน</div>
-          </button>
-          <button type="button" id="quickBtnPayslip" onclick="switchTab('payslip')" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95 relative">
-            <div class="text-xl sm:text-2xl">💰</div>
-            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">สลิปเงิน</div>
-            <span id="quickPayslipBadge" class="hidden absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
-          </button>
         </div>
 
       </section>
@@ -702,26 +681,38 @@
 
     <!-- Bottom Navigation Bar (4 Tabs for Employee Portal) & System Branding Footer -->
     <nav class="fixed bottom-0 w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white/95 backdrop-blur-md border-t border-slate-200 flex flex-col z-40 shadow-2xl safe-bottom transition-all">
-      <div class="flex items-center justify-around py-2 md:py-2.5 px-3">
-        <button onclick="switchTab('clock')" id="navBtnClock" class="flex-1 flex flex-col items-center justify-center py-1 text-sky-600 transition">
-          <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <span class="text-xs md:text-sm font-extrabold mt-1">ลงเวลา</span>
+      <div class="flex items-center justify-around py-1.5 md:py-2 px-2 sm:px-4">
+        <!-- Tab 1: Clock (สดใส: สีฟ้า Sky/Blue) -->
+        <button onclick="switchTab('clock')" id="navBtnClock" class="flex-1 flex flex-col items-center justify-center py-1 transition group">
+          <div id="navPillClock" class="w-12 h-8 rounded-xl flex items-center justify-center bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/35 scale-105 ring-2 ring-sky-300 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <span id="navTextClock" class="text-[11px] md:text-xs mt-1 text-sky-600 font-extrabold transition">ลงเวลา</span>
         </button>
 
-        <button onclick="switchTab('history')" id="navBtnHistory" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
-          <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-          <span class="text-xs md:text-sm font-semibold mt-1">ประวัติ</span>
+        <!-- Tab 2: History (สดใส: สีม่วงคราม Indigo/Violet) -->
+        <button onclick="switchTab('history')" id="navBtnHistory" class="flex-1 flex flex-col items-center justify-center py-1 transition group">
+          <div id="navPillHistory" class="w-12 h-8 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+          </div>
+          <span id="navTextHistory" class="text-[11px] md:text-xs mt-1 text-slate-600 font-medium transition">ประวัติ</span>
         </button>
 
-        <button onclick="switchTab('requests')" id="navBtnRequests" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
-          <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <span class="text-xs md:text-sm font-semibold mt-1">ขอเบิก/ลา</span>
+        <!-- Tab 3: Requests (สดใส: สีเขียวมรกต Emerald/Teal) -->
+        <button onclick="switchTab('requests')" id="navBtnRequests" class="flex-1 flex flex-col items-center justify-center py-1 transition group">
+          <div id="navPillRequests" class="w-12 h-8 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <span id="navTextRequests" class="text-[11px] md:text-xs mt-1 text-slate-600 font-medium transition">ขอเบิก/ลา</span>
         </button>
 
-        <button onclick="switchTab('payslip')" id="navBtnPayslip" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition relative">
-          <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path></svg>
-          <span class="text-xs md:text-sm font-semibold mt-1">สลิปเงิน</span>
-          <span id="badgePayslipNew" class="hidden absolute top-1 right-3.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+        <!-- Tab 4: Payslip (สดใส: สีทองส้ม Amber/Orange) -->
+        <button onclick="switchTab('payslip')" id="navBtnPayslip" class="flex-1 flex flex-col items-center justify-center py-1 transition group relative">
+          <div id="navPillPayslip" class="w-12 h-8 rounded-xl flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all relative">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path></svg>
+            <span id="badgePayslipNew" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping"></span>
+          </div>
+          <span id="navTextPayslip" class="text-[11px] md:text-xs mt-1 text-slate-600 font-medium transition">สลิปเงิน</span>
         </button>
       </div>
 
@@ -1484,6 +1475,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=10.2"></script>
+  <script src="js/app.js?v=10.3"></script>
 </body>
 </html>
