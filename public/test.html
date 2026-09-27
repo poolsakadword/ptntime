@@ -59,37 +59,68 @@
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css?v=9.8">
+  <style>
+    .glass-aurora {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+    }
+    .neo-shadow-mint {
+      box-shadow: 0 14px 35px -8px rgba(16, 185, 129, 0.38);
+    }
+    .neo-shadow-amber {
+      box-shadow: 0 14px 35px -8px rgba(245, 158, 11, 0.38);
+    }
+    .neo-shadow-coral {
+      box-shadow: 0 14px 35px -8px rgba(244, 63, 94, 0.38);
+    }
+    .neo-shadow-purple {
+      box-shadow: 0 14px 35px -8px rgba(147, 51, 234, 0.38);
+    }
+    @keyframes pulse-ring {
+      0%, 100% { box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4); }
+      50% { box-shadow: 0 20px 35px -5px rgba(16, 185, 129, 0.65); }
+    }
+    .hero-pulse { animation: pulse-ring 2.5s infinite; }
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center">
+<body class="bg-slate-900 md:bg-slate-950 min-h-screen text-slate-800 antialiased flex flex-col items-center selection:bg-sky-500 selection:text-white">
 
   <!-- Responsive Wrapper Container (Mobile & Tablet/iPad/Desktop Adaptive) -->
-  <div class="w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white min-h-screen shadow-2xl flex flex-col relative pb-28 transition-all duration-200">
+  <div class="w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-gradient-to-b from-sky-50 via-slate-50 to-indigo-50/40 min-h-screen shadow-2xl flex flex-col relative pb-28 border-x border-slate-200/50 transition-all duration-200">
     
-    <!-- TEST MODE BANNER -->
-    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-2 flex items-center justify-between text-xs font-medium shadow-sm">
+    <!-- TEST MODE BANNER (Concept 1: Vibrant Bento & Aurora Glass) -->
+    <div class="bg-gradient-to-r from-sky-600 via-indigo-600 to-pink-600 text-white px-4 py-2 flex items-center justify-between text-xs font-medium shadow-sm">
       <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 rounded-full bg-white/20 font-bold text-[10px] tracking-wide">🧪 TEST PAGE</span>
-        <span>หน้าทดสอบ: <strong>แบบที่ 1 Modern Minimalist (Apple Health Style)</strong></span>
+        <span class="px-2 py-0.5 rounded-full bg-white/25 font-black text-[10px] tracking-wide border border-white/30">🧪 TEST PAGE</span>
+        <span>หน้าทดสอบ: <strong>แบบที่ 1 Vibrant Bento & Aurora Glass</strong></span>
       </div>
       <a href="/index.html" class="bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded-lg text-white font-bold transition flex items-center gap-1 active:scale-95 text-[11px]">
         <span>← กลับหน้าหลัก</span>
       </a>
     </div>
 
-    <!-- Top App Bar & Profile Card (Apple Modern Clean) -->
-    <header class="bg-white/95 backdrop-blur-md text-slate-800 p-4 md:p-5 border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
+    <!-- Top App Bar & Profile Card (Vibrant Aurora Glass Header) -->
+    <header class="bg-white/80 backdrop-blur-xl text-slate-800 p-4 md:p-5 border-b border-white/60 sticky top-0 z-30 shadow-xs">
       <div class="flex items-center justify-between">
-        <!-- Employee Avatar & Welcome -->
+        <!-- Employee Avatar & Welcome with Rainbow Aurora Ring -->
         <div onclick="handleHeaderEmployeeCardClick()" class="flex items-center space-x-3 cursor-pointer group min-w-0">
-          <div id="headerEmpAvatar" class="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-bold text-base flex-shrink-0 flex items-center justify-center shadow-md ring-2 ring-white">
-            ⏱️
+          <div class="relative flex-shrink-0">
+            <div class="w-12 h-12 md:w-13 md:h-13 rounded-2xl bg-gradient-to-tr from-sky-400 via-indigo-500 to-pink-500 p-0.5 shadow-md">
+              <div id="headerEmpAvatar" class="w-full h-full rounded-[14px] bg-white text-slate-800 font-extrabold text-base flex items-center justify-center shadow-inner">
+                ⏱️
+              </div>
+            </div>
+            <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-[8px] text-white font-bold">✓</span>
           </div>
           <div class="min-w-0">
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <span id="headerEmpSub" class="text-xs text-slate-500 font-medium truncate">ยินดีต้อนรับ 👋</span>
-              <span id="headerLockBadge" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">🔒 ล็อกเครื่อง</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold border border-sky-200">HQ • สนง.ใหญ่</span>
+              <span id="headerLockBadge" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">🔒 ล็อกเครื่อง</span>
             </div>
-            <div id="headerEmpName" class="text-base md:text-lg font-bold text-slate-900 truncate leading-tight group-hover:text-sky-600 transition">
+            <div id="headerEmpName" class="text-base md:text-lg font-black text-slate-900 truncate leading-tight group-hover:text-sky-600 transition mt-0.5">
               กรุณาแตะเพื่อเลือกรหัสพนักงาน
             </div>
           </div>
@@ -157,87 +188,132 @@
       <!-- ========================================================================= -->
       <section id="tabClock" class="space-y-4">
 
-        <!-- 1. UNIFIED LIVE STATUS CARD (รวมเวลาเดินจริง + สถานะ + GPS + ไทม์ไลน์ 4 สเต็ป) -->
-        <div class="bg-white rounded-3xl p-5 md:p-6 border border-slate-200 shadow-sm relative overflow-hidden space-y-4">
-          <!-- Top row: Clock & Status on left, GPS on right -->
-          <div class="flex items-start justify-between">
-            <div>
+        <!-- 1. VIBRANT BENTO & AURORA GLASS CARD (คอนเซ็ปต์ที่ 1: การ์ดกระจกแก้วออโรร่า + วงแหวนเปอร์เซ็นต์เวลางาน + 4 เบนโตะชิปสีสดใส) -->
+        <div class="glass-aurora rounded-3xl p-5 md:p-6 border border-white/80 shadow-xl shadow-slate-200/60 relative overflow-hidden space-y-4">
+          
+          <!-- Subtle Aurora Glow Orb in Background -->
+          <div class="absolute -top-12 -right-12 w-44 h-44 bg-gradient-to-br from-emerald-400/20 via-sky-400/20 to-indigo-400/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="absolute -bottom-10 -left-10 w-36 h-36 bg-gradient-to-tr from-amber-400/15 via-rose-400/15 to-transparent rounded-full blur-2xl pointer-events-none"></div>
+
+          <!-- Top row: Status & Digital Clock on left, Circular Work Progress Ring on right -->
+          <div class="relative z-10 flex items-start justify-between">
+            <div class="space-y-1">
               <!-- Status Badge & Icon -->
               <div class="flex items-center gap-1.5">
-                <span id="todayStatusIcon" class="text-lg">🌅</span>
-                <span id="todayStatusBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                <span id="todayStatusIcon" class="text-base">☀️</span>
+                <span id="todayStatusBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200/80 shadow-2xs">
                   พร้อมลงเวลา
                 </span>
+                <span id="todayLateInfo" class="text-[11px] text-slate-400 font-medium ml-1">เกณฑ์ 09:30 น.</span>
               </div>
               
-              <!-- Crisp Big Clock -->
-              <div class="text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-900 mt-1 drop-shadow-2xs" id="liveClock">
+              <!-- Big Digital Clock -->
+              <div class="text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-900 drop-shadow-2xs" id="liveClock">
                 00:00:00
               </div>
-              <div class="text-xs text-slate-400 font-medium mt-0.5" id="liveDateThai">
+              
+              <!-- Thai Date -->
+              <div class="text-xs text-slate-500 font-medium flex items-center gap-1" id="liveDateThai">
                 กำลังโหลดวันที่...
               </div>
               <div class="hidden" id="liveClockSubtext">ตัดวิกทุกวันที่ 25</div>
               <div class="hidden" id="todayStatusText">ยังไม่ได้ลงเวลาวันนี้</div>
             </div>
 
-            <!-- Right: GPS pill & refresh -->
-            <div class="text-right space-y-1.5 flex-shrink-0">
-              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200/80 shadow-2xs">
-                <span id="gpsPulseDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span id="gpsBadge">รอตรวจพิกัด</span>
-              </div>
-              <div class="text-[11px] text-slate-500 font-medium" id="gpsDistanceText">
-                ระยะห่าง: รอคำนวณ
-              </div>
-              <div class="hidden" id="gpsStatusText">กำลังค้นหาตำแหน่ง GPS...</div>
-              <div>
-                <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-bold transition shadow-2xs">
-                  <svg id="iconRefreshGps" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                  <span>รีเฟรช GPS</span>
-                </button>
+            <!-- Right: Circular Work Progress Donut Arc (Apple Ring Style) -->
+            <div class="relative flex flex-col items-center justify-center flex-shrink-0 pt-1">
+              <div class="relative w-20 h-20 flex items-center justify-center">
+                <svg class="w-20 h-20 transform -rotate-90 drop-shadow-xs" viewBox="0 0 72 72">
+                  <circle cx="36" cy="36" r="28" stroke="currentColor" stroke-width="6.5" class="text-slate-100" fill="transparent" />
+                  <circle id="workProgressArc" cx="36" cy="36" r="28" stroke="url(#arcAuroraGrad)" stroke-width="6.5" stroke-linecap="round" class="transition-all duration-700 ease-out" fill="transparent" stroke-dasharray="175.93" stroke-dashoffset="175.93" />
+                  <defs>
+                    <linearGradient id="arcAuroraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#10b981"/>
+                      <stop offset="50%" stop-color="#06b6d4"/>
+                      <stop offset="100%" stop-color="#6366f1"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                  <span id="workProgressPercent" class="text-sm font-black text-slate-800 tracking-tight">0%</span>
+                  <span class="text-[9px] font-semibold text-slate-400">เวลากะ</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Horizontal 4-Step Attendance Stepper (Apple Health Style) -->
-          <div class="pt-3.5 border-t border-slate-100 space-y-2">
-            <div class="flex items-center justify-between text-xs">
-              <span class="font-bold text-slate-700 flex items-center gap-1">
-                <span>📋</span> สเต็ปการลงเวลาประจำวัน
-              </span>
-              <span id="todayLateInfo" class="text-xs text-slate-500 font-medium">เกณฑ์ 09:30 น.</span>
+          <!-- GPS Location Pill with Satellite Sync & Refresh -->
+          <div class="relative z-10 flex items-center justify-between p-2.5 px-3 rounded-2xl bg-white/70 backdrop-blur-md border border-slate-200/70 shadow-xs">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs shadow-xs">
+                📍
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span id="gpsPulseDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span id="gpsBadge" class="text-xs font-bold text-slate-800">รอตรวจพิกัด</span>
+                </div>
+                <div class="text-[11px] text-slate-500 font-medium" id="gpsDistanceText">
+                  ระยะห่าง: รอคำนวณ
+                </div>
+                <div class="hidden" id="gpsStatusText">กำลังค้นหาตำแหน่ง GPS...</div>
+              </div>
             </div>
 
-            <!-- Horizontal Progress Bar (4 Segments) -->
+            <div>
+              <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-slate-900 text-xs font-bold transition shadow-2xs active:scale-95">
+                <svg id="iconRefreshGps" class="w-3.5 h-3.5 text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <span>รีเฟรช</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 VIBRANT BENTO CHIPS: เข้าเช้า / ออกพัก / เข้าบ่าย / ออกงาน -->
+          <div class="relative z-10 pt-1 space-y-2">
+            <!-- 4-Segment Rainbow Stepper Line -->
             <div class="grid grid-cols-4 gap-1.5" id="horizontalStepperBars">
-              <div id="stepBarMorning" class="h-2 rounded-full bg-slate-200 transition-all duration-300"></div>
-              <div id="stepBarBreakOut" class="h-2 rounded-full bg-slate-200 transition-all duration-300"></div>
-              <div id="stepBarBreakIn" class="h-2 rounded-full bg-slate-200 transition-all duration-300"></div>
-              <div id="stepBarEvening" class="h-2 rounded-full bg-slate-200 transition-all duration-300"></div>
+              <div id="stepBarMorning" class="h-1.5 rounded-full bg-slate-200 transition-all duration-300"></div>
+              <div id="stepBarBreakOut" class="h-1.5 rounded-full bg-slate-200 transition-all duration-300"></div>
+              <div id="stepBarBreakIn" class="h-1.5 rounded-full bg-slate-200 transition-all duration-300"></div>
+              <div id="stepBarEvening" class="h-1.5 rounded-full bg-slate-200 transition-all duration-300"></div>
             </div>
 
-            <!-- Stepper Labels with Actual Punch Times -->
-            <div class="grid grid-cols-4 gap-1.5 text-center" id="timelineBoxesContainer">
-              <!-- Step 1: เข้าเช้า -->
-              <div id="timeBoxMorning" class="p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
-                <span class="text-[10px] text-slate-500 font-medium">☀️ เข้าเช้า</span>
-                <div id="todayClockInTime" class="text-xs md:text-sm font-bold text-slate-400 font-mono mt-0.5">--:--:--</div>
+            <!-- Bento Chips -->
+            <div class="grid grid-cols-4 gap-2 text-center" id="timelineBoxesContainer">
+              <!-- Chip 1: เข้าเช้า (Mint Green Accent) -->
+              <div id="timeBoxMorning" class="p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all">
+                <div class="flex items-center justify-center gap-1">
+                  <span class="text-xs">☀️</span>
+                  <span class="text-[10px] font-bold text-slate-600">เข้าเช้า</span>
+                </div>
+                <div id="todayClockInTime" class="text-xs md:text-sm font-black text-slate-400 font-mono mt-1">--:--:--</div>
               </div>
-              <!-- Step 2: ออกพัก -->
-              <div id="timeBoxBreakOut" class="p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
-                <span class="text-[10px] text-slate-500 font-medium">☕ เริ่มพัก</span>
-                <div id="todayBreakOutTime" class="text-xs md:text-sm font-bold text-slate-400 font-mono mt-0.5">--:--:--</div>
+
+              <!-- Chip 2: ออกพัก (Amber Honey Accent) -->
+              <div id="timeBoxBreakOut" class="p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all">
+                <div class="flex items-center justify-center gap-1">
+                  <span class="text-xs">☕</span>
+                  <span class="text-[10px] font-bold text-slate-600">เริ่มพัก</span>
+                </div>
+                <div id="todayBreakOutTime" class="text-xs md:text-sm font-black text-slate-400 font-mono mt-1">--:--:--</div>
               </div>
-              <!-- Step 3: เข้าบ่าย -->
-              <div id="timeBoxBreakIn" class="p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
-                <span class="text-[10px] text-slate-500 font-medium">💼 เข้าบ่าย</span>
-                <div id="todayBreakInTime" class="text-xs md:text-sm font-bold text-slate-400 font-mono mt-0.5">--:--:--</div>
+
+              <!-- Chip 3: เข้าบ่าย (Purple Lavender Accent) -->
+              <div id="timeBoxBreakIn" class="p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all">
+                <div class="flex items-center justify-center gap-1">
+                  <span class="text-xs">💼</span>
+                  <span class="text-[10px] font-bold text-slate-600">เข้าบ่าย</span>
+                </div>
+                <div id="todayBreakInTime" class="text-xs md:text-sm font-black text-slate-400 font-mono mt-1">--:--:--</div>
               </div>
-              <!-- Step 4: ออกงาน -->
-              <div id="timeBoxEvening" class="p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
-                <span class="text-[10px] text-slate-500 font-medium">🚪 ออกงาน</span>
-                <div id="todayClockOutTime" class="text-xs md:text-sm font-bold text-slate-400 font-mono mt-0.5">--:--:--</div>
+
+              <!-- Chip 4: ออกงาน (Coral Rose Accent) -->
+              <div id="timeBoxEvening" class="p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all">
+                <div class="flex items-center justify-center gap-1">
+                  <span class="text-xs">🚪</span>
+                  <span class="text-[10px] font-bold text-slate-600">ออกงาน</span>
+                </div>
+                <div id="todayClockOutTime" class="text-xs md:text-sm font-black text-slate-400 font-mono mt-1">--:--:--</div>
               </div>
             </div>
 
@@ -247,17 +323,20 @@
           </div>
         </div>
 
-        <!-- 2. HERO ACTION BUTTON (Modern Rounded Card with Elevated Shadow) -->
+        <!-- 2. HIGH-IMPACT HERO ACTION BUTTON (Vibrant Neon Glow) -->
         <div class="space-y-2.5 pt-1">
           <!-- Hero Button Element -->
-          <button id="heroActionButton" type="button" class="w-full py-6 md:py-7 px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex items-center justify-between bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 hero-pulse group">
-            <div class="flex items-center space-x-4 text-left">
-              <div id="heroActionIconBox" class="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl md:text-4xl shadow-inner border border-white/25 group-hover:scale-105 transition-transform flex-shrink-0">
+          <button id="heroActionButton" type="button" class="w-full py-5 md:py-6 px-5 md:px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex items-center justify-between bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/25 hero-pulse group relative overflow-hidden">
+            <!-- Shiny sheen overlay -->
+            <div class="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
+
+            <div class="relative z-10 flex items-center space-x-3.5 md:space-x-4 text-left">
+              <div id="heroActionIconBox" class="w-13 h-13 md:w-16 md:h-16 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center text-3xl md:text-4xl shadow-inner border border-white/35 group-hover:scale-105 transition-transform flex-shrink-0">
                 <span id="heroActionIcon">☀️</span>
               </div>
               <div>
-                <div class="text-xs font-semibold text-white/80 uppercase tracking-wider">แตะปุ่มนี้เพื่อทำรายการ</div>
-                <div id="heroActionTitle" class="text-xl md:text-2xl font-bold tracking-tight text-white mt-0.5">
+                <div class="text-[10px] md:text-xs font-bold text-white/85 tracking-wider uppercase">แตะเพื่อทำรายการทันที</div>
+                <div id="heroActionTitle" class="text-lg md:text-2xl font-black tracking-tight text-white mt-0.5">
                   แตะเพื่อลงเวลาเข้างาน
                 </div>
                 <div id="heroActionSubtitle" class="text-xs md:text-sm font-medium text-emerald-100 mt-0.5">
@@ -265,7 +344,7 @@
                 </div>
               </div>
             </div>
-            <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-white text-xl shadow-xs group-hover:translate-x-1 transition-transform flex-shrink-0">
+            <div class="relative z-10 w-10 h-10 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center text-white text-xl shadow-xs group-hover:translate-x-1 transition-transform flex-shrink-0 border border-white/30">
               &rarr;
             </div>
           </button>
@@ -295,7 +374,7 @@
 
             <!-- Direct GPS Button (shown when allow_direct_gps === 'true') -->
             <div id="containerHeroDirectGps" class="text-center hidden">
-              <button type="button" id="btnHeroDirectGps" class="w-full py-2.5 px-4 bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-700 font-medium text-xs md:text-sm rounded-2xl border border-slate-200 flex items-center justify-center space-x-2 transition shadow-2xs">
+              <button type="button" id="btnHeroDirectGps" class="w-full py-2.5 px-4 bg-white/90 hover:bg-white active:scale-[0.98] text-slate-700 font-medium text-xs md:text-sm rounded-2xl border border-slate-200 flex items-center justify-center space-x-2 transition shadow-2xs">
                 <span class="text-base">📸</span>
                 <span id="txtHeroDirectGps">ถ่ายรูปด้วย GPS โดยตรง (ไม่ต้องใช้ QR)</span>
               </button>
@@ -303,24 +382,39 @@
           </div>
         </div>
 
-        <!-- 6. Quick Access Shortcuts (บริการตนเอง: ประวัติ / เบิกเงิน / ลางาน / สลิปเงินเดือน) -->
-        <div class="grid grid-cols-4 gap-2 pt-1">
-          <button type="button" onclick="switchTab('history')" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-xl sm:text-2xl">📅</div>
-            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">ประวัติเวลา</div>
+        <!-- 3. COLORFUL BENTO SHORTCUT TILES (บริการตนเอง: ประวัติ / เบิกเงิน / ลางาน / สลิปเงินเดือน) -->
+        <div class="grid grid-cols-4 gap-2.5 pt-1">
+          <!-- Tile 1: ประวัติเวลา (Sky Blue Bento) -->
+          <button type="button" onclick="switchTab('history')" class="p-3 rounded-2xl bg-sky-50/90 hover:bg-sky-100/90 border border-sky-100 text-center transition shadow-xs active:scale-95 group">
+            <div class="w-10 h-10 mx-auto rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+              📅
+            </div>
+            <div class="text-[11px] font-bold text-sky-950 mt-1.5">ประวัติเวลา</div>
           </button>
-          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-xl sm:text-2xl">💵</div>
-            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">ขอเบิกเงิน</div>
+
+          <!-- Tile 2: ขอเบิกเงิน (Amber Bento) -->
+          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="p-3 rounded-2xl bg-amber-50/90 hover:bg-amber-100/90 border border-amber-100 text-center transition shadow-xs active:scale-95 group">
+            <div class="w-10 h-10 mx-auto rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+              💵
+            </div>
+            <div class="text-[11px] font-bold text-amber-950 mt-1.5">ขอเบิกเงิน</div>
           </button>
-          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95">
-            <div class="text-xl sm:text-2xl">🏖️</div>
-            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">แจ้งลางาน</div>
+
+          <!-- Tile 3: แจ้งลางาน (Emerald Bento) -->
+          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="p-3 rounded-2xl bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-100 text-center transition shadow-xs active:scale-95 group">
+            <div class="w-10 h-10 mx-auto rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+              🏖️
+            </div>
+            <div class="text-[11px] font-bold text-emerald-950 mt-1.5">แจ้งลางาน</div>
           </button>
-          <button type="button" id="quickBtnPayslip" onclick="switchTab('payslip')" class="p-2.5 sm:p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-center transition shadow-sm active:scale-95 relative">
-            <div class="text-xl sm:text-2xl">💰</div>
-            <div class="text-[11px] sm:text-xs font-medium text-slate-700 mt-1">สลิปเงิน</div>
-            <span id="quickPayslipBadge" class="hidden absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+
+          <!-- Tile 4: สลิปเงินเดือน (Indigo Bento) -->
+          <button type="button" id="quickBtnPayslip" onclick="switchTab('payslip')" class="p-3 rounded-2xl bg-indigo-50/90 hover:bg-indigo-100/90 border border-indigo-100 text-center transition shadow-xs active:scale-95 relative group">
+            <div class="w-10 h-10 mx-auto rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+              💰
+            </div>
+            <div class="text-[11px] font-bold text-indigo-950 mt-1.5">สลิปเงิน</div>
+            <span id="quickPayslipBadge" class="hidden absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
           </button>
         </div>
 
@@ -1385,7 +1479,7 @@
   <!-- Main JavaScript -->
   <script src="js/app.js?v=10.0"></script>
 
-  <!-- Stepper Visual Synchronizer for Concept 1 (Apple Health Style) -->
+  <!-- Stepper Visual Synchronizer for Concept 1 (Apple Health Style & Work Donut Arc) -->
   <script>
     (function() {
       function syncStepperProgress() {
@@ -1399,27 +1493,69 @@
         const hasBIn = tBIn && tBIn !== '--:--:--';
         const hasOut = tOut && tOut !== '--:--:--';
 
-        // Stepper Progress Bars
+        // 1. Stepper Progress Bars (Top Rainbow line)
         const b1 = document.getElementById('stepBarMorning');
         const b2 = document.getElementById('stepBarBreakOut');
         const b3 = document.getElementById('stepBarBreakIn');
         const b4 = document.getElementById('stepBarEvening');
 
-        if (b1) b1.className = hasIn ? 'h-2 rounded-full bg-emerald-500 shadow-xs' : 'h-2 rounded-full bg-slate-200 transition-all duration-300';
-        if (b2) b2.className = hasBOut ? 'h-2 rounded-full bg-amber-500 shadow-xs' : 'h-2 rounded-full bg-slate-200 transition-all duration-300';
-        if (b3) b3.className = hasBIn ? 'h-2 rounded-full bg-sky-500 shadow-xs' : 'h-2 rounded-full bg-slate-200 transition-all duration-300';
-        if (b4) b4.className = hasOut ? 'h-2 rounded-full bg-rose-500 shadow-xs' : 'h-2 rounded-full bg-slate-200 transition-all duration-300';
+        if (b1) b1.className = hasIn ? 'h-1.5 rounded-full bg-emerald-500 shadow-xs' : 'h-1.5 rounded-full bg-slate-200 transition-all duration-300';
+        if (b2) b2.className = hasBOut ? 'h-1.5 rounded-full bg-amber-500 shadow-xs' : 'h-1.5 rounded-full bg-slate-200 transition-all duration-300';
+        if (b3) b3.className = hasBIn ? 'h-1.5 rounded-full bg-indigo-500 shadow-xs' : 'h-1.5 rounded-full bg-slate-200 transition-all duration-300';
+        if (b4) b4.className = hasOut ? 'h-1.5 rounded-full bg-rose-500 shadow-xs' : 'h-1.5 rounded-full bg-slate-200 transition-all duration-300';
 
-        // Time boxes active styling
+        // 2. Bento Chips Active Dynamic Styling
         const box1 = document.getElementById('timeBoxMorning');
         const box2 = document.getElementById('timeBoxBreakOut');
         const box3 = document.getElementById('timeBoxBreakIn');
         const box4 = document.getElementById('timeBoxEvening');
+        const txt1 = document.getElementById('todayClockInTime');
+        const txt2 = document.getElementById('todayBreakOutTime');
+        const txt3 = document.getElementById('todayBreakInTime');
+        const txt4 = document.getElementById('todayClockOutTime');
 
-        if (box1) box1.className = hasIn ? 'p-1.5 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col justify-between transition-colors' : 'p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between transition-colors';
-        if (box2) box2.className = hasBOut ? 'p-1.5 rounded-xl bg-amber-50 border border-amber-200 flex flex-col justify-between transition-colors' : 'p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between transition-colors';
-        if (box3) box3.className = hasBIn ? 'p-1.5 rounded-xl bg-sky-50 border border-sky-200 flex flex-col justify-between transition-colors' : 'p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between transition-colors';
-        if (box4) box4.className = hasOut ? 'p-1.5 rounded-xl bg-rose-50 border border-rose-200 flex flex-col justify-between transition-colors' : 'p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between transition-colors';
+        if (box1) box1.className = hasIn ? 'p-2 rounded-2xl bg-emerald-50/90 border border-emerald-300 ring-2 ring-emerald-400/25 neo-shadow-mint flex flex-col justify-between transition-all' : 'p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all';
+        if (txt1) txt1.className = hasIn ? 'text-xs md:text-sm font-black text-emerald-700 font-mono mt-1' : 'text-xs md:text-sm font-black text-slate-400 font-mono mt-1';
+
+        if (box2) box2.className = hasBOut ? 'p-2 rounded-2xl bg-amber-50/90 border border-amber-300 ring-2 ring-amber-400/25 neo-shadow-amber flex flex-col justify-between transition-all' : 'p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all';
+        if (txt2) txt2.className = hasBOut ? 'text-xs md:text-sm font-black text-amber-700 font-mono mt-1' : 'text-xs md:text-sm font-black text-slate-400 font-mono mt-1';
+
+        if (box3) box3.className = hasBIn ? 'p-2 rounded-2xl bg-indigo-50/90 border border-indigo-300 ring-2 ring-indigo-400/25 neo-shadow-purple flex flex-col justify-between transition-all' : 'p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all';
+        if (txt3) txt3.className = hasBIn ? 'text-xs md:text-sm font-black text-indigo-700 font-mono mt-1' : 'text-xs md:text-sm font-black text-slate-400 font-mono mt-1';
+
+        if (box4) box4.className = hasOut ? 'p-2 rounded-2xl bg-rose-50/90 border border-rose-300 ring-2 ring-rose-400/25 neo-shadow-coral flex flex-col justify-between transition-all' : 'p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all';
+        if (txt4) txt4.className = hasOut ? 'text-xs md:text-sm font-black text-rose-700 font-mono mt-1' : 'text-xs md:text-sm font-black text-slate-400 font-mono mt-1';
+
+        // 3. Work Progress Circular Ring (Calculated against standard shift 09:30 - 19:00)
+        let percent = 0;
+        if (hasOut) {
+          percent = 100;
+        } else if (hasIn) {
+          const now = new Date();
+          const currentMins = now.getHours() * 60 + now.getMinutes();
+          const startMins = 9 * 60 + 30; // 09:30
+          const endMins = 19 * 60;       // 19:00
+          if (currentMins <= startMins) {
+            percent = 5;
+          } else if (currentMins >= endMins) {
+            percent = 100;
+          } else {
+            percent = Math.min(99, Math.max(5, Math.round(((currentMins - startMins) / (endMins - startMins)) * 100)));
+          }
+        } else {
+          percent = 0;
+        }
+
+        const arc = document.getElementById('workProgressArc');
+        const pTxt = document.getElementById('workProgressPercent');
+        const circ = 175.93;
+        if (arc) {
+          const offset = circ - (circ * (percent / 100));
+          arc.style.strokeDashoffset = offset;
+        }
+        if (pTxt) {
+          pTxt.textContent = percent + '%';
+        }
       }
 
       setInterval(syncStepperProgress, 600);
