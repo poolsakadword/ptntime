@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PTN Time — แบบ C (Warm Pastel Aurora) หน้าทดสอบ</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#fecdd3">
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    /* Aurora Warm Pastel Mesh Gradient Background */
+    body {
+      background: linear-gradient(135deg, #ffd7c2 0%, #fecdd3 25%, #e9d5ff 55%, #cffafe 85%, #fef3c7 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    /* Subtle Glassmorphism Card Effects */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 10px 25px -5px rgba(225, 112, 85, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    }
+
+    .glass-card-sm {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .glass-pill {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    /* Warm Gradient Coral Button */
+    .btn-coral-gradient {
+      background: linear-gradient(135deg, #f97316 0%, #fb7185 45%, #f43f5e 100%);
+      box-shadow: 0 12px 28px -6px rgba(244, 63, 94, 0.42), 0 4px 10px -2px rgba(249, 115, 22, 0.3);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-coral-gradient:hover {
+      box-shadow: 0 16px 32px -6px rgba(244, 63, 94, 0.52);
+      transform: translateY(-1px);
+    }
+    .btn-coral-gradient:active {
+      transform: scale(0.98);
+    }
+
+    /* Work Progress Bar Multi-Stop Gradient */
+    .progress-gradient {
+      background: linear-gradient(90deg, #fdba74 0%, #f472b6 45%, #a855f7 100%);
+    }
+
+    /* Soft Tile Styling */
+    .tile-peach {
+      background: rgba(254, 215, 170, 0.82);
+      border: 1px solid rgba(253, 186, 116, 0.6);
+      color: #9a3412;
+    }
+    .tile-peach:active { background: #fed7aa; }
+
+    .tile-purple {
+      background: rgba(233, 213, 255, 0.82);
+      border: 1px solid rgba(216, 180, 254, 0.6);
+      color: #6b21a8;
+    }
+    .tile-purple:active { background: #e9d5ff; }
+
+    .tile-mint {
+      background: rgba(187, 247, 208, 0.82);
+      border: 1px solid rgba(134, 239, 172, 0.6);
+      color: #166534;
+    }
+    .tile-mint:active { background: #bbf7d0; }
+
+    .tile-blue {
+      background: rgba(186, 230, 253, 0.82);
+      border: 1px solid rgba(125, 211, 252, 0.6);
+      color: #075985;
+    }
+    .tile-blue:active { background: #bae6fd; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-start p-3 sm:p-6 antialiased text-slate-800">
+
+  <!-- Mobile/Tablet Screen Container Frame -->
+  <div class="w-full max-w-md mx-auto flex flex-col space-y-4 pb-12 transition-all">
+
+    <!-- Top Badge Indicator (Test Mode Bar) -->
+    <div class="bg-white/80 backdrop-blur-md px-3.5 py-1.5 rounded-full flex items-center justify-between text-xs text-slate-600 shadow-sm border border-white/80">
+      <div class="flex items-center gap-1.5 font-medium text-rose-600">
+        <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+        <span class="font-bold">✨ หน้าทดสอบแบบ C</span>
+        <span class="text-slate-400">|</span>
+        <span class="text-slate-600 font-normal">Warm Pastel Aurora</span>
+      </div>
+      <a href="index.html" class="text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-1">
+        <span>หน้าหลัก</span>
+        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+      </a>
+    </div>
+
+    <!-- 1. TOP HEADER & EMPLOYEE PROFILE -->
+    <div class="flex items-center justify-between px-1">
+      <div class="flex items-center space-x-3.5">
+        <!-- Avatar Photo Placeholder -->
+        <div class="relative cursor-pointer group" onclick="switchEmployeeMock()">
+          <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-rose-400 via-purple-300 to-sky-300 p-0.5 shadow-md group-hover:scale-105 transition">
+            <img id="empAvatarImg" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256" alt="Avatar" class="w-full h-full rounded-full object-cover">
+          </div>
+          <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+        </div>
+        <!-- Name & Branch Info -->
+        <div>
+          <div class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight leading-tight flex items-center gap-1.5" id="empNameText">
+            <span>สุภารัตน์ แก้วกล้า</span>
+          </div>
+          <div class="text-xs text-slate-600 font-normal mt-0.5" id="empSubText">
+            พนักงาน #<span id="empIdText">24590</span> • <span class="font-medium text-slate-700" id="empBranchText">สนง.ใหญ่</span>
+          </div>
+        </div>
+      </div>
+      <!-- Notification Bell -->
+      <button type="button" onclick="showMockNotif()" class="relative p-2.5 rounded-2xl glass-card text-slate-700 hover:text-slate-900 transition active:scale-95 shadow-sm" title="การแจ้งเตือน">
+        <i class="fa-regular fa-bell text-lg"></i>
+        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
+      </button>
+    </div>
+
+    <!-- 2. GREETING CARD -->
+    <div class="glass-card rounded-[28px] p-5 shadow-sm space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2" id="liveGreetingText">
+          <span>สวัสดีตอนบ่ายค่ะ</span>
+          <span class="animate-bounce">👋</span>
+        </div>
+        <!-- Shift Hours Pill Badge -->
+        <span class="px-3 py-1 rounded-full bg-teal-500/90 text-white text-xs font-medium shadow-sm inline-flex items-center gap-1 border border-teal-400">
+          <i class="fa-regular fa-clock text-[10px]"></i>
+          <span>09:30 - 19:00 (10 ชม.)</span>
+        </span>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-500 font-normal" id="liveFullDateThai">
+        กำลังโหลดวันที่...
+      </div>
+    </div>
+
+    <!-- 3. MAIN CLOCK AREA & WORK PROGRESS -->
+    <div class="glass-card rounded-[30px] p-6 text-center space-y-3.5 shadow-sm">
+      <!-- Big Clock with Seconds -->
+      <div class="flex items-baseline justify-center">
+        <span id="liveClockHourMin" class="text-6xl sm:text-7xl font-extrabold text-slate-800 tracking-tight font-mono">15:04</span>
+        <span id="liveClockSeconds" class="text-2xl sm:text-3xl font-bold text-slate-400 font-mono ml-1">:31</span>
+      </div>
+
+      <!-- Animated Progress Bar -->
+      <div class="space-y-1.5 pt-1">
+        <div class="w-full bg-slate-200/70 h-7 rounded-full overflow-hidden p-0.5 border border-white/60 relative flex items-center justify-center shadow-inner">
+          <div id="shiftProgressBar" class="progress-gradient h-full rounded-full transition-all duration-700 flex items-center justify-center absolute left-0.5 top-0.5 bottom-0.5" style="width: 58%;"></div>
+          <span id="shiftProgressText" class="relative z-10 text-xs font-bold text-white drop-shadow-sm tracking-wide">
+            58% ของกะงาน
+          </span>
+        </div>
+        <!-- Duration Summary -->
+        <div class="text-xs text-slate-500 font-normal pt-0.5 flex items-center justify-center gap-1.5" id="shiftSummaryText">
+          <span>ทำงานแล้ว <strong class="font-semibold text-slate-700" id="workedHoursText">5 ชม. 34 นาที</strong></span>
+          <span>•</span>
+          <span>เหลืออีก <strong class="font-semibold text-slate-700" id="remainHoursText">3 ชม. 26 นาที</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. PUNCH CARDS ROW (4 STEP TIMELINE) -->
+    <div class="grid grid-cols-4 gap-2">
+      <!-- 1: เข้าเช้า -->
+      <div class="glass-card-sm rounded-2xl p-2.5 sm:p-3 text-center relative overflow-hidden flex flex-col justify-between shadow-xs transition hover:scale-[1.02]">
+        <div class="h-1.5 w-full bg-emerald-400 absolute top-0 left-0 right-0"></div>
+        <div class="text-[11px] sm:text-xs text-slate-600 font-medium mt-1">เข้าเช้า</div>
+        <div class="text-sm sm:text-base font-bold text-slate-800 font-mono mt-0.5" id="stepTime1">09:28</div>
+        <div class="text-[10px] text-emerald-600 font-medium mt-0.5">✅ ตรงเวลา</div>
+      </div>
+
+      <!-- 2: ออกพัก -->
+      <div class="glass-card-sm rounded-2xl p-2.5 sm:p-3 text-center relative overflow-hidden flex flex-col justify-between shadow-xs transition hover:scale-[1.02]">
+        <div class="h-1.5 w-full bg-amber-400 absolute top-0 left-0 right-0"></div>
+        <div class="text-[11px] sm:text-xs text-slate-600 font-medium mt-1">ออกพัก</div>
+        <div class="text-sm sm:text-base font-bold text-slate-800 font-mono mt-0.5" id="stepTime2">13:00</div>
+        <div class="text-[10px] text-amber-600 font-medium mt-0.5">☕ พัก 60น.</div>
+      </div>
+
+      <!-- 3: กลับงาน -->
+      <div class="glass-card-sm rounded-2xl p-2.5 sm:p-3 text-center relative overflow-hidden flex flex-col justify-between shadow-xs transition hover:scale-[1.02]">
+        <div class="h-1.5 w-full bg-indigo-500 absolute top-0 left-0 right-0"></div>
+        <div class="text-[11px] sm:text-xs text-slate-600 font-medium mt-1">กลับงาน</div>
+        <div class="text-sm sm:text-base font-bold text-slate-800 font-mono mt-0.5" id="stepTime3">13:58</div>
+        <div class="text-[10px] text-indigo-600 font-medium mt-0.5">👍 เข้าบ่าย</div>
+      </div>
+
+      <!-- 4: เลิกงาน -->
+      <div class="glass-card-sm rounded-2xl p-2.5 sm:p-3 text-center relative overflow-hidden flex flex-col justify-between shadow-xs transition hover:scale-[1.02] border-2 border-rose-300">
+        <div class="h-1.5 w-full bg-rose-400 absolute top-0 left-0 right-0"></div>
+        <div class="text-[11px] sm:text-xs text-rose-800 font-semibold mt-1">เลิกงาน</div>
+        <div class="text-sm sm:text-base font-bold text-slate-400 font-mono mt-0.5" id="stepTime4">--:--</div>
+        <div class="text-[10px] text-rose-600 font-medium mt-0.5">รอสแกน</div>
+      </div>
+    </div>
+
+    <!-- 5. GPS MINI BAR -->
+    <div class="glass-pill rounded-full px-4 py-2.5 flex items-center justify-between text-xs text-slate-700 shadow-xs">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="font-medium text-slate-800" id="gpsStatusLocation">📍 ในรัศมีสำนักงาน (12m)</span>
+      </div>
+      <button type="button" onclick="refreshGpsMock()" class="text-slate-500 hover:text-slate-800 text-xs font-medium p-1 transition flex items-center gap-1" title="จับพิกัดใหม่">
+        <i class="fa-solid fa-arrows-rotate text-[11px]" id="gpsRefreshIcon"></i>
+        <span>รีเฟรช</span>
+      </button>
+    </div>
+
+    <!-- 6. MAIN ACTION BUTTON (BIG CORAL GRADIENT PILL) -->
+    <div class="space-y-1.5 pt-1">
+      <button type="button" id="btnMainScanAction" onclick="handleScanMockAction()" class="btn-coral-gradient w-full py-4 sm:py-4.5 px-6 rounded-full text-white font-bold text-lg sm:text-xl tracking-wide flex items-center justify-center gap-2.5 text-center cursor-pointer">
+        <span id="btnMainScanText">สแกนออกงาน</span>
+        <span class="text-2xl" id="btnMainScanIcon">🚪</span>
+      </button>
+      <div class="text-center">
+        <button type="button" onclick="handleDirectGpsMock()" class="text-xs text-slate-500 hover:text-slate-700 font-medium inline-flex items-center gap-1 transition">
+          <i class="fa-solid fa-camera text-[11px]"></i>
+          <span>หรือถ่ายเซลฟี่ด้วย GPS</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 7. QUICK SHORTCUT TILES (4 PASTEL BUTTONS) -->
+    <div class="grid grid-cols-4 gap-2.5 pt-1">
+      <!-- 1: ประวัติ (Peach) -->
+      <button type="button" onclick="openHistoryMock()" class="tile-peach rounded-2xl p-3 sm:p-3.5 text-center shadow-xs transition active:scale-95 flex flex-col items-center justify-center space-y-1">
+        <div class="text-2xl sm:text-3xl">📅</div>
+        <div class="text-xs font-bold mt-1">ประวัติ</div>
+      </button>
+
+      <!-- 2: เบิกเงิน (Purple) -->
+      <button type="button" onclick="openAdvanceMock()" class="tile-purple rounded-2xl p-3 sm:p-3.5 text-center shadow-xs transition active:scale-95 flex flex-col items-center justify-center space-y-1">
+        <div class="text-2xl sm:text-3xl">💵</div>
+        <div class="text-xs font-bold mt-1">เบิกเงิน</div>
+      </button>
+
+      <!-- 3: ลาหยุด (Mint) -->
+      <button type="button" onclick="openLeaveMock()" class="tile-mint rounded-2xl p-3 sm:p-3.5 text-center shadow-xs transition active:scale-95 flex flex-col items-center justify-center space-y-1">
+        <div class="text-2xl sm:text-3xl">🏖️</div>
+        <div class="text-xs font-bold mt-1">ลาหยุด</div>
+      </button>
+
+      <!-- 4: สลิปเงิน (Sky Blue) -->
+      <button type="button" onclick="openPayslipMock()" class="tile-blue rounded-2xl p-3 sm:p-3.5 text-center shadow-xs transition active:scale-95 flex flex-col items-center justify-center space-y-1 relative">
+        <div class="text-2xl sm:text-3xl">📄</div>
+        <div class="text-xs font-bold mt-1">สลิปเงิน</div>
+        <span class="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+      </button>
+    </div>
+
+    <!-- 8. DEMO INTERACTIVE CONTROLS (แผงควบคุมทดสอบเปลี่ยนสถานะ) -->
+    <div class="mt-6 p-4 rounded-3xl bg-white/70 backdrop-blur-md border border-white/80 shadow-xs space-y-3">
+      <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-sliders text-rose-500"></i>
+          <span>เครื่องมือทดสอบการทำงาน (Interactive Simulator)</span>
+        </span>
+        <span class="text-[10px] text-slate-400 font-normal">คลิกเพื่อดูการเปลี่ยนสถานะ</span>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+        <button type="button" onclick="setAttendanceState('NOT_IN')" class="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition text-center">
+          1. ยังไม่เข้างาน
+        </button>
+        <button type="button" onclick="setAttendanceState('WORKING')" class="py-1.5 px-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-medium transition text-center">
+          2. เข้าเช้าแล้ว
+        </button>
+        <button type="button" onclick="setAttendanceState('ON_BREAK')" class="py-1.5 px-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition text-center">
+          3. กำลังพักเที่ยง
+        </button>
+        <button type="button" onclick="setAttendanceState('AFTERNOON')" class="py-1.5 px-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold transition text-center">
+          4. พร้อมออกงาน
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JavaScript Logic for Live Clock, Progress, and State Simulator -->
+  <script>
+    // Thai Days & Months
+    const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+    const thaiMonths = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+
+    // Work Shift: 09:30 - 19:00 (10 hours = 600 minutes)
+    const SHIFT_START_HOUR = 9;
+    const SHIFT_START_MIN = 30;
+    const SHIFT_END_HOUR = 19;
+    const SHIFT_END_MIN = 0;
+
+    let currentState = 'AFTERNOON'; // Initial state shown in mockup C
+
+    function updateLiveClock() {
+      const now = new Date();
+      
+      // Clock Numbers
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      
+      document.getElementById('liveClockHourMin').textContent = `${h}:${m}`;
+      document.getElementById('liveClockSeconds').textContent = `:${s}`;
+
+      // Date Display (วันเสาร์ที่ 27 กันยายน 2569)
+      const dayName = thaiDays[now.getDay()];
+      const dateNum = now.getDate();
+      const monthName = thaiMonths[now.getMonth()];
+      const yearBuddhist = now.getFullYear() + 543;
+      document.getElementById('liveFullDateThai').textContent = `${dayName}ที่ ${dateNum} ${monthName} ${yearBuddhist}`;
+
+      // Greeting based on time of day
+      const hour = now.getHours();
+      let greeting = 'สวัสดีตอนเช้าค่ะ';
+      let icon = '🌅';
+      if (hour >= 12 && hour < 17) {
+        greeting = 'สวัสดีตอนบ่ายค่ะ';
+        icon = '👋';
+      } else if (hour >= 17) {
+        greeting = 'สวัสดีตอนเย็นค่ะ';
+        icon = '🌆';
+      }
+      document.getElementById('liveGreetingText').innerHTML = `<span>${greeting}</span> <span class="animate-bounce">${icon}</span>`;
+
+      // Calculate shift progress percentage
+      const totalShiftMinutes = (SHIFT_END_HOUR * 60 + SHIFT_END_MIN) - (SHIFT_START_HOUR * 60 + SHIFT_START_MIN); // 570 mins
+      const currentDayMinutes = now.getHours() * 60 + now.getMinutes();
+      const startShiftDayMinutes = SHIFT_START_HOUR * 60 + SHIFT_START_MIN; // 570
+      
+      let workedMins = Math.max(0, currentDayMinutes - startShiftDayMinutes);
+      let pct = Math.min(100, Math.max(0, Math.round((workedMins / totalShiftMinutes) * 100)));
+
+      // In AFTERNOON state for mockup matching, default to 58% if early in day
+      if (pct === 0 && currentState === 'AFTERNOON') {
+        pct = 58;
+        workedMins = Math.round(totalShiftMinutes * 0.58);
+      }
+
+      const workedH = Math.floor(workedMins / 60);
+      const workedM = workedMins % 60;
+      const remainMins = Math.max(0, totalShiftMinutes - workedMins);
+      const remainH = Math.floor(remainMins / 60);
+      const remainM = remainMins % 60;
+
+      document.getElementById('shiftProgressBar').style.width = `${pct}%`;
+      document.getElementById('shiftProgressText').textContent = `${pct}% ของกะงาน`;
+      document.getElementById('workedHoursText').textContent = `${workedH} ชม. ${workedM} นาที`;
+      document.getElementById('remainHoursText').textContent = `${remainH} ชม. ${remainM} นาที`;
+    }
+
+    // Set Attendance State (Simulation)
+    function setAttendanceState(state) {
+      currentState = state;
+      const btnScan = document.getElementById('btnMainScanAction');
+      const btnText = document.getElementById('btnMainScanText');
+      const btnIcon = document.getElementById('btnMainScanIcon');
+
+      const s1 = document.getElementById('stepTime1');
+      const s2 = document.getElementById('stepTime2');
+      const s3 = document.getElementById('stepTime3');
+      const s4 = document.getElementById('stepTime4');
+
+      if (state === 'NOT_IN') {
+        btnText.textContent = 'สแกนเข้างานเช้า';
+        btnIcon.textContent = '☀️';
+        btnScan.className = 'w-full py-4 sm:py-4.5 px-6 rounded-full text-white font-bold text-lg sm:text-xl tracking-wide flex items-center justify-center gap-2.5 text-center cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 shadow-lg shadow-emerald-500/30';
+        s1.textContent = '--:--';
+        s2.textContent = '--:--';
+        s3.textContent = '--:--';
+        s4.textContent = '--:--';
+      } else if (state === 'WORKING') {
+        btnText.textContent = 'สแกนออกไปพัก';
+        btnIcon.textContent = '☕';
+        btnScan.className = 'w-full py-4 sm:py-4.5 px-6 rounded-full text-white font-bold text-lg sm:text-xl tracking-wide flex items-center justify-center gap-2.5 text-center cursor-pointer bg-gradient-to-r from-amber-500 to-orange-500 shadow-lg shadow-amber-500/30';
+        s1.textContent = '09:28';
+        s2.textContent = '--:--';
+        s3.textContent = '--:--';
+        s4.textContent = '--:--';
+      } else if (state === 'ON_BREAK') {
+        btnText.textContent = 'สแกนกลับเข้างาน';
+        btnIcon.textContent = '💼';
+        btnScan.className = 'w-full py-4 sm:py-4.5 px-6 rounded-full text-white font-bold text-lg sm:text-xl tracking-wide flex items-center justify-center gap-2.5 text-center cursor-pointer bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30';
+        s1.textContent = '09:28';
+        s2.textContent = '13:00';
+        s3.textContent = '--:--';
+        s4.textContent = '--:--';
+      } else { // AFTERNOON (Mockup C exact look)
+        btnText.textContent = 'สแกนออกงาน';
+        btnIcon.textContent = '🚪';
+        btnScan.className = 'btn-coral-gradient w-full py-4 sm:py-4.5 px-6 rounded-full text-white font-bold text-lg sm:text-xl tracking-wide flex items-center justify-center gap-2.5 text-center cursor-pointer';
+        s1.textContent = '09:28';
+        s2.textContent = '13:00';
+        s3.textContent = '13:58';
+        s4.textContent = '--:--';
+      }
+    }
+
+    // Handlers
+    function handleScanMockAction() {
+      const titles = {
+        'NOT_IN': 'ลงเวลาเข้างานเช้า',
+        'WORKING': 'ออกไปพักเที่ยง',
+        'ON_BREAK': 'กลับเข้าทำงานช่วงบ่าย',
+        'AFTERNOON': 'ลงเวลาออกงาน (เลิกงาน)'
+      };
+      Swal.fire({
+        title: `📸 ${titles[currentState]}`,
+        text: 'ระบบกำลังเปิดกล้องสแกน QR Code ประจำสาขา...',
+        icon: 'info',
+        confirmButtonText: 'จำลองสแกนสำเร็จ',
+        showCancelButton: true,
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#f43f5e'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({
+            title: 'บันทึกเวลาสำเร็จ! 🎉',
+            text: `บันทึกรายการเรียบร้อยเวลา ${new Date().toLocaleTimeString('th-TH')}`,
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        }
+      });
+    }
+
+    function handleDirectGpsMock() {
+      Swal.fire({
+        title: '📸 ถ่ายรูปยืนยันด้วย GPS',
+        text: 'พิกัดปัจจุบัน: อยู่ในรัศมีที่กำหนด (12 ม.) สามารถถ่ายรูปยืนยันตัวตนได้ทันที',
+        icon: 'question',
+        confirmButtonText: 'ถ่ายรูปเซลฟี่',
+        confirmButtonColor: '#f43f5e',
+        showCancelButton: true,
+        cancelButtonText: 'ยกเลิก'
+      });
+    }
+
+    function refreshGpsMock() {
+      const icon = document.getElementById('gpsRefreshIcon');
+      icon.classList.add('fa-spin');
+      setTimeout(() => {
+        icon.classList.remove('fa-spin');
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'อัปเดตตำแหน่ง GPS สำเร็จ (12 ม.)',
+          showConfirmButton: false,
+          timer: 1500
+        });
+      }, 700);
+    }
+
+    function showMockNotif() {
+      Swal.fire({
+        title: '🔔 การแจ้งเตือน',
+        html: `
+          <div class="text-left text-sm space-y-2.5">
+            <div class="p-2.5 rounded-xl bg-rose-50 border border-rose-200">
+              <div class="font-bold text-rose-800">🎉 แจ้งเตือนสลิปเงินเดือน</div>
+              <div class="text-xs text-rose-600">สลิปเงินเดือนรอบล่าสุดออกแล้ว แตะเพื่อดูรายละเอียด</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-bold text-slate-800">✅ ผลอนุมัติคำขอลา</div>
+              <div class="text-xs text-slate-600">คำขอลากิจได้รับการอนุมัติเรียบร้อยแล้ว</div>
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'ปิด',
+        confirmButtonColor: '#0284c7'
+      });
+    }
+
+    function openHistoryMock() {
+      Swal.fire({
+        title: '📅 ประวัติเวลาทำงาน',
+        text: 'เข้าดูประวัติการลงเวลาย้อนหลัง รอบตัดวิก 26 ถึง 25',
+        confirmButtonText: 'ไปที่หน้าหลัก',
+        showCancelButton: true,
+        cancelButtonText: 'ปิด',
+        confirmButtonColor: '#f97316'
+      }).then(res => {
+        if (res.isConfirmed) window.location.href = 'index.html';
+      });
+    }
+
+    function openAdvanceMock() {
+      Swal.fire({
+        title: '💵 ยื่นขอเบิกเงินล่วงหน้า',
+        text: 'เปิดแบบฟอร์มขอเบิกเงินเดือนล่วงหน้าระหว่างรอบวิก',
+        confirmButtonText: 'ไปที่หน้าหลัก',
+        showCancelButton: true,
+        cancelButtonText: 'ปิด',
+        confirmButtonColor: '#a855f7'
+      }).then(res => {
+        if (res.isConfirmed) window.location.href = 'index.html';
+      });
+    }
+
+    function openLeaveMock() {
+      Swal.fire({
+        title: '🏖️ ยื่นใบลาออนไลน์',
+        text: 'เลือกลาป่วย ลากิจ หรือลาพักร้อน พร้อมแนบใบรับรองแพทย์',
+        confirmButtonText: 'ไปที่หน้าหลัก',
+        showCancelButton: true,
+        cancelButtonText: 'ปิด',
+        confirmButtonColor: '#10b981'
+      }).then(res => {
+        if (res.isConfirmed) window.location.href = 'index.html';
+      });
+    }
+
+    function openPayslipMock() {
+      Swal.fire({
+        title: '📄 สลิปเงินเดือนออนไลน์',
+        text: 'ดูสลิปเงินเดือนรอบปัจจุบันและย้อนหลัง พร้อมรหัสผ่านป้องกันความปลอดภัย',
+        confirmButtonText: 'ไปที่หน้าหลัก',
+        showCancelButton: true,
+        cancelButtonText: 'ปิด',
+        confirmButtonColor: '#0ea5e9'
+      }).then(res => {
+        if (res.isConfirmed) window.location.href = 'index.html';
+      });
+    }
+
+    function switchEmployeeMock() {
+      Swal.fire({
+        title: '👤 เลือกรหัสพนักงาน',
+        input: 'select',
+        inputOptions: {
+          '24590': '24590 - สุภารัตน์ แก้วกล้า (สนง.ใหญ่)',
+          '24591': '24591 - กิตติศักดิ์ มีชัย (สาขาหลัก)',
+          '24592': '24592 - วรรณภา ศรีสุข (สาขา 2)'
+        },
+        confirmButtonText: 'เปลี่ยนผู้ใช้งาน',
+        confirmButtonColor: '#f43f5e',
+        showCancelButton: true,
+        cancelButtonText: 'ยกเลิก'
+      }).then(res => {
+        if (res.isConfirmed) {
+          const names = {
+            '24590': 'สุภารัตน์ แก้วกล้า',
+            '24591': 'กิตติศักดิ์ มีชัย',
+            '24592': 'วรรณภา ศรีสุข'
+          };
+          document.getElementById('empIdText').textContent = res.value;
+          document.getElementById('empNameText').textContent = names[res.value];
+        }
+      });
+    }
+
+    // Init
+    updateLiveClock();
+    setInterval(updateLiveClock, 1000);
+    setAttendanceState('AFTERNOON');
+  </script>
+</body>
+</html>
