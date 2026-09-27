@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PTN Time — ตัวอย่าง: ปรับดีไซน์ปุ่มลงเวลา</title>
+  <title>PTN Time — หน้าทดสอบถ่ายรูปเซลฟี่หน้าเนียน (ไม่เช็ค GPS)</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0284c7">
 
@@ -28,6 +28,9 @@
     }
   </script>
 
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <style>
     body {
       font-family: 'Prompt', sans-serif;
@@ -36,6 +39,30 @@
       background-color: #0284c7 !important;
       color: #ffffff !important;
       font-weight: 600 !important;
+    }
+
+    /* Auto Beauty Filter: Soft-focus wrinkle reduction & radiant skin */
+    .beauty-active {
+      filter: brightness(1.08) contrast(0.97) saturate(1.08) blur(0.35px) !important;
+      -webkit-filter: brightness(1.08) contrast(0.97) saturate(1.08) blur(0.35px) !important;
+    }
+    .beauty-inactive {
+      filter: none !important;
+      -webkit-filter: none !important;
+    }
+
+    .cam-video-mirrored {
+      transform: scaleX(-1) translateZ(0);
+      -webkit-transform: scaleX(-1) translateZ(0);
+    }
+    .cam-video-normal {
+      transform: scaleX(1) translateZ(0);
+      -webkit-transform: scaleX(1) translateZ(0);
+    }
+
+    .face-guide-oval {
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+      border-radius: 50%;
     }
 
     /* Radar Wave Ripple Animation (Style 3) */
@@ -49,6 +76,7 @@
       border-radius: 9999px;
       border: 2px solid rgba(16, 185, 129, 0.4);
       animation: radar-ping 2.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+      pointer-events: none;
     }
     .radar-circle::after {
       animation-delay: 1.25s;
@@ -57,6 +85,10 @@
       0% { transform: scale(0.9); opacity: 1; }
       100% { transform: scale(1.35); opacity: 0; }
     }
+
+    /* Radar color variations */
+    .radar-emerald::before, .radar-emerald::after { border-color: rgba(16, 185, 129, 0.5); }
+    .radar-rose::before, .radar-rose::after { border-color: rgba(244, 63, 94, 0.5); }
 
     /* Neo-Glass Border Glow (Style 2) */
     .neo-glass-glow {
@@ -77,34 +109,56 @@
     }
   </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center p-3 sm:p-6">
+<body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center p-3 sm:p-6 pb-20">
 
-  <!-- Top Controller Bar -->
-  <div class="w-full max-w-md bg-white rounded-3xl p-4 shadow-md border border-slate-200 mb-4 space-y-3">
+  <!-- ========================================================================= -->
+  <!-- 1. BIG HERO CAMERA TEST BANNER (BYPASS GPS) -->
+  <!-- ========================================================================= -->
+  <div class="w-full max-w-md bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 rounded-3xl p-4 sm:p-5 shadow-xl text-white mb-4 space-y-3">
     <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="text-xl">✨</span>
+      <div class="flex items-center gap-2.5">
+        <span class="text-3xl animate-bounce select-none">📸</span>
         <div>
-          <h2 class="text-sm font-bold text-slate-900">เลือกดูดีไซน์ "ปุ่มลงเวลา"</h2>
-          <p class="text-[11px] text-slate-500">เปรียบเทียบ 3 สไตล์โมเดิร์น กับแบบเดิม</p>
+          <h2 class="text-base font-black tracking-wide text-white drop-shadow">ทดสอบถ่ายรูปเซลฟี่ "หน้าเนียน"</h2>
+          <p class="text-xs text-pink-100 font-medium">ไม่เช็ค GPS • ไม่ต้องใช้ QR • เปิดกล้องได้ทันที</p>
         </div>
       </div>
-      <a href="index.html" class="text-xs text-sky-600 hover:text-sky-800 font-semibold flex items-center gap-1">
+      <a href="index.html" class="text-xs text-white/90 hover:text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl font-bold backdrop-blur-sm transition flex items-center gap-1 shadow-sm">
         <span>หน้าหลัก</span>
         <i class="fa-solid fa-arrow-right text-[10px]"></i>
       </a>
     </div>
 
+    <!-- Quick Action Launch Button -->
+    <button type="button" onclick="openTestCamera()" class="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-rose-50 text-rose-600 font-extrabold text-sm sm:text-base shadow-lg transition active:scale-[0.98] flex items-center justify-center gap-2">
+      <span class="text-lg">✨</span>
+      <span>เปิดกล้องทดสอบเซลฟี่หน้าเนียน</span>
+      <span class="text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold ml-1">Bypass GPS</span>
+    </button>
+  </div>
+
+  <!-- Top Controller Bar for Layout Preview -->
+  <div class="w-full max-w-md bg-white rounded-3xl p-4 shadow-md border border-slate-200 mb-4 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🎨</span>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">เลือกดูดีไซน์ปุ่มลงเวลา</h3>
+          <p class="text-[11px] text-slate-500">เปรียบเทียบสไตล์ปุ่ม หรือแตะปุ่มเพื่อเปิดกล้อง</p>
+        </div>
+      </div>
+    </div>
+
     <!-- 4 Button Styles Switcher -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
-      <button type="button" onclick="selectBtnStyle('style1')" id="btnTabStyle1" class="active-toggle py-2 px-2 rounded-xl bg-slate-100 text-slate-700 transition text-center font-medium shadow-xs">
+      <button type="button" onclick="selectBtnStyle('style3')" id="btnTabStyle3" class="active-toggle py-2 px-2 rounded-xl bg-slate-100 text-slate-700 transition text-center font-medium shadow-xs">
+        3. วงกลม (Radar) ⭐
+      </button>
+      <button type="button" onclick="selectBtnStyle('style1')" id="btnTabStyle1" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
         1. แคปซูล (Pill)
       </button>
       <button type="button" onclick="selectBtnStyle('style2')" id="btnTabStyle2" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
         2. กระจกฝ้า (Glass)
-      </button>
-      <button type="button" onclick="selectBtnStyle('style3')" id="btnTabStyle3" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
-        3. วงกลม (Radar)
       </button>
       <button type="button" onclick="selectBtnStyle('styleOld')" id="btnTabStyleOld" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
         แบบเดิม (บล็อกหนา)
@@ -136,7 +190,7 @@
             <p class="text-[11px] text-sky-100 font-normal">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</p>
           </div>
         </div>
-        <span class="text-xs bg-white/20 px-2 py-1 rounded-lg">#24590</span>
+        <span class="text-xs bg-white/20 px-2 py-1 rounded-lg">#โหมดทดสอบ</span>
       </div>
     </header>
 
@@ -155,29 +209,29 @@
       <!-- 1. Digital Clock with Integrated Status -->
       <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 rounded-2xl p-4 text-white shadow-lg text-center relative overflow-hidden">
         <div class="text-xs text-slate-300 font-normal">วันเสาร์ที่ 27 กันยายน 2569</div>
-        <div class="text-4xl sm:text-5xl font-normal font-mono tracking-tight my-1 text-white">15:04:31</div>
+        <div class="text-4xl sm:text-5xl font-normal font-mono tracking-tight my-1 text-white" id="testLiveClock">18:30:00</div>
 
         <!-- Integrated Status Strip -->
         <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between gap-2 px-1 text-xs">
           <div class="flex items-center gap-2 min-w-0">
             <span class="text-base" id="statIcon">🌅</span>
-            <span class="font-medium text-slate-200 truncate" id="statText">ยังไม่ได้ลงเวลาวันนี้</span>
+            <span class="font-medium text-slate-200 truncate" id="statText">พร้อมลงเวลา (โหมดทดสอบ)</span>
           </div>
           <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800" id="statBadge">
-            ยังไม่ลงเวลา
+            พร้อมลงเวลา
           </span>
         </div>
       </div>
 
-      <!-- 2. Compact GPS Status Bar (อยู่เหนือปุ่ม) -->
+      <!-- 2. Compact GPS Status Bar (อยู่เหนือปุ่ม - บายพาส GPS) -->
       <div class="px-3.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs shadow-2xs">
         <div class="flex items-center gap-1.5 text-slate-700 min-w-0">
           <span class="text-sm">📍</span>
           <span class="font-semibold text-slate-900 text-[11px]">สนง.ใหญ่</span>
           <span class="text-slate-400">•</span>
-          <span class="text-slate-500 text-[11px]">ระยะ 12 ม.</span>
+          <span class="text-slate-500 text-[11px]">ระยะ 0 ม. (Bypass)</span>
         </div>
-        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">ในพิกัด</span>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">ในพิกัด ✅</span>
       </div>
 
       <!-- 3. Slim Timeline Bar (แบบ B 1 แถว) -->
@@ -207,26 +261,33 @@
       </div>
 
       <!-- ========================================================================= -->
-      <!-- 4. พื้นที่แสดงปุ่มลงเวลา (HERO BUTTON STYLES) -->
+      <!-- 4. HERO BUTTON (แตะเพื่อเปิดกล้องทดสอบได้เลย) -->
       <!-- ========================================================================= -->
 
-      <!-- [สไตล์ที่ 1: แคปซูลแนวนอน โมเดิร์น สไตล์ iOS - แนะนำ ⭐] -->
-      <div id="wrapperStyle1" class="pt-1">
-        <button type="button" id="btnStyle1" class="pill-gradient-emerald w-full py-3.5 px-4 rounded-full text-white flex items-center justify-between transition-all active:scale-[0.98] group">
-          <!-- Left Icon Circle -->
+      <!-- [สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนลายนิ้วมือ/QR - Circular Radar Ring (เลือกใช้ในหน้าจริง)] -->
+      <div id="wrapperStyle3" class="py-2.5 flex flex-col items-center justify-center text-center space-y-2">
+        <button type="button" onclick="openTestCamera()" id="btnStyle3" class="radar-circle radar-emerald w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-xl shadow-emerald-500/35 flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer">
+          <span class="text-3xl sm:text-4xl" id="s3Icon">☀️</span>
+          <span class="text-xs sm:text-sm font-bold tracking-tight text-white mt-1" id="s3Title">แตะลงเวลาเข้า</span>
+          <span class="text-[10px] text-white/90 font-medium px-2 py-0.5 rounded-full bg-white/20 mt-0.5" id="s3Badge">สแกน QR</span>
+        </button>
+        <span class="text-[11px] text-slate-500 font-medium" id="s3Sub">✨ แตะปุ่มเพื่อเปิดกล้องเซลฟี่หน้าเนียน (ไม่เช็ค GPS)</span>
+      </div>
+
+      <!-- [สไตล์ที่ 1: แคปซูลแนวนอน โมเดิร์น สไตล์ iOS] -->
+      <div id="wrapperStyle1" class="hidden pt-1">
+        <button type="button" onclick="openTestCamera()" id="btnStyle1" class="pill-gradient-emerald w-full py-3.5 px-4 rounded-full text-white flex items-center justify-between transition-all active:scale-[0.98] group">
           <div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shadow-inner border border-white/30 flex-shrink-0 group-hover:scale-105 transition-transform" id="s1IconBox">
             <span id="s1Icon">☀️</span>
           </div>
-          <!-- Center Text -->
           <div class="flex-1 text-left px-3.5 min-w-0">
             <div class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight truncate" id="s1Title">
               แตะเพื่อลงเวลาเข้างาน
             </div>
             <div class="text-[11px] text-emerald-100 font-normal mt-0.5 truncate" id="s1Sub">
-              สแกน QR Code ประจำสาขา หรือเซลฟี่
+              แตะเพื่อเปิดกล้องทดสอบถ่ายรูปเซลฟี่
             </div>
           </div>
-          <!-- Right Arrow Pill -->
           <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white text-sm shadow-2xs flex-shrink-0 group-hover:translate-x-1 transition-transform">
             <i class="fa-solid fa-arrow-right"></i>
           </div>
@@ -235,7 +296,7 @@
 
       <!-- [สไตล์ที่ 2: กระจกฝ้าเรืองแสง Neo-Glass Glow] -->
       <div id="wrapperStyle2" class="hidden pt-1">
-        <button type="button" id="btnStyle2" class="neo-glass-glow w-full py-4 px-5 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98] group">
+        <button type="button" onclick="openTestCamera()" id="btnStyle2" class="neo-glass-glow w-full py-4 px-5 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98] group">
           <div class="flex items-center space-x-3 text-left min-w-0">
             <div class="w-11 h-11 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-md flex-shrink-0" id="s2IconBox">
               <span id="s2Icon">☀️</span>
@@ -245,7 +306,7 @@
                 แตะเพื่อลงเวลาเข้างาน
               </div>
               <div class="text-[11px] text-emerald-700 font-medium mt-0.5 truncate" id="s2Sub">
-                สแกน QR Code ประจำสาขา
+                แตะเพื่อเปิดกล้องทดสอบถ่ายรูปเซลฟี่
               </div>
             </div>
           </div>
@@ -256,19 +317,9 @@
         </button>
       </div>
 
-      <!-- [สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนลายนิ้วมือ/QR - Circular Radar Ring] -->
-      <div id="wrapperStyle3" class="hidden py-3 flex flex-col items-center justify-center text-center space-y-2">
-        <button type="button" id="btnStyle3" class="radar-circle w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-xl shadow-emerald-500/35 flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer">
-          <span class="text-3xl sm:text-4xl" id="s3Icon">☀️</span>
-          <span class="text-xs sm:text-sm font-bold tracking-tight text-white mt-1" id="s3Title">แตะลงเวลา</span>
-          <span class="text-[10px] text-emerald-100 font-normal">สแกน QR</span>
-        </button>
-        <span class="text-[11px] text-slate-400 font-normal">แตะปุ่มวงกลมเพื่อเปิดกล้องสแกน</span>
-      </div>
-
       <!-- [แบบเดิม: บล็อกสี่เหลี่ยมแนวตั้ง หนา] -->
       <div id="wrapperStyleOld" class="hidden pt-1">
-        <button type="button" class="w-full py-6 px-4 rounded-3xl text-white shadow-xl flex flex-col items-center justify-center space-y-2 bg-emerald-600">
+        <button type="button" onclick="openTestCamera()" class="w-full py-6 px-4 rounded-3xl text-white shadow-xl flex flex-col items-center justify-center space-y-2 bg-emerald-600">
           <div class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-3xl shadow-inner border border-white/25">
             <span>☀️</span>
           </div>
@@ -277,7 +328,7 @@
               แตะเพื่อลงเวลาเข้างาน
             </div>
             <div class="text-xs text-emerald-100 mt-0.5">
-              สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
+              แตะเพื่อเปิดกล้องทดสอบถ่ายรูปเซลฟี่
             </div>
           </div>
         </button>
@@ -285,24 +336,17 @@
 
       <!-- Secondary Action & Direct GPS Buttons -->
       <div class="space-y-1.5 pt-0.5">
-        <div class="w-full py-2 px-3 bg-gradient-to-r from-rose-50 to-orange-50 border border-dashed border-rose-300 rounded-xl flex items-center justify-between text-rose-800 shadow-2xs">
+        <button type="button" onclick="openTestCamera('OUT')" class="w-full py-2 px-3 bg-gradient-to-r from-rose-50 to-orange-50 border border-dashed border-rose-300 rounded-xl flex items-center justify-between text-rose-800 shadow-2xs hover:from-rose-100 hover:to-orange-100 transition">
           <div class="flex items-center space-x-2 text-left min-w-0">
             <span class="text-base flex-shrink-0">🚪</span>
             <span class="text-xs font-bold text-rose-900 truncate">
-              หรือแตะเพื่อลงเวลาออกงานทันที
+              หรือแตะเพื่อทดสอบลงเวลาออกงาน (OUT)
             </span>
           </div>
           <div class="flex items-center space-x-1 text-rose-600 font-bold text-xs bg-white px-2 py-0.5 rounded-lg border border-rose-200 shadow-2xs flex-shrink-0 ml-2">
-            <span>ออกงาน &rarr;</span>
+            <span>ทดสอบออกงาน &rarr;</span>
           </div>
-        </div>
-
-        <div class="text-center pt-0.5">
-          <button type="button" class="text-xs text-slate-500 hover:text-slate-800 font-medium inline-flex items-center gap-1 transition">
-            <span>📸</span>
-            <span>ถ่ายรูปด้วย GPS โดยตรง (ไม่ต้องใช้ QR)</span>
-          </button>
-        </div>
+        </button>
       </div>
 
       <!-- 5. Quick Shortcuts (4 ช่อง) -->
@@ -326,35 +370,158 @@
       </div>
 
     </main>
-
   </div>
 
-  <!-- Comparison Summary Card -->
-  <div class="w-full max-w-md mt-4 bg-white rounded-2xl p-4 border border-slate-200 shadow-sm text-xs space-y-2.5">
-    <div class="font-bold text-slate-900 text-sm">💡 รายละเอียดของทั้ง 3 สไตล์:</div>
-    <ul class="space-y-2 text-slate-600">
-      <li class="flex items-start gap-2">
-        <span class="font-bold text-emerald-600 min-w-[75px]">สไตล์ที่ 1:</span>
-        <span><strong>แคปซูลแนวนอน (Horizontal Pill — แนะนำ ⭐)</strong> — ปรับเป็นทรงแคปซูลแนวนอน (สูงเพียง ~64px) ลดความหนาลง 60% มีวงกลมไอคอนฝั่งซ้าย + ลูกศรฝั่งขวา กดง่าย สไตล์ iOS</span>
-      </li>
-      <li class="flex items-start gap-2">
-        <span class="font-bold text-teal-600 min-w-[75px]">สไตล์ที่ 2:</span>
-        <span><strong>กระจกฝ้าเรืองแสง (Neo-Glass)</strong> — พื้นหลังกระจกโปร่งแสงพร้อมขอบนีออนเรืองแสง ดูโมเดิร์น ไฮเทค ตัวหนังสือคมชัด</span>
-      </li>
-      <li class="flex items-start gap-2">
-        <span class="font-bold text-sky-600 min-w-[75px]">สไตล์ที่ 3:</span>
-        <span><strong>ทรงกลมเรดาร์ (Circular Radar)</strong> — ปุ่มกลมตรงกลางพร้อมคลื่นเรดาร์แผ่ขยาย (Ripple Wave) สไตล์ระบบสแกนไบโอเมตริกซ์ เด่นชัดที่สุด</span>
-      </li>
-    </ul>
+  <!-- ========================================================================= -->
+  <!-- 2. FULLSCREEN TEST CAMERA MODAL (NO GPS CHECK REQUIRED) -->
+  <!-- ========================================================================= -->
+  <div id="modalTestCamera" class="fixed inset-0 bg-black z-50 flex flex-col justify-between hidden select-none overflow-hidden">
+    <!-- Top Bar -->
+    <div class="relative z-20 flex items-center justify-between px-4 pt-4 pb-3 bg-gradient-to-b from-black/90 via-black/50 to-transparent text-white">
+      <button type="button" onclick="closeTestCamera()" class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 active:scale-90 flex items-center justify-center text-2xl font-bold backdrop-blur-md transition shadow-lg">
+        &times;
+      </button>
+      
+      <div class="text-center">
+        <h3 id="testCamTitle" class="text-sm sm:text-base font-black tracking-wide text-white drop-shadow">📸 ทดสอบกล้องเซลฟี่ (Bypass GPS)</h3>
+        <p class="text-[11px] text-pink-300 font-bold drop-shadow flex items-center justify-center gap-1">
+          <span>✨</span> <span id="testCamModeLabel">โหมดหน้าเนียนใสอัตโนมัติ (เปิด)</span>
+        </p>
+      </div>
+
+      <!-- Controls Right: Beauty Filter Toggle & Flip Cam -->
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="toggleTestBeautyFilter()" id="btnBeautyToggle" class="px-2.5 py-1.5 rounded-full bg-pink-500 hover:bg-pink-600 active:scale-90 flex items-center gap-1 text-[11px] font-bold text-white shadow-lg border border-pink-300/50 transition backdrop-blur-md" title="สลับเปิด/ปิดฟิลเตอร์หน้าเนียนเพื่อเปรียบเทียบ">
+          <span id="beautyToggleIcon">✨</span>
+          <span id="beautyToggleText">เนียน: เปิด</span>
+        </button>
+        <button type="button" onclick="flipTestCamera()" class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 active:scale-90 flex items-center justify-center text-lg backdrop-blur-md transition shadow-lg" title="สลับกล้องหน้า/หลัง">
+          🔄
+        </button>
+      </div>
+    </div>
+
+    <!-- Viewport with Oval Face Guide -->
+    <div class="relative flex-1 flex items-center justify-center overflow-hidden bg-black">
+      <video id="testVideoPreview" autoplay playsinline webkit-playsinline muted class="absolute inset-0 w-full h-full object-cover cam-video-mirrored beauty-active"></video>
+
+      <!-- Oval Face Guide -->
+      <div class="pointer-events-none relative z-10 w-[280px] h-[380px] sm:w-[320px] sm:h-[430px] rounded-[50%] border-2.5 border-dashed border-amber-400 face-guide-oval flex flex-col items-center justify-between py-6 transition-all duration-300">
+        <span class="text-white text-xs font-bold drop-shadow bg-amber-600/90 border border-amber-300 px-3.5 py-1 rounded-full backdrop-blur-md shadow-md">
+          🔍 จัดใบหน้าให้อยู่ในกรอบวงรี
+        </span>
+        <span id="liveFilterHint" class="text-white/95 text-[11px] font-bold drop-shadow bg-pink-600/80 border border-pink-300 px-3 py-1 rounded-full backdrop-blur-sm">
+          ✨ ผิวเนียนนุ่ม • ลดริ้วรอย • ผิวสว่างอมชมพู
+        </span>
+      </div>
+
+      <!-- Shutter Flash Overlay -->
+      <div id="testCamFlash" class="pointer-events-none absolute inset-0 bg-white opacity-0 transition-opacity duration-150 z-20"></div>
+    </div>
+
+    <!-- Bottom Bar with Shutter Button -->
+    <div class="relative z-20 pb-8 pt-3 px-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex flex-col items-center justify-center space-y-2">
+      <button type="button" id="btnTestShutter" onclick="captureTestPhoto()" class="w-20 h-20 rounded-full border-4 border-white bg-transparent flex items-center justify-center active:scale-90 transition p-1 shadow-2xl group cursor-pointer">
+        <span class="w-full h-full rounded-full bg-white group-active:bg-slate-200 shadow-inner flex items-center justify-center text-slate-800 text-3xl font-bold transition-all">
+          📸
+        </span>
+      </button>
+      <span class="text-xs text-amber-200 font-bold tracking-wider drop-shadow">
+        แตะปุ่มเพื่อถ่ายภาพและดูผลลัพธ์
+      </span>
+    </div>
+
+    <!-- Hidden Canvas for rendering snapshot and watermark -->
+    <canvas id="testPhotoCanvas" class="hidden"></canvas>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- 3. PHOTO RESULT MODAL (แสดงผลลัพธ์ภาพถ่ายพร้อมลายน้ำ + สลับเทียบ Before/After) -->
+  <!-- ========================================================================= -->
+  <div id="modalTestResult" class="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-3 sm:p-4 hidden backdrop-blur-md overflow-y-auto">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-3.5 my-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🎉</span>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">ผลลัพธ์ภาพถ่ายเซลฟี่</h3>
+            <p class="text-[11px] text-emerald-600 font-semibold">บันทึกสำเร็จ (โหมดทดสอบ ไม่เช็ค GPS)</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeTestResultModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 flex items-center justify-center">&times;</button>
+      </div>
+
+      <!-- Before / After Toggle Buttons -->
+      <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-2xl text-xs font-bold text-center">
+        <button type="button" id="tabResBeauty" onclick="switchResultTab('beauty')" class="py-2 rounded-xl bg-white text-pink-600 shadow-xs transition">
+          ✨ ภาพหน้าเนียน (Auto)
+        </button>
+        <button type="button" id="tabResRaw" onclick="switchResultTab('raw')" class="py-2 rounded-xl text-slate-600 hover:text-slate-900 transition">
+          📷 กล้องสดต้นฉบับ
+        </button>
+      </div>
+
+      <!-- Photo Display Area -->
+      <div class="relative w-full aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-slate-900">
+        <img id="imgResultPreview" src="" alt="ภาพถ่ายเซลฟี่" class="w-full h-full object-cover">
+        
+        <!-- Badge on photo -->
+        <div id="badgePhotoType" class="absolute top-2.5 left-2.5 px-3 py-1 rounded-full text-[11px] font-extrabold text-white bg-pink-600/90 backdrop-blur-md shadow-md border border-white/30 flex items-center gap-1">
+          <span>✨</span>
+          <span id="txtBadgePhotoType">Auto Smooth Skin (ลดริ้วรอย)</span>
+        </div>
+      </div>
+
+      <!-- Feature Tags Breakdown -->
+      <div class="p-3 bg-pink-50/80 border border-pink-200/80 rounded-2xl text-xs space-y-1.5">
+        <div class="font-bold text-pink-900 flex items-center gap-1 text-[11px]">
+          <span>🌸</span> <span>จุดเด่นของภาพนี้:</span>
+        </div>
+        <ul class="text-[11px] text-pink-800 space-y-1">
+          <li class="flex items-center gap-1.5">
+            <span class="text-emerald-500 font-bold">✓</span>
+            <span>เกลี่ยแสงนุ่มนวล ลดริ้วรอยเส้นเล็ก รูขุมขน และความมัน</span>
+          </li>
+          <li class="flex items-center gap-1.5">
+            <span class="text-emerald-500 font-bold">✓</span>
+            <span>คงความคมชัดของดวงตา คิ้ว และรอยยิ้มอย่างเป็นธรรมชาติ</span>
+          </li>
+          <li class="flex items-center gap-1.5">
+            <span class="text-emerald-500 font-bold">✓</span>
+            <span>แถบลายน้ำ วันที่ เวลา สาขา และพิกัดทดสอบ คมชัด 100%</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="closeTestResultModal(); openTestCamera();" class="flex-1 py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5">
+          <span>🔄</span> <span>ลองถ่ายใหม่อีกครั้ง</span>
+        </button>
+        <button type="button" onclick="closeTestResultModal()" class="px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+          ปิด
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
   <script>
-    let currentBtnStyle = 'style1';
+    let currentBtnStyle = 'style3';
     let currentSimState = 'IN';
+    let cameraStream = null;
+    let currentFacing = 'user';
+    let isBeautyActive = true;
+    let lastBeautyPhotoData = null;
+    let lastRawPhotoData = null;
+    let currentClockType = 'IN';
 
+    // 1. STYLE & SIMULATOR LOGIC
     function selectBtnStyle(style) {
       currentBtnStyle = style;
-
       ['style1', 'style2', 'style3', 'styleOld'].forEach(s => {
         const tabBtn = document.getElementById('btnTab' + s.charAt(0).toUpperCase() + s.slice(1));
         const wrapper = document.getElementById('wrapper' + s.charAt(0).toUpperCase() + s.slice(1));
@@ -370,6 +537,7 @@
 
     function setSimState(st) {
       currentSimState = st;
+      currentClockType = st;
       document.getElementById('simBtnIn').className = st === 'IN'
         ? 'px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-semibold'
         : 'px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium';
@@ -382,37 +550,314 @@
 
       // Top Status
       document.getElementById('statIcon').textContent = isIn ? '🌅' : '💼';
-      document.getElementById('statText').textContent = isIn ? 'ยังไม่ได้ลงเวลาวันนี้' : 'ปฏิบัติงานช่วงบ่าย (เข้า 09:28)';
-      document.getElementById('statBadge').textContent = isIn ? 'ยังไม่ลงเวลา' : 'กำลังทำงาน';
-      document.getElementById('statBadge').className = isIn ? 'px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800' : 'px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800';
+      document.getElementById('statText').textContent = isIn ? 'พร้อมลงเวลาเข้า (โหมดทดสอบ)' : 'พร้อมลงเวลาออก (โหมดทดสอบ)';
+      document.getElementById('statBadge').textContent = isIn ? 'พร้อมลงเวลา' : 'พร้อมออกงาน';
+      document.getElementById('statBadge').className = isIn ? 'px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800' : 'px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800';
 
-      // Timeline
-      document.getElementById('tlTime1').textContent = isIn ? '--:--:--' : '09:28:15';
-      document.getElementById('tlTime2').textContent = isIn ? '--:--:--' : '13:00:00';
-      document.getElementById('tlTime3').textContent = isIn ? '--:--:--' : '13:58:20';
+      // Style 3 (Radar)
+      const b3 = document.getElementById('btnStyle3');
+      b3.className = 'radar-circle ' + (isIn ? 'radar-emerald' : 'radar-rose') + ' w-28 h-28 sm:w-32 sm:h-32 rounded-full ' + (isIn ? 'bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 shadow-emerald-500/35' : 'bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 shadow-rose-500/35') + ' text-white shadow-xl flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer';
+      document.getElementById('s3Icon').textContent = isIn ? '☀️' : '🚪';
+      document.getElementById('s3Title').textContent = isIn ? 'แตะลงเวลาเข้า' : 'แตะลงเวลาออก';
 
       // Style 1 (Pill)
       const b1 = document.getElementById('btnStyle1');
       b1.className = (isIn ? 'pill-gradient-emerald' : 'pill-gradient-rose') + ' w-full py-3.5 px-4 rounded-full text-white flex items-center justify-between transition-all active:scale-[0.98] group';
       document.getElementById('s1Icon').textContent = isIn ? '☀️' : '🚪';
       document.getElementById('s1Title').textContent = isIn ? 'แตะเพื่อลงเวลาเข้างาน' : 'แตะเพื่อลงเวลาเลิกงาน';
-      document.getElementById('s1Sub').textContent = isIn ? 'สแกน QR Code ประจำสาขา หรือเซลฟี่' : 'สแกน QR Code สรุปเวลางานประจำวัน';
-
-      // Style 2 (Glass)
-      document.getElementById('s2Icon').textContent = isIn ? '☀️' : '🚪';
-      document.getElementById('s2Title').textContent = isIn ? 'แตะเพื่อลงเวลาเข้างาน' : 'แตะเพื่อลงเวลาเลิกงาน';
-      document.getElementById('s2Sub').textContent = isIn ? 'สแกน QR Code ประจำสาขา' : 'สแกนเพื่อสรุปเวลางาน';
-      document.getElementById('s2IconBox').className = (isIn ? 'bg-emerald-500' : 'bg-rose-500') + ' w-11 h-11 rounded-xl text-white flex items-center justify-center text-2xl shadow-md flex-shrink-0';
-
-      // Style 3 (Radar)
-      const b3 = document.getElementById('btnStyle3');
-      b3.className = 'radar-circle w-28 h-28 sm:w-32 sm:h-32 rounded-full ' + (isIn ? 'bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 shadow-emerald-500/35' : 'bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 shadow-rose-500/35') + ' text-white shadow-xl flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer';
-      document.getElementById('s3Icon').textContent = isIn ? '☀️' : '🚪';
-      document.getElementById('s3Title').textContent = isIn ? 'แตะลงเวลา' : 'แตะออกงาน';
     }
 
-    // Init
-    selectBtnStyle('style1');
+    // 2. CAMERA ENGINE (NO GPS CHECK REQUIRED)
+    async function openTestCamera(actionType = 'IN') {
+      currentClockType = actionType || currentSimState || 'IN';
+      const modal = document.getElementById('modalTestCamera');
+      const title = document.getElementById('testCamTitle');
+      if (title) {
+        title.textContent = (currentClockType === 'OUT') ? '📸 ถ่ายรูปเซลฟี่ออกงาน (OUT)' : '📸 ถ่ายรูปเซลฟี่เข้างาน (IN)';
+      }
+
+      modal.classList.remove('hidden');
+      isBeautyActive = true;
+      updateBeautyUI();
+
+      try {
+        await startTestVideoStream();
+      } catch (err) {
+        console.error('Camera stream error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'ไม่สามารถเปิดกล้องได้',
+          text: 'กรุณาอนุญาตสิทธิ์การเข้าถึงกล้องถ่ายรูปในเบราว์เซอร์ แล้วลองใหม่อีกครั้ง'
+        });
+        closeTestCamera();
+      }
+    }
+
+    async function startTestVideoStream() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+
+      const constraints = {
+        video: {
+          facingMode: currentFacing,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+
+      cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const video = document.getElementById('testVideoPreview');
+      video.srcObject = cameraStream;
+
+      if (currentFacing === 'user') {
+        video.classList.add('cam-video-mirrored');
+        video.classList.remove('cam-video-normal');
+      } else {
+        video.classList.add('cam-video-normal');
+        video.classList.remove('cam-video-mirrored');
+      }
+    }
+
+    function closeTestCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+      document.getElementById('modalTestCamera').classList.add('hidden');
+    }
+
+    function flipTestCamera() {
+      currentFacing = (currentFacing === 'user') ? 'environment' : 'user';
+      startTestVideoStream();
+    }
+
+    function toggleTestBeautyFilter() {
+      isBeautyActive = !isBeautyActive;
+      updateBeautyUI();
+    }
+
+    function updateBeautyUI() {
+      const video = document.getElementById('testVideoPreview');
+      const btn = document.getElementById('btnBeautyToggle');
+      const txt = document.getElementById('beautyToggleText');
+      const modeLabel = document.getElementById('testCamModeLabel');
+      const liveHint = document.getElementById('liveFilterHint');
+
+      if (isBeautyActive) {
+        video.classList.add('beauty-active');
+        video.classList.remove('beauty-inactive');
+        btn.className = 'px-2.5 py-1.5 rounded-full bg-pink-500 hover:bg-pink-600 active:scale-90 flex items-center gap-1 text-[11px] font-bold text-white shadow-lg border border-pink-300/50 transition backdrop-blur-md';
+        txt.textContent = 'เนียน: เปิด';
+        modeLabel.textContent = 'โหมดหน้าเนียนใสอัตโนมัติ (เปิด)';
+        liveHint.textContent = '✨ ผิวเนียนนุ่ม • ลดริ้วรอย • ผิวสว่างอมชมพู';
+        liveHint.className = 'text-white/95 text-[11px] font-bold drop-shadow bg-pink-600/80 border border-pink-300 px-3 py-1 rounded-full backdrop-blur-sm';
+      } else {
+        video.classList.remove('beauty-active');
+        video.classList.add('beauty-inactive');
+        btn.className = 'px-2.5 py-1.5 rounded-full bg-slate-700 hover:bg-slate-600 active:scale-90 flex items-center gap-1 text-[11px] font-bold text-slate-200 shadow-lg border border-slate-500/50 transition backdrop-blur-md';
+        txt.textContent = 'เนียน: ปิด';
+        modeLabel.textContent = 'กล้องสดปกติ (ปิดฟิลเตอร์)';
+        liveHint.textContent = '📷 โหมดกล้องสดปกติ (ไม่มีฟิลเตอร์)';
+        liveHint.className = 'text-white/95 text-[11px] font-bold drop-shadow bg-slate-800/80 border border-slate-500 px-3 py-1 rounded-full backdrop-blur-sm';
+      }
+    }
+
+    // 3. CAPTURE & WATERMARK ENGINE
+    function captureTestPhoto() {
+      const video = document.getElementById('testVideoPreview');
+      const canvas = document.getElementById('testPhotoCanvas');
+      const flash = document.getElementById('testCamFlash');
+
+      if (!video || !canvas) return;
+
+      // Flash Effect & Vibrate
+      flash.style.opacity = '0.85';
+      setTimeout(() => { flash.style.opacity = '0'; }, 180);
+      if (navigator.vibrate) try { navigator.vibrate(50); } catch(e) {}
+
+      const targetSize = 640;
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
+
+      const vw = video.videoWidth || 640;
+      const vh = video.videoHeight || 480;
+      const cropSize = Math.min(vw, vh);
+      const startX = (vw - cropSize) / 2;
+      const startY = (vh - cropSize) / 2;
+
+      // ==========================================
+      // A. RENDER BEAUTY PHOTO (With Soft-Focus Glow)
+      // ==========================================
+      ctx.clearRect(0, 0, targetSize, targetSize);
+      ctx.save();
+      if (currentFacing === 'user') {
+        ctx.translate(targetSize, 0);
+        ctx.scale(-1, 1);
+      }
+
+      // Pass 1: Crisp Base Layer with radiant tone enhancement
+      try { ctx.filter = 'brightness(1.07) contrast(1.01) saturate(1.08)'; } catch(e) {}
+      ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+
+      // Pass 2: Automatic Dual-Pass Soft-Focus (ลดริ้วรอย รูขุมขน เกลี่ยผิวหน้าเนียนใสแบบธรรมชาติ)
+      try {
+        ctx.save();
+        ctx.filter = 'blur(4px) brightness(1.10) contrast(0.94)';
+        ctx.globalAlpha = 0.35;
+        ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+        ctx.restore();
+      } catch(e) {}
+
+      ctx.restore();
+      try { ctx.filter = 'none'; } catch(e) {}
+
+      // Draw Watermark
+      drawTestWatermark(ctx, targetSize, targetSize, currentClockType);
+      lastBeautyPhotoData = canvas.toDataURL('image/jpeg', 0.80);
+
+      // ==========================================
+      // B. RENDER RAW PHOTO (Without Beauty Filter)
+      // ==========================================
+      ctx.clearRect(0, 0, targetSize, targetSize);
+      ctx.save();
+      if (currentFacing === 'user') {
+        ctx.translate(targetSize, 0);
+        ctx.scale(-1, 1);
+      }
+      try { ctx.filter = 'none'; } catch(e) {}
+      ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+      ctx.restore();
+
+      // Draw Watermark on Raw photo as well
+      drawTestWatermark(ctx, targetSize, targetSize, currentClockType);
+      lastRawPhotoData = canvas.toDataURL('image/jpeg', 0.80);
+
+      // Close camera and open Result Modal
+      closeTestCamera();
+      showTestResultModal();
+    }
+
+    function drawTestWatermark(ctx, width, height, clockType) {
+      const bannerH = 150;
+      const startY = height - bannerH;
+
+      // Dark Gradient Background
+      const grad = ctx.createLinearGradient(0, startY - 24, 0, height);
+      grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      grad.addColorStop(0.25, 'rgba(15, 23, 42, 0.80)');
+      grad.addColorStop(1, 'rgba(15, 23, 42, 0.96)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, startY - 24, width, bannerH + 24);
+
+      let badgeText = (clockType === 'OUT') ? 'ออกงาน (OUT)' : 'เข้างาน (IN)';
+      let badgeColor = (clockType === 'OUT') ? '#ef4444' : '#10b981';
+
+      const now = new Date();
+      const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      const dateStr = `${now.getDate()} ${thMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} น.`;
+
+      ctx.save();
+
+      // Badge Pill
+      const fontSans = 'system-ui, -apple-system, sans-serif';
+      ctx.font = `bold 13px ${fontSans}`;
+      const badgeW = ctx.measureText(badgeText).width + 24;
+      const badgeX = 16;
+      const badgeY = startY + 8;
+
+      ctx.fillStyle = badgeColor;
+      if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(badgeX, badgeY, badgeW, 24, 12);
+        ctx.fill();
+      } else {
+        ctx.fillRect(badgeX, badgeY, badgeW, 24);
+      }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(badgeText, badgeX + 12, badgeY + 17);
+
+      // Timestamp
+      ctx.font = `bold 13.5px ${fontSans}`;
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillText(`📅 ${dateStr} • ${timeStr}`, badgeX + badgeW + 12, badgeY + 17);
+
+      // Employee
+      ctx.font = `bold 17px ${fontSans}`;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('👤 คุณพูลศักดิ์ (โหมดทดสอบ)', 18, startY + 58);
+
+      // Branch
+      ctx.font = `13.5px ${fontSans}`;
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText('🏢 สาขา: สำนักงานใหญ่ (ห่าง 0 ม. • Bypass GPS)', 18, startY + 83);
+
+      // GPS
+      ctx.font = 'bold 13px monospace';
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('📍 GPS: 13.756331, 100.501765 (ตำแหน่งจำลอง)', 18, startY + 107);
+
+      // Brand
+      ctx.font = `11.5px ${fontSans}`;
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('✓ ทดสอบระบบกล้อง PTN Time Attendant', 18, startY + 130);
+
+      ctx.font = `bold 12px ${fontSans}`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.fillText('PTN TIME', width - 80, startY + 130);
+
+      ctx.restore();
+    }
+
+    // 4. RESULT MODAL
+    function showTestResultModal() {
+      const modal = document.getElementById('modalTestResult');
+      modal.classList.remove('hidden');
+      switchResultTab('beauty');
+    }
+
+    function closeTestResultModal() {
+      document.getElementById('modalTestResult').classList.add('hidden');
+    }
+
+    function switchResultTab(tab) {
+      const img = document.getElementById('imgResultPreview');
+      const tabB = document.getElementById('tabResBeauty');
+      const tabR = document.getElementById('tabResRaw');
+      const badge = document.getElementById('badgePhotoType');
+      const txt = document.getElementById('txtBadgePhotoType');
+
+      if (tab === 'beauty') {
+        img.src = lastBeautyPhotoData || '';
+        tabB.className = 'py-2 rounded-xl bg-white text-pink-600 shadow-xs transition font-extrabold';
+        tabR.className = 'py-2 rounded-xl text-slate-600 hover:text-slate-900 transition font-medium';
+        badge.className = 'absolute top-2.5 left-2.5 px-3 py-1 rounded-full text-[11px] font-extrabold text-white bg-pink-600/90 backdrop-blur-md shadow-md border border-white/30 flex items-center gap-1';
+        txt.textContent = 'Auto Smooth Skin (ลดริ้วรอย)';
+      } else {
+        img.src = lastRawPhotoData || '';
+        tabR.className = 'py-2 rounded-xl bg-white text-slate-900 shadow-xs transition font-extrabold';
+        tabB.className = 'py-2 rounded-xl text-slate-600 hover:text-slate-900 transition font-medium';
+        badge.className = 'absolute top-2.5 left-2.5 px-3 py-1 rounded-full text-[11px] font-extrabold text-white bg-slate-800/90 backdrop-blur-md shadow-md border border-white/30 flex items-center gap-1';
+        txt.textContent = 'กล้องสด (Raw)';
+      }
+    }
+
+    // Live clock ticker
+    setInterval(() => {
+      const el = document.getElementById('testLiveClock');
+      if (el) {
+        const d = new Date();
+        el.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+      }
+    }, 1000);
+
+    // Initial setup
+    selectBtnStyle('style3');
     setSimState('IN');
   </script>
 </body>
