@@ -60,361 +60,299 @@
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css?v=9.8">
   <style>
-    .glass-aurora {
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.7);
+    body.aurora-canvas {
+      background: radial-gradient(circle at 10% 12%, rgba(167, 243, 208, 0.75) 0%, transparent 45%),
+                  radial-gradient(circle at 90% 10%, rgba(199, 210, 254, 0.85) 0%, transparent 45%),
+                  radial-gradient(circle at 50% 90%, rgba(245, 208, 254, 0.75) 0%, transparent 50%),
+                  radial-gradient(circle at 15% 80%, rgba(186, 230, 253, 0.7) 0%, transparent 45%),
+                  linear-gradient(180deg, #dcfce7 0%, #e0f2fe 35%, #f5f3ff 70%, #fae8ff 100%);
+      background-attachment: fixed;
     }
-    .neo-shadow-mint {
-      box-shadow: 0 14px 35px -8px rgba(16, 185, 129, 0.38);
+    .card-aurora-glass {
+      background: rgba(255, 255, 255, 0.84);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 20px 45px -12px rgba(99, 102, 241, 0.15), 0 0 1px 1px rgba(255, 255, 255, 0.8) inset;
+      border-radius: 36px;
     }
-    .neo-shadow-amber {
-      box-shadow: 0 14px 35px -8px rgba(245, 158, 11, 0.38);
+    .clock-banner-grad {
+      background: linear-gradient(135deg, #10b981 0%, #06b6d4 40%, #6366f1 100%);
+      border-radius: 26px;
+      box-shadow: 0 12px 28px -6px rgba(6, 182, 212, 0.35);
     }
-    .neo-shadow-coral {
-      box-shadow: 0 14px 35px -8px rgba(244, 63, 94, 0.38);
+    #heroActionButton {
+      border-radius: 9999px !important;
+      padding-top: 1.1rem !important;
+      padding-bottom: 1.1rem !important;
+      padding-left: 1.5rem !important;
+      padding-right: 1.5rem !important;
+      background: #059669 !important;
+      box-shadow: 0 14px 30px -6px rgba(5, 150, 105, 0.45) !important;
     }
-    .neo-shadow-purple {
-      box-shadow: 0 14px 35px -8px rgba(147, 51, 234, 0.38);
+    #heroActionButton:hover {
+      background: #047857 !important;
     }
     @keyframes pulse-ring {
-      0%, 100% { box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4); }
-      50% { box-shadow: 0 20px 35px -5px rgba(16, 185, 129, 0.65); }
+      0%, 100% { box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.4); }
+      50% { box-shadow: 0 20px 35px -5px rgba(5, 150, 105, 0.7); }
     }
     .hero-pulse { animation: pulse-ring 2.5s infinite; }
   </style>
 </head>
-<body class="bg-slate-900 md:bg-slate-950 min-h-screen text-slate-800 antialiased flex flex-col items-center selection:bg-sky-500 selection:text-white">
+<body class="aurora-canvas min-h-screen text-slate-800 antialiased flex flex-col items-center selection:bg-emerald-500 selection:text-white">
 
-  <!-- Responsive Wrapper Container (Mobile & Tablet/iPad/Desktop Adaptive) -->
-  <div class="w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-gradient-to-b from-sky-50 via-slate-50 to-indigo-50/40 min-h-screen shadow-2xl flex flex-col relative pb-28 border-x border-slate-200/50 transition-all duration-200">
+  <!-- Mobile Phone Canvas Container -->
+  <div class="w-full max-w-md min-h-screen flex flex-col relative pb-24 px-4 pt-1">
     
-    <!-- TEST MODE BANNER (Concept 1: Vibrant Bento & Aurora Glass) -->
-    <div class="bg-gradient-to-r from-sky-600 via-indigo-600 to-pink-600 text-white px-4 py-2 flex items-center justify-between text-xs font-medium shadow-sm">
-      <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 rounded-full bg-white/25 font-black text-[10px] tracking-wide border border-white/30">🧪 TEST PAGE</span>
-        <span>หน้าทดสอบ: <strong>แบบที่ 1 Vibrant Bento & Aurora Glass</strong></span>
+    <!-- TEST MODE FLOATING BADGE -->
+    <div class="flex items-center justify-between text-[11px] py-1 px-1 mb-1">
+      <div class="flex items-center gap-1.5">
+        <span class="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black text-[9px] tracking-wide shadow-xs">🧪 TEST MODE</span>
+        <span class="text-slate-600 font-bold">แบบที่ 1 (Vibrant Bento)</span>
       </div>
-      <a href="/index.html" class="bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded-lg text-white font-bold transition flex items-center gap-1 active:scale-95 text-[11px]">
+      <a href="/index.html" class="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-0.5 transition active:scale-95">
         <span>← กลับหน้าหลัก</span>
       </a>
     </div>
 
-    <!-- Top App Bar & Profile Card (Vibrant Aurora Glass Header) -->
-    <header class="bg-white/80 backdrop-blur-xl text-slate-800 p-4 md:p-5 border-b border-white/60 sticky top-0 z-30 shadow-xs">
-      <div class="flex items-center justify-between">
-        <!-- Employee Avatar & Welcome with Rainbow Aurora Ring -->
-        <div onclick="handleHeaderEmployeeCardClick()" class="flex items-center space-x-3 cursor-pointer group min-w-0">
-          <div class="relative flex-shrink-0">
-            <div class="w-12 h-12 md:w-13 md:h-13 rounded-2xl bg-gradient-to-tr from-sky-400 via-indigo-500 to-pink-500 p-0.5 shadow-md">
-              <div id="headerEmpAvatar" class="w-full h-full rounded-[14px] bg-white text-slate-800 font-extrabold text-base flex items-center justify-center shadow-inner">
-                ⏱️
-              </div>
-            </div>
-            <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-[8px] text-white font-bold">✓</span>
-          </div>
-          <div class="min-w-0">
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span id="headerEmpSub" class="text-xs text-slate-500 font-medium truncate">ยินดีต้อนรับ 👋</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold border border-sky-200">HQ • สนง.ใหญ่</span>
-              <span id="headerLockBadge" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">🔒 ล็อกเครื่อง</span>
-            </div>
-            <div id="headerEmpName" class="text-base md:text-lg font-black text-slate-900 truncate leading-tight group-hover:text-sky-600 transition mt-0.5">
-              กรุณาแตะเพื่อเลือกรหัสพนักงาน
-            </div>
-          </div>
-        </div>
-
-        <!-- Action Buttons: Guide, Notification, Switcher -->
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <button type="button" id="headerEmpBtnTag" onclick="handleHeaderEmployeeCardClick()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1">
-            <span id="headerEmpBtnText">เปลี่ยน</span>
-            <span id="headerEmpBtnIcon">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-            </span>
-          </button>
-          <a href="/guide.html" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="คู่มือติดตั้ง">
-            <span>📖</span>
-          </a>
-          <button type="button" id="btnOpenNotifications" onclick="openNotificationDrawer()" class="relative p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="การแจ้งเตือน">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-            <span id="notifBadge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
-          </button>
-        </div>
-      </div>
-      <div id="headerCompanyName" class="hidden">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</div>
-    </header>
-
-    <!-- Shift Time Ticker Bar (Minimal Pill) -->
-    <div class="bg-slate-50/90 border-b border-slate-200/80 px-4 md:px-6 py-2 flex items-center justify-between text-xs text-slate-600">
-      <div class="flex items-center space-x-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-        <span class="font-medium text-slate-500">กะงานวันนี้:</span>
-        <strong class="font-mono text-slate-900" id="shiftTickerText">09:30 - 19:00 น.</strong>
-        <span id="shiftBranchBadge" class="text-[11px] bg-sky-100 text-sky-800 font-semibold px-2 py-0.5 rounded-full border border-sky-200">สำนักงานใหญ่</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <span id="shiftLunchText" class="hidden sm:inline text-slate-500">🍱 พัก 13:00 - 14:00 น.</span>
-        <!-- Font Size Switcher -->
-        <div class="inline-flex bg-white border border-slate-300 rounded-lg p-0.5 shadow-2xs text-xs font-bold items-center" title="ปรับขนาดตัวอักษร">
-          <button type="button" onclick="changeAppFontSize('md')" id="btnFontMd" class="px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-100">ก</button>
-          <button type="button" onclick="changeAppFontSize('lg')" id="btnFontLg" class="px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-100">ก+</button>
-          <button type="button" onclick="changeAppFontSize('xl')" id="btnFontXl" class="px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-100">ก++</button>
+    <!-- Simulated Phone Status Bar (9:28 | 5G [88]) -->
+    <div class="flex items-center justify-between text-xs font-black text-slate-900 px-3 py-1 select-none">
+      <span id="statusBarClock" class="font-bold text-sm tracking-tight">09:28</span>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[11px] font-black">5G</span>
+        <div class="w-5 h-2.5 border border-slate-900 rounded-[3px] p-[1.5px] flex items-center">
+          <div class="h-full bg-slate-900 rounded-[1.5px]" style="width: 88%;"></div>
         </div>
       </div>
     </div>
 
-    <!-- Notification Permission Banner -->
-    <div id="notifPermissionBanner" class="hidden bg-gradient-to-r from-sky-600 to-blue-700 text-white px-4 py-2.5 flex items-center justify-between shadow text-xs border-b border-white/20 animate-fadeIn">
-      <div class="flex items-center gap-2">
-        <span class="text-sm">🔔</span>
-        <div>
-          <span class="font-semibold">เปิดรับแจ้งเตือนบนมือถือ:</span>
-          <span class="opacity-90 ml-1 text-[11px]">เตือนเวลาพักเบรก และผลอนุมัติ OT ทันที</span>
+    <!-- Top Profile & Shift Bar -->
+    <header class="py-3 px-1 flex items-center justify-between">
+      <!-- Left: Employee Avatar & Name/ID -->
+      <div onclick="handleHeaderEmployeeCardClick()" class="flex items-center gap-3 cursor-pointer group">
+        <div class="relative flex-shrink-0">
+          <div class="w-13 h-13 rounded-full p-0.5 bg-gradient-to-tr from-sky-400 via-indigo-400 to-pink-400 shadow-md">
+            <div id="headerEmpAvatar" class="w-12 h-12 rounded-full bg-white text-slate-800 font-extrabold text-base flex items-center justify-center overflow-hidden border-2 border-white shadow-inner">
+              ⏱️
+            </div>
+          </div>
+          <span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"></span>
+        </div>
+        <div class="min-w-0">
+          <div id="headerEmpName" class="text-base md:text-lg font-black text-slate-900 leading-tight group-hover:text-emerald-600 transition truncate">
+            สุภารัตน์ แก้วกล้า
+          </div>
+          <div id="headerEmpSub" class="text-xs text-slate-500 font-medium truncate">
+            ID: 24590
+          </div>
         </div>
       </div>
-      <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
-        <button type="button" onclick="requestNotificationPermission()" class="bg-white text-sky-800 font-bold px-2.5 py-1 rounded-lg shadow-sm hover:bg-sky-50 transition text-[11px] active:scale-95">เปิดใช้งาน</button>
-        <button type="button" onclick="dismissNotifBanner()" class="opacity-70 hover:opacity-100 p-1 text-sm leading-none" title="ปิด">&times;</button>
+
+      <!-- Right: Thai Date & Shift Badge -->
+      <div class="text-right flex-shrink-0">
+        <div id="headerLiveDateFull" class="text-xs font-bold text-slate-800">
+          วันพุธ, 18 กันยายน 2567
+        </div>
+        <div class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-100/90 border border-emerald-300/80 text-emerald-800 text-[10px] font-bold mt-1 shadow-2xs">
+          <span id="shiftTickerText">กะงาน: 09:30 - 19:00 (10 ชม.)</span>
+        </div>
+      </div>
+
+      <!-- Hidden compatibility elements required by app.js -->
+      <div class="hidden">
+        <span id="shiftBranchBadge">สำนักงานใหญ่</span>
+        <span id="shiftLunchText"></span>
+        <span id="headerLockBadge"></span>
+        <button type="button" id="headerEmpBtnTag"></button>
+        <span id="headerEmpBtnText"></span>
+        <span id="headerEmpBtnIcon"></span>
+        <button type="button" id="btnOpenNotifications"></button>
+        <span id="notifBadge"></span>
+        <div id="headerCompanyName">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</div>
+      </div>
+    </header>
+
+    <!-- Notification Permission Banner (Conditional) -->
+    <div id="notifPermissionBanner" class="hidden bg-white/90 backdrop-blur-md text-slate-800 p-3 rounded-2xl shadow-sm text-xs border border-white/60 mb-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>🔔</span>
+          <span class="font-bold">เปิดรับแจ้งเตือนมือถือ</span>
+        </div>
+        <button type="button" onclick="requestNotificationPermission()" class="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-lg text-[11px]">เปิดใช้งาน</button>
       </div>
     </div>
 
     <!-- MAIN VIEWS CONTAINER -->
-    <main class="flex-1 p-4 md:p-6 overflow-y-auto space-y-5">
+    <main class="flex-1 overflow-y-auto space-y-4">
 
       <!-- ========================================================================= -->
-      <!-- TAB 1: CLOCK IN / OUT (แบบที่ 1: Modern Minimalist Apple Health Style) -->
+      <!-- TAB 1: CLOCK IN / OUT (แบบที่ 1: Vibrant Bento & Aurora Glass - Exact 1:1) -->
       <!-- ========================================================================= -->
       <section id="tabClock" class="space-y-4">
 
-        <!-- 1. VIBRANT BENTO & AURORA GLASS CARD (คอนเซ็ปต์ที่ 1: การ์ดกระจกแก้วออโรร่า + วงแหวนเปอร์เซ็นต์เวลางาน + 4 เบนโตะชิปสีสดใส) -->
-        <div class="glass-aurora rounded-3xl p-5 md:p-6 border border-white/80 shadow-xl shadow-slate-200/60 relative overflow-hidden space-y-4">
+        <!-- 1. VIBRANT BENTO & AURORA GLASS CARD (การ์ดกระจกแก้วออโรร่า + วงแหวนเปอร์เซ็นต์เวลางาน) -->
+        <div class="card-aurora-glass p-5 md:p-6 relative overflow-hidden space-y-4">
           
-          <!-- Subtle Aurora Glow Orb in Background -->
-          <div class="absolute -top-12 -right-12 w-44 h-44 bg-gradient-to-br from-emerald-400/20 via-sky-400/20 to-indigo-400/10 rounded-full blur-2xl pointer-events-none"></div>
-          <div class="absolute -bottom-10 -left-10 w-36 h-36 bg-gradient-to-tr from-amber-400/15 via-rose-400/15 to-transparent rounded-full blur-2xl pointer-events-none"></div>
+          <!-- Subtle Glow Orbs in Background -->
+          <div class="absolute -top-10 -right-10 w-40 h-40 bg-cyan-300/20 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-300/20 rounded-full blur-2xl pointer-events-none"></div>
 
-          <!-- Top row: Status & Digital Clock on left, Circular Work Progress Ring on right -->
-          <div class="relative z-10 flex items-start justify-between">
-            <div class="space-y-1">
-              <!-- Status Badge & Icon -->
-              <div class="flex items-center gap-1.5">
-                <span id="todayStatusIcon" class="text-base">☀️</span>
-                <span id="todayStatusBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200/80 shadow-2xs">
-                  พร้อมลงเวลา
-                </span>
-                <span id="todayLateInfo" class="text-[11px] text-slate-400 font-medium ml-1">เกณฑ์ 09:30 น.</span>
-              </div>
-              
-              <!-- Big Digital Clock -->
-              <div class="text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-900 drop-shadow-2xs" id="liveClock">
-                00:00:00
-              </div>
-              
-              <!-- Thai Date -->
-              <div class="text-xs text-slate-500 font-medium flex items-center gap-1" id="liveDateThai">
-                กำลังโหลดวันที่...
-              </div>
-              <div class="hidden" id="liveClockSubtext">ตัดวิกทุกวันที่ 25</div>
-              <div class="hidden" id="todayStatusText">ยังไม่ได้ลงเวลาวันนี้</div>
+          <!-- 1. Digital Clock Gradient Capsule/Banner -->
+          <div class="relative z-10 p-4 md:p-5 clock-banner-grad text-center text-white">
+            <div id="liveClock" class="text-4xl md:text-5xl font-black font-mono tracking-tight text-white drop-shadow-sm">
+              09:28:15
             </div>
-
-            <!-- Right: Circular Work Progress Donut Arc (Apple Ring Style) -->
-            <div class="relative flex flex-col items-center justify-center flex-shrink-0 pt-1">
-              <div class="relative w-20 h-20 flex items-center justify-center">
-                <svg class="w-20 h-20 transform -rotate-90 drop-shadow-xs" viewBox="0 0 72 72">
-                  <circle cx="36" cy="36" r="28" stroke="currentColor" stroke-width="6.5" class="text-slate-100" fill="transparent" />
-                  <circle id="workProgressArc" cx="36" cy="36" r="28" stroke="url(#arcAuroraGrad)" stroke-width="6.5" stroke-linecap="round" class="transition-all duration-700 ease-out" fill="transparent" stroke-dasharray="175.93" stroke-dashoffset="175.93" />
-                  <defs>
-                    <linearGradient id="arcAuroraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#10b981"/>
-                      <stop offset="50%" stop-color="#06b6d4"/>
-                      <stop offset="100%" stop-color="#6366f1"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                  <span id="workProgressPercent" class="text-sm font-black text-slate-800 tracking-tight">0%</span>
-                  <span class="text-[9px] font-semibold text-slate-400">เวลากะ</span>
-                </div>
-              </div>
-            </div>
+            <div class="hidden" id="liveClockSubtext">ตัดวิกทุกวันที่ 25</div>
           </div>
 
-          <!-- GPS Location Pill with Satellite Sync & Refresh -->
-          <div class="relative z-10 flex items-center justify-between p-2.5 px-3 rounded-2xl bg-white/70 backdrop-blur-md border border-slate-200/70 shadow-xs">
-            <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs shadow-xs">
-                📍
-              </div>
-              <div>
-                <div class="flex items-center gap-1.5">
-                  <span id="gpsPulseDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span id="gpsBadge" class="text-xs font-bold text-slate-800">รอตรวจพิกัด</span>
-                </div>
-                <div class="text-[11px] text-slate-500 font-medium" id="gpsDistanceText">
-                  ระยะห่าง: รอคำนวณ
-                </div>
-                <div class="hidden" id="gpsStatusText">กำลังค้นหาตำแหน่ง GPS...</div>
-              </div>
+          <!-- 2. Two Pills Row (Date Chip & Location GPS Chip) -->
+          <div class="relative z-10 flex items-center justify-between gap-2">
+            <!-- Left Pill: Date -->
+            <div id="liveDateThai" class="px-3.5 py-1.5 rounded-full bg-slate-100/90 text-slate-700 text-xs font-bold shadow-2xs flex items-center gap-1">
+              พุธ, 18 ก.ย. 67
             </div>
 
-            <div>
-              <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-slate-900 text-xs font-bold transition shadow-2xs active:scale-95">
-                <svg id="iconRefreshGps" class="w-3.5 h-3.5 text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                <span>รีเฟรช</span>
+            <!-- Right Pill: Location HQ + Distance -->
+            <div class="flex items-center gap-1">
+              <div id="gpsLocationChip" class="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                <span id="gpsPulseDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Location: <span id="gpsBadge">Office HQ</span> (<span id="gpsDistanceText">12m</span>)</span>
+              </div>
+              <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="p-1.5 rounded-full bg-white text-slate-500 hover:text-slate-800 shadow-2xs border border-slate-200 active:scale-95 transition" title="รีเฟรช GPS">
+                <svg id="iconRefreshGps" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
               </button>
+              <div class="hidden" id="gpsStatusText">กำลังค้นหาตำแหน่ง GPS...</div>
             </div>
           </div>
 
-          <!-- 4 VIBRANT BENTO CHIPS: เข้าเช้า / ออกพัก / เข้าบ่าย / ออกงาน -->
-          <div class="relative z-10 pt-1 space-y-2">
-            <!-- 4-Segment Rainbow Stepper Line -->
-            <div class="grid grid-cols-4 gap-1.5" id="horizontalStepperBars">
-              <div id="stepBarMorning" class="h-1.5 rounded-full bg-slate-200 transition-all duration-300"></div>
-              <div id="stepBarBreakOut" class="h-1.5 rounded-full bg-slate-200 transition-all duration-300"></div>
-              <div id="stepBarBreakIn" class="h-1.5 rounded-full bg-slate-200 transition-all duration-300"></div>
-              <div id="stepBarEvening" class="h-1.5 rounded-full bg-slate-200 transition-all duration-300"></div>
-            </div>
-
-            <!-- Bento Chips -->
-            <div class="grid grid-cols-4 gap-2 text-center" id="timelineBoxesContainer">
-              <!-- Chip 1: เข้าเช้า (Mint Green Accent) -->
-              <div id="timeBoxMorning" class="p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all">
-                <div class="flex items-center justify-center gap-1">
-                  <span class="text-xs">☀️</span>
-                  <span class="text-[10px] font-bold text-slate-600">เข้าเช้า</span>
-                </div>
-                <div id="todayClockInTime" class="text-xs md:text-sm font-black text-slate-400 font-mono mt-1">--:--:--</div>
-              </div>
-
-              <!-- Chip 2: ออกพัก (Amber Honey Accent) -->
-              <div id="timeBoxBreakOut" class="p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all">
-                <div class="flex items-center justify-center gap-1">
-                  <span class="text-xs">☕</span>
-                  <span class="text-[10px] font-bold text-slate-600">เริ่มพัก</span>
-                </div>
-                <div id="todayBreakOutTime" class="text-xs md:text-sm font-black text-slate-400 font-mono mt-1">--:--:--</div>
-              </div>
-
-              <!-- Chip 3: เข้าบ่าย (Purple Lavender Accent) -->
-              <div id="timeBoxBreakIn" class="p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all">
-                <div class="flex items-center justify-center gap-1">
-                  <span class="text-xs">💼</span>
-                  <span class="text-[10px] font-bold text-slate-600">เข้าบ่าย</span>
-                </div>
-                <div id="todayBreakInTime" class="text-xs md:text-sm font-black text-slate-400 font-mono mt-1">--:--:--</div>
-              </div>
-
-              <!-- Chip 4: ออกงาน (Coral Rose Accent) -->
-              <div id="timeBoxEvening" class="p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all">
-                <div class="flex items-center justify-center gap-1">
-                  <span class="text-xs">🚪</span>
-                  <span class="text-[10px] font-bold text-slate-600">ออกงาน</span>
-                </div>
-                <div id="todayClockOutTime" class="text-xs md:text-sm font-black text-slate-400 font-mono mt-1">--:--:--</div>
+          <!-- 3. Center Donut Progress Arc (Big Circular Ring in Center) -->
+          <div class="relative z-10 py-3 flex flex-col items-center justify-center">
+            <div class="relative w-44 h-44 flex items-center justify-center">
+              <svg class="w-44 h-44 transform -rotate-90 drop-shadow-xs" viewBox="0 0 120 120">
+                <!-- Background Track -->
+                <circle cx="60" cy="60" r="50" stroke="currentColor" stroke-width="9" class="text-slate-100/90" fill="transparent" />
+                <!-- Progress Arc with Cyan -> Purple Gradient -->
+                <circle id="workProgressArc" cx="60" cy="60" r="50" stroke="url(#donutGradientConceptOne)" stroke-width="9" stroke-linecap="round" class="transition-all duration-700 ease-out" fill="transparent" stroke-dasharray="314.16" stroke-dashoffset="267.03" />
+                <defs>
+                  <linearGradient id="donutGradientConceptOne" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#06b6d4"/>
+                    <stop offset="50%" stop-color="#3b82f6"/>
+                    <stop offset="100%" stop-color="#a855f7"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <!-- Center Text inside Donut -->
+              <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                <span id="workProgressPercent" class="text-3xl font-black text-slate-800 tracking-tight">15%</span>
+                <span class="text-xs font-medium text-slate-400 mt-0.5">ความคืบหน้า:</span>
+                <span id="workProgressElapsed" class="text-xs font-bold text-slate-700 mt-0.5">1 ชม. 29 นาที</span>
               </div>
             </div>
+          </div>
 
-            <div id="todayWorkSummary" class="text-center text-[11px] text-slate-500 font-medium pt-0.5">
-              ปกติ 0 ชม.
-            </div>
+          <!-- Hidden compatibility elements needed by app.js so stepper logic works seamlessly -->
+          <div class="hidden">
+            <span id="todayLateInfo">เกณฑ์ 09:30 น.</span>
+            <div id="stepBarMorning"></div>
+            <div id="stepBarBreakOut"></div>
+            <div id="stepBarBreakIn"></div>
+            <div id="stepBarEvening"></div>
+            <div id="timeBoxMorning"><span id="todayClockInTime">--:--:--</span></div>
+            <div id="timeBoxBreakOut"><span id="todayBreakOutTime">--:--:--</span></div>
+            <div id="timeBoxBreakIn"><span id="todayBreakInTime">--:--:--</span></div>
+            <div id="timeBoxEvening"><span id="todayClockOutTime">--:--:--</span></div>
+            <div id="todayWorkSummary">ปกติ 0 ชม.</div>
           </div>
         </div>
 
-        <!-- 2. HIGH-IMPACT HERO ACTION BUTTON (Vibrant Neon Glow) -->
-        <div class="space-y-2.5 pt-1">
+        <!-- 2. HIGH-IMPACT HERO ACTION BUTTON (Rounded-Full Pill Button) -->
+        <div class="space-y-2 pt-1">
           <!-- Hero Button Element -->
-          <button id="heroActionButton" type="button" class="w-full py-5 md:py-6 px-5 md:px-6 rounded-3xl text-white shadow-xl transition-all duration-200 transform active:scale-[0.98] flex items-center justify-between bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/25 hero-pulse group relative overflow-hidden">
-            <!-- Shiny sheen overlay -->
-            <div class="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
-
-            <div class="relative z-10 flex items-center space-x-3.5 md:space-x-4 text-left">
-              <div id="heroActionIconBox" class="w-13 h-13 md:w-16 md:h-16 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center text-3xl md:text-4xl shadow-inner border border-white/35 group-hover:scale-105 transition-transform flex-shrink-0">
-                <span id="heroActionIcon">☀️</span>
-              </div>
-              <div>
-                <div class="text-[10px] md:text-xs font-bold text-white/85 tracking-wider uppercase">แตะเพื่อทำรายการทันที</div>
-                <div id="heroActionTitle" class="text-lg md:text-2xl font-black tracking-tight text-white mt-0.5">
-                  แตะเพื่อลงเวลาเข้างาน
-                </div>
-                <div id="heroActionSubtitle" class="text-xs md:text-sm font-medium text-emerald-100 mt-0.5">
-                  สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
-                </div>
-              </div>
+          <button id="heroActionButton" type="button" class="w-full text-white font-black text-base md:text-lg shadow-xl transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center gap-2.5 hero-pulse">
+            <!-- Camera icon inside rounded white/transparent badge -->
+            <div id="heroActionIconBox" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-base flex-shrink-0">
+              <span id="heroActionCameraIcon">📷</span>
             </div>
-            <div class="relative z-10 w-10 h-10 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center text-white text-xl shadow-xs group-hover:translate-x-1 transition-transform flex-shrink-0 border border-white/30">
-              &rarr;
-            </div>
+            <!-- Main button text -->
+            <span id="heroActionTitle" class="tracking-wide">สแกนเข้างานเช้า</span>
+            <!-- Sun / step icon -->
+            <span id="heroActionIcon" class="text-xl">☀️</span>
+            <!-- Time IN tag -->
+            <span id="heroActionTag" class="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-black tracking-wider uppercase">TIME IN</span>
+            <!-- Hidden subtitle required by app.js -->
+            <span id="heroActionSubtitle" class="hidden"></span>
           </button>
 
           <!-- Secondary Actions & Direct GPS Options -->
           <div id="heroSecondaryContainer" class="space-y-2">
-            <!-- Alternative button -->
             <div id="heroSecondaryActionBox" class="hidden">
-              <button type="button" id="btnHeroSecondaryAction" class="w-full py-3.5 px-4 bg-gradient-to-r from-rose-50 via-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 active:scale-[0.98] border-2 border-dashed border-rose-300 rounded-2xl flex items-center justify-between text-rose-800 transition-all shadow-sm group">
-                <div class="flex items-center space-x-3 text-left">
-                  <span id="iconHeroSecondaryAction" class="text-2xl p-2 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">🚪</span>
-                  <div>
-                    <div id="titleHeroSecondaryAction" class="text-xs md:text-sm font-bold text-rose-900">
-                      หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)
-                    </div>
-                    <div id="subHeroSecondaryAction" class="text-[11px] md:text-xs text-rose-700/80 font-normal">
-                      แตะที่นี่หากไม่ได้สแกนพัก หรือต้องการออกงานทันที
-                    </div>
-                  </div>
-                </div>
-                <div id="badgeWrapperHeroSecondaryAction" class="flex items-center space-x-1 text-rose-600 font-bold text-xs md:text-sm bg-white/95 px-3 py-1.5 rounded-xl border border-rose-200 shadow-2xs group-hover:translate-x-0.5 transition-transform flex-shrink-0">
-                  <span id="badgeTextHeroSecondaryAction">สแกนออกงาน</span>
-                  <span>&rarr;</span>
-                </div>
+              <button type="button" id="btnHeroSecondaryAction" class="w-full py-3 px-4 bg-white/90 hover:bg-white text-rose-700 font-bold text-xs rounded-full border border-rose-200 shadow-xs flex items-center justify-center gap-2">
+                <span id="iconHeroSecondaryAction">🚪</span>
+                <span id="titleHeroSecondaryAction">หรือแตะเพื่อลงเวลาออกงานทันที (Clock OUT)</span>
+                <span id="subHeroSecondaryAction" class="hidden"></span>
+                <span id="badgeWrapperHeroSecondaryAction" class="hidden"><span id="badgeTextHeroSecondaryAction"></span></span>
               </button>
             </div>
-
-            <!-- Direct GPS Button (shown when allow_direct_gps === 'true') -->
             <div id="containerHeroDirectGps" class="text-center hidden">
-              <button type="button" id="btnHeroDirectGps" class="w-full py-2.5 px-4 bg-white/90 hover:bg-white active:scale-[0.98] text-slate-700 font-medium text-xs md:text-sm rounded-2xl border border-slate-200 flex items-center justify-center space-x-2 transition shadow-2xs">
-                <span class="text-base">📸</span>
+              <button type="button" id="btnHeroDirectGps" class="w-full py-2.5 px-4 bg-white/90 hover:bg-white text-slate-700 font-semibold text-xs rounded-full border border-slate-200 shadow-xs flex items-center justify-center gap-2">
+                <span>📸</span>
                 <span id="txtHeroDirectGps">ถ่ายรูปด้วย GPS โดยตรง (ไม่ต้องใช้ QR)</span>
               </button>
             </div>
           </div>
+
+          <!-- Status text under button: สถานะ: ยังไม่ได้เข้างาน -->
+          <div class="text-center pt-1 text-sm font-bold text-slate-700">
+            <span>สถานะ: </span>
+            <span id="todayStatusBadge" class="text-slate-800">ยังไม่ได้เข้างาน</span>
+            <span id="todayStatusIcon" class="hidden">☀️</span>
+            <span id="todayStatusText" class="hidden">ยังไม่ได้ลงเวลาวันนี้</span>
+          </div>
         </div>
 
-        <!-- 3. COLORFUL BENTO SHORTCUT TILES (บริการตนเอง: ประวัติ / เบิกเงิน / ลางาน / สลิปเงินเดือน) -->
-        <div class="grid grid-cols-4 gap-2.5 pt-1">
-          <!-- Tile 1: ประวัติเวลา (Sky Blue Bento) -->
-          <button type="button" onclick="switchTab('history')" class="p-3 rounded-2xl bg-sky-50/90 hover:bg-sky-100/90 border border-sky-100 text-center transition shadow-xs active:scale-95 group">
-            <div class="w-10 h-10 mx-auto rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-              📅
+        <!-- 3. COLORFUL BENTO SHORTCUT TILES (4 App-like Square Tiles) -->
+        <div class="grid grid-cols-4 gap-3 pt-2">
+          <!-- Tile 1: ประวัติ (Sky Blue) -->
+          <button type="button" onclick="switchTab('history')" class="group flex flex-col items-center focus:outline-none">
+            <div class="w-full aspect-square rounded-3xl p-3 bg-gradient-to-b from-[#38bdf8] to-[#0284c7] text-white flex items-center justify-center shadow-lg shadow-sky-400/30 group-active:scale-95 transition-transform">
+              <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+              </div>
             </div>
-            <div class="text-[11px] font-bold text-sky-950 mt-1.5">ประวัติเวลา</div>
+            <span class="text-xs font-bold text-slate-800 mt-2">ประวัติ</span>
           </button>
 
-          <!-- Tile 2: ขอเบิกเงิน (Amber Bento) -->
-          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="p-3 rounded-2xl bg-amber-50/90 hover:bg-amber-100/90 border border-amber-100 text-center transition shadow-xs active:scale-95 group">
-            <div class="w-10 h-10 mx-auto rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-              💵
+          <!-- Tile 2: เบิกเงิน (Purple) -->
+          <button type="button" id="quickBtnAdvance" onclick="switchTab('requests'); switchSubTab('advance');" class="group flex flex-col items-center focus:outline-none">
+            <div class="w-full aspect-square rounded-3xl p-3 bg-gradient-to-b from-[#c084fc] to-[#a855f7] text-white flex items-center justify-center shadow-lg shadow-purple-400/30 group-active:scale-95 transition-transform">
+              <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white text-xl">
+                💵
+              </div>
             </div>
-            <div class="text-[11px] font-bold text-amber-950 mt-1.5">ขอเบิกเงิน</div>
+            <span class="text-xs font-bold text-slate-800 mt-2">เบิกเงิน</span>
           </button>
 
-          <!-- Tile 3: แจ้งลางาน (Emerald Bento) -->
-          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="p-3 rounded-2xl bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-100 text-center transition shadow-xs active:scale-95 group">
-            <div class="w-10 h-10 mx-auto rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-              🏖️
+          <!-- Tile 3: ลาหยุด (Amber) -->
+          <button type="button" id="quickBtnLeave" onclick="switchTab('requests'); switchSubTab('leave');" class="group flex flex-col items-center focus:outline-none">
+            <div class="w-full aspect-square rounded-3xl p-3 bg-gradient-to-b from-[#fcd34d] to-[#f59e0b] text-white flex items-center justify-center shadow-lg shadow-amber-400/30 group-active:scale-95 transition-transform">
+              <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white text-xl">
+                📅
+              </div>
             </div>
-            <div class="text-[11px] font-bold text-emerald-950 mt-1.5">แจ้งลางาน</div>
+            <span class="text-xs font-bold text-slate-800 mt-2">ลาหยุด</span>
           </button>
 
-          <!-- Tile 4: สลิปเงินเดือน (Indigo Bento) -->
-          <button type="button" id="quickBtnPayslip" onclick="switchTab('payslip')" class="p-3 rounded-2xl bg-indigo-50/90 hover:bg-indigo-100/90 border border-indigo-100 text-center transition shadow-xs active:scale-95 relative group">
-            <div class="w-10 h-10 mx-auto rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-              💰
+          <!-- Tile 4: สลิปเงินเดือน (Mint / Emerald) -->
+          <button type="button" id="quickBtnPayslip" onclick="switchTab('payslip')" class="group flex flex-col items-center focus:outline-none relative">
+            <div class="w-full aspect-square rounded-3xl p-3 bg-gradient-to-b from-[#34d399] to-[#059669] text-white flex items-center justify-center shadow-lg shadow-emerald-400/30 group-active:scale-95 transition-transform relative">
+              <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white text-xl">
+                📄
+              </div>
+              <span id="quickPayslipBadge" class="hidden absolute top-2 right-2 w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping"></span>
             </div>
-            <div class="text-[11px] font-bold text-indigo-950 mt-1.5">สลิปเงิน</div>
-            <span id="quickPayslipBadge" class="hidden absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+            <span class="text-xs font-bold text-slate-800 mt-2">สลิปเงินเดือน</span>
           </button>
         </div>
 
@@ -1503,38 +1441,58 @@
         if (b2) b2.className = hasBOut ? 'h-1.5 rounded-full bg-amber-500 shadow-xs' : 'h-1.5 rounded-full bg-slate-200 transition-all duration-300';
         if (b3) b3.className = hasBIn ? 'h-1.5 rounded-full bg-indigo-500 shadow-xs' : 'h-1.5 rounded-full bg-slate-200 transition-all duration-300';
         if (b4) b4.className = hasOut ? 'h-1.5 rounded-full bg-rose-500 shadow-xs' : 'h-1.5 rounded-full bg-slate-200 transition-all duration-300';
+  <!-- Visual Synchronizer for Concept 1 (Exact 1:1 Match) -->
+  <script>
+    (function() {
+      function syncConceptOne() {
+        const now = new Date();
 
-        // 2. Bento Chips Active Dynamic Styling
-        const box1 = document.getElementById('timeBoxMorning');
-        const box2 = document.getElementById('timeBoxBreakOut');
-        const box3 = document.getElementById('timeBoxBreakIn');
-        const box4 = document.getElementById('timeBoxEvening');
-        const txt1 = document.getElementById('todayClockInTime');
-        const txt2 = document.getElementById('todayBreakOutTime');
-        const txt3 = document.getElementById('todayBreakInTime');
-        const txt4 = document.getElementById('todayClockOutTime');
+        // 1. Status Bar Clock (e.g. 09:28)
+        const curH = String(now.getHours()).padStart(2, '0');
+        const curM = String(now.getMinutes()).padStart(2, '0');
+        const sbClock = document.getElementById('statusBarClock');
+        if (sbClock) sbClock.textContent = `${curH}:${curM}`;
 
-        if (box1) box1.className = hasIn ? 'p-2 rounded-2xl bg-emerald-50/90 border border-emerald-300 ring-2 ring-emerald-400/25 neo-shadow-mint flex flex-col justify-between transition-all' : 'p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all';
-        if (txt1) txt1.className = hasIn ? 'text-xs md:text-sm font-black text-emerald-700 font-mono mt-1' : 'text-xs md:text-sm font-black text-slate-400 font-mono mt-1';
+        // 2. Full Thai Date & Short Thai Date
+        const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+        const thaiMonthsFull = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+        const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const dayName = thaiDays[now.getDay()];
+        const dNum = now.getDate();
+        const mNameFull = thaiMonthsFull[now.getMonth()];
+        const mNameShort = thaiMonthsShort[now.getMonth()];
+        const yNum = now.getFullYear() + 543;
+        const yNumShort = String(yNum).slice(-2);
 
-        if (box2) box2.className = hasBOut ? 'p-2 rounded-2xl bg-amber-50/90 border border-amber-300 ring-2 ring-amber-400/25 neo-shadow-amber flex flex-col justify-between transition-all' : 'p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all';
-        if (txt2) txt2.className = hasBOut ? 'text-xs md:text-sm font-black text-amber-700 font-mono mt-1' : 'text-xs md:text-sm font-black text-slate-400 font-mono mt-1';
+        const hDate = document.getElementById('headerLiveDateFull');
+        if (hDate) hDate.textContent = `${dayName}, ${dNum} ${mNameFull} ${yNum}`;
 
-        if (box3) box3.className = hasBIn ? 'p-2 rounded-2xl bg-indigo-50/90 border border-indigo-300 ring-2 ring-indigo-400/25 neo-shadow-purple flex flex-col justify-between transition-all' : 'p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all';
-        if (txt3) txt3.className = hasBIn ? 'text-xs md:text-sm font-black text-indigo-700 font-mono mt-1' : 'text-xs md:text-sm font-black text-slate-400 font-mono mt-1';
+        const lDate = document.getElementById('liveDateThai');
+        if (lDate) lDate.textContent = `${dayName.replace('วัน', '')}, ${dNum} ${mNameShort} ${yNumShort}`;
 
-        if (box4) box4.className = hasOut ? 'p-2 rounded-2xl bg-rose-50/90 border border-rose-300 ring-2 ring-rose-400/25 neo-shadow-coral flex flex-col justify-between transition-all' : 'p-2 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all';
-        if (txt4) txt4.className = hasOut ? 'text-xs md:text-sm font-black text-rose-700 font-mono mt-1' : 'text-xs md:text-sm font-black text-slate-400 font-mono mt-1';
+        // 3. Shift Punch Times & Progress Calculation
+        const tIn = document.getElementById('todayClockInTime')?.textContent?.trim() || '';
+        const tBOut = document.getElementById('todayBreakOutTime')?.textContent?.trim() || '';
+        const tBIn = document.getElementById('todayBreakInTime')?.textContent?.trim() || '';
+        const tOut = document.getElementById('todayClockOutTime')?.textContent?.trim() || '';
 
-        // 3. Work Progress Circular Ring (Calculated against standard shift 09:30 - 19:00)
+        const hasIn = tIn && tIn !== '--:--:--';
+        const hasBOut = tBOut && tBOut !== '--:--:--';
+        const hasBIn = tBIn && tBIn !== '--:--:--';
+        const hasOut = tOut && tOut !== '--:--:--';
+
+        // Work Progress Ring (radius = 50, circumference = 314.16)
         let percent = 0;
+        let elapsedTxt = '0 ชม. 0 นาที';
+
         if (hasOut) {
           percent = 100;
+          elapsedTxt = 'จบกะงานประจำวัน';
         } else if (hasIn) {
-          const now = new Date();
           const currentMins = now.getHours() * 60 + now.getMinutes();
           const startMins = 9 * 60 + 30; // 09:30
           const endMins = 19 * 60;       // 19:00
+
           if (currentMins <= startMins) {
             percent = 5;
           } else if (currentMins >= endMins) {
@@ -1542,25 +1500,77 @@
           } else {
             percent = Math.min(99, Math.max(5, Math.round(((currentMins - startMins) / (endMins - startMins)) * 100)));
           }
+
+          // Calculate elapsed time from tIn
+          const parts = tIn.split(':').map(Number);
+          if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            const inMins = parts[0] * 60 + parts[1];
+            const diff = Math.max(0, currentMins - inMins);
+            const h = Math.floor(diff / 60);
+            const m = diff % 60;
+            elapsedTxt = `${h} ชม. ${m} นาที`;
+          }
         } else {
           percent = 0;
+          elapsedTxt = 'ยังไม่เริ่มงาน';
         }
 
         const arc = document.getElementById('workProgressArc');
         const pTxt = document.getElementById('workProgressPercent');
-        const circ = 175.93;
+        const eTxt = document.getElementById('workProgressElapsed');
+        const circ = 314.16;
+
         if (arc) {
           const offset = circ - (circ * (percent / 100));
           arc.style.strokeDashoffset = offset;
         }
-        if (pTxt) {
-          pTxt.textContent = percent + '%';
+        if (pTxt) pTxt.textContent = percent + '%';
+        if (eTxt) eTxt.textContent = elapsedTxt;
+
+        // 4. Hero Button Labels and Status Matching the Mockup
+        const heroTitle = document.getElementById('heroActionTitle');
+        const heroIcon = document.getElementById('heroActionIcon');
+        const heroTag = document.getElementById('heroActionTag');
+        const statusBadge = document.getElementById('todayStatusBadge');
+
+        if (!hasIn) {
+          if (heroTitle) heroTitle.textContent = 'สแกนเข้างานเช้า';
+          if (heroIcon) heroIcon.textContent = '☀️';
+          if (heroTag) heroTag.textContent = 'TIME IN';
+          if (statusBadge) statusBadge.textContent = 'ยังไม่ได้เข้างาน';
+        } else if (hasIn && !hasBOut && !hasOut) {
+          const curHM = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+          if (curHM >= '14:30') {
+            if (heroTitle) heroTitle.textContent = 'สแกนออกงาน';
+            if (heroIcon) heroIcon.textContent = '🚪';
+            if (heroTag) heroTag.textContent = 'TIME OUT';
+          } else {
+            if (heroTitle) heroTitle.textContent = 'สแกนเริ่มพัก';
+            if (heroIcon) heroIcon.textContent = '☕';
+            if (heroTag) heroTag.textContent = 'BREAK OUT';
+          }
+          if (statusBadge) statusBadge.textContent = `กำลังปฏิบัติงาน (เข้างาน ${tIn})`;
+        } else if (hasBOut && !hasBIn && !hasOut) {
+          if (heroTitle) heroTitle.textContent = 'สแกนกลับเข้างาน';
+          if (heroIcon) heroIcon.textContent = '💼';
+          if (heroTag) heroTag.textContent = 'BREAK IN';
+          if (statusBadge) statusBadge.textContent = `กำลังพักเบรก (ออกพัก ${tBOut})`;
+        } else if (hasBIn && !hasOut) {
+          if (heroTitle) heroTitle.textContent = 'สแกนออกงาน';
+          if (heroIcon) heroIcon.textContent = '🚪';
+          if (heroTag) heroTag.textContent = 'TIME OUT';
+          if (statusBadge) statusBadge.textContent = `ปฏิบัติงานช่วงบ่าย/เย็น (กลับเข้า ${tBIn})`;
+        } else if (hasOut) {
+          if (heroTitle) heroTitle.textContent = 'ลงเวลาครบเรียบร้อย';
+          if (heroIcon) heroIcon.textContent = '✨';
+          if (heroTag) heroTag.textContent = 'COMPLETED';
+          if (statusBadge) statusBadge.textContent = `ออกงานเรียบร้อย (${tOut})`;
         }
       }
 
-      setInterval(syncStepperProgress, 600);
-      window.addEventListener('DOMContentLoaded', syncStepperProgress);
-      window.addEventListener('load', syncStepperProgress);
+      setInterval(syncConceptOne, 600);
+      window.addEventListener('DOMContentLoaded', syncConceptOne);
+      window.addEventListener('load', syncConceptOne);
     })();
   </script>
 </body>
