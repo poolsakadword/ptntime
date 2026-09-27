@@ -211,18 +211,13 @@
   <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col relative transition-all">
 
     <!-- Top App Header -->
-    <header class="bg-gradient-to-r from-sky-600 via-sky-700 to-blue-800 text-white p-4">
+    <header class="bg-gradient-to-r from-sky-600 via-sky-700 to-blue-800 text-white p-3.5 space-y-2">
       <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-xl shadow-inner border border-white/30">
-            ⏱️
-          </div>
-          <div>
-            <h1 class="text-sm font-semibold leading-tight">ระบบลงเวลาทำงาน (PTN Time)</h1>
-            <p class="text-[11px] text-sky-100 font-normal">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</p>
-          </div>
-        </div>
-        <span class="text-xs bg-white/20 px-2 py-1 rounded-lg">#โหมดทดสอบ</span>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur text-white text-[11px] font-semibold border border-white/20">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>PTN Time</span>
+        </span>
+        <span class="text-xs bg-white/20 px-2 py-0.5 rounded-lg border border-white/20 font-medium">#โหมดทดสอบ</span>
       </div>
 
       <!-- ========================================================================= -->
@@ -498,6 +493,14 @@
       </div>
 
     </main>
+
+    <!-- System Branding Footer (ด้านล่างสุด ใต้ nav bar) -->
+    <div class="py-2.5 px-3 bg-slate-50 border-t border-slate-200/80 flex items-center justify-center gap-1.5 text-[11px] text-slate-500 select-none text-center">
+      <span class="text-xs">⏱️</span>
+      <span class="font-bold text-slate-700 tracking-tight">ระบบลงเวลาทำงาน (PTN Time)</span>
+      <span class="text-slate-300">•</span>
+      <span class="text-slate-500 font-normal">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</span>
+    </div>
   </div>
 
   <!-- ========================================================================= -->
@@ -1105,7 +1108,7 @@
     }, 1000);
 
     // Initial setup
-    selectEmpCardStyle('emp1');
+    selectEmpCardStyle('emp3');
     selectBtnStyle('style3');
     setSimState('IN');
   </script>

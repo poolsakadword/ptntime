@@ -58,58 +58,59 @@
   </script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=10.0">
+  <link rel="stylesheet" href="css/style.css?v=10.1">
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center">
 
   <!-- Responsive Wrapper Container (Mobile & Tablet/iPad/Desktop Adaptive) -->
-  <div class="w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white min-h-screen shadow-2xl flex flex-col relative pb-28 transition-all duration-200">
+  <div class="w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white min-h-screen shadow-2xl flex flex-col relative pb-32 transition-all duration-200">
     
-    <!-- Top App Bar & Profile Card -->
-    <header class="bg-gradient-to-r from-sky-600 via-sky-700 to-blue-800 text-white p-4 md:p-5 sticky top-0 z-30 shadow-md">
+    <!-- Top App Bar & Profile Card (Style 3: Digital VIP ID Badge) -->
+    <header class="bg-gradient-to-r from-sky-600 via-sky-700 to-blue-800 text-white p-3.5 md:p-4 sticky top-0 z-30 shadow-md space-y-2.5">
+      <!-- Utility Row: Guide & Notification Drawer -->
       <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3.5">
-          <div class="w-12 h-12 md:w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-2xl md:text-3xl shadow-inner border border-white/30 flex-shrink-0">
-            ⏱️
-          </div>
-          <div>
-            <h1 class="text-base md:text-xl font-semibold tracking-tight leading-tight">ระบบลงเวลาทำงาน (PTN Time)</h1>
-            <p class="text-xs md:text-sm text-sky-100 font-normal" id="headerCompanyName">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</p>
-          </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-white text-xs font-semibold border border-white/20 shadow-2xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>PTN Time</span>
+          </span>
         </div>
         <div class="flex items-center gap-2">
-          <a href="/guide.html" class="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur border border-white/25 shadow-sm transition active:scale-95 flex items-center gap-1.5 text-xs font-semibold" title="คู่มือการติดตั้งแอป">
+          <a href="/guide.html" class="p-1.5 px-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur border border-white/25 shadow-xs transition active:scale-95 flex items-center gap-1.5 text-xs font-semibold" title="คู่มือการติดตั้งแอป">
             <span>📖</span>
             <span class="hidden sm:inline">คู่มือติดตั้ง</span>
           </a>
-          <button type="button" id="btnOpenNotifications" onclick="openNotificationDrawer()" class="relative p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur border border-white/25 shadow-sm transition active:scale-95" title="การแจ้งเตือน">
+          <button type="button" id="btnOpenNotifications" onclick="openNotificationDrawer()" class="relative p-1.5 px-2 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur border border-white/25 shadow-xs transition active:scale-95" title="การแจ้งเตือน">
             <svg class="w-4 h-4 md:w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
             <span id="notifBadge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
           </button>
         </div>
       </div>
 
-      <!-- Employee Switcher / Profile Card (Prominent, High-contrast, Easy to Tap) -->
-      <div onclick="handleHeaderEmployeeCardClick()" class="mt-3.5 bg-white/15 hover:bg-white/25 active:scale-[0.99] backdrop-blur-md rounded-2xl p-3 md:p-4 border border-white/25 flex items-center justify-between cursor-pointer transition shadow-sm">
-        <div class="flex items-center space-x-3.5 min-w-0">
-          <div id="headerEmpAvatar" class="w-11 h-11 md:w-12 h-12 rounded-xl bg-sky-500 text-white font-medium text-base flex-shrink-0 flex items-center justify-center shadow-md">
+      <!-- Employee Switcher / Profile Card (Style 3: Digital VIP ID Badge) -->
+      <div onclick="handleHeaderEmployeeCardClick()" class="bg-gradient-to-br from-white via-sky-50/70 to-white rounded-2xl p-3 md:p-3.5 border border-sky-200/90 shadow-md text-slate-800 flex items-center justify-between cursor-pointer transition active:scale-[0.99] group hover:border-sky-300 hover:shadow-lg">
+        <div class="flex items-center space-x-3 min-w-0">
+          <div id="headerEmpAvatar" class="w-11 h-11 md:w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-600 to-blue-700 text-white font-extrabold text-base flex-shrink-0 flex items-center justify-center shadow-md border-2 border-white overflow-hidden">
             ⏱️
           </div>
           <div class="min-w-0">
-            <div class="flex items-center gap-1.5">
-              <div id="headerEmpSub" class="text-xs md:text-sm text-sky-200 font-normal truncate">แตะเพื่อระบุตัวตนเข้าใช้งาน</div>
-              <span id="headerLockBadge" class="hidden text-xs font-semibold px-2 py-0.5 rounded bg-amber-400 text-slate-900 shadow-sm flex items-center gap-1">🔒 ล็อกเครื่อง</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span id="headerLockBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs items-center gap-1">🔒 ล็อกเครื่อง</span>
+              <span class="text-[10px] text-sky-800 font-semibold bg-sky-100/90 px-2 py-0.5 rounded-full border border-sky-200">บัตรพนักงาน</span>
             </div>
-            <div id="headerEmpName" class="text-base md:text-xl font-medium text-white truncate mt-0.5">
+            <div id="headerEmpName" class="text-sm md:text-base font-extrabold text-slate-900 truncate mt-0.5">
               กรุณาแตะเพื่อเลือกรหัสพนักงาน
+            </div>
+            <div id="headerEmpSub" class="text-[11px] text-slate-500 font-medium truncate">
+              แตะเพื่อระบุตัวตนเข้าใช้งาน
             </div>
           </div>
         </div>
-        <div id="headerEmpBtnTag" class="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl text-xs md:text-sm font-normal text-sky-100 flex items-center space-x-1.5 flex-shrink-0 ml-2 shadow-sm">
-          <span id="headerEmpBtnText">เปลี่ยน</span>
+        <div id="headerEmpBtnTag" class="flex flex-col items-center justify-center p-2 px-2.5 rounded-xl bg-slate-100 group-hover:bg-sky-100 text-sky-700 transition flex-shrink-0 ml-2 shadow-2xs border border-slate-200/60">
           <span id="headerEmpBtnIcon">
-            <svg class="w-4 h-4 md:w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            <i class="fa-solid fa-id-card text-xs"></i>
           </span>
+          <span id="headerEmpBtnText" class="text-[10px] font-bold mt-0.5 text-sky-800">เปลี่ยน</span>
         </div>
       </div>
     </header>
@@ -697,28 +698,38 @@
 
     </main>
 
-    <!-- Bottom Navigation Bar (4 Tabs for Employee Portal) -->
-    <nav class="fixed bottom-0 w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-3 px-3 z-40 shadow-2xl safe-bottom transition-all">
-      <button onclick="switchTab('clock')" id="navBtnClock" class="flex-1 flex flex-col items-center justify-center py-1 text-sky-600 transition">
-        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <span class="text-xs md:text-sm font-extrabold mt-1">ลงเวลา</span>
-      </button>
+    <!-- Bottom Navigation Bar (4 Tabs for Employee Portal) & System Branding Footer -->
+    <nav class="fixed bottom-0 w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-white/95 backdrop-blur-md border-t border-slate-200 flex flex-col z-40 shadow-2xl safe-bottom transition-all">
+      <div class="flex items-center justify-around py-2 md:py-2.5 px-3">
+        <button onclick="switchTab('clock')" id="navBtnClock" class="flex-1 flex flex-col items-center justify-center py-1 text-sky-600 transition">
+          <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span class="text-xs md:text-sm font-extrabold mt-1">ลงเวลา</span>
+        </button>
 
-      <button onclick="switchTab('history')" id="navBtnHistory" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
-        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-        <span class="text-xs md:text-sm font-semibold mt-1">ประวัติ</span>
-      </button>
+        <button onclick="switchTab('history')" id="navBtnHistory" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
+          <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+          <span class="text-xs md:text-sm font-semibold mt-1">ประวัติ</span>
+        </button>
 
-      <button onclick="switchTab('requests')" id="navBtnRequests" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
-        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <span class="text-xs md:text-sm font-semibold mt-1">ขอเบิก/ลา</span>
-      </button>
+        <button onclick="switchTab('requests')" id="navBtnRequests" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition">
+          <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span class="text-xs md:text-sm font-semibold mt-1">ขอเบิก/ลา</span>
+        </button>
 
-      <button onclick="switchTab('payslip')" id="navBtnPayslip" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition relative">
-        <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path></svg>
-        <span class="text-xs md:text-sm font-semibold mt-1">สลิปเงิน</span>
-        <span id="badgePayslipNew" class="hidden absolute top-1 right-3.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
-      </button>
+        <button onclick="switchTab('payslip')" id="navBtnPayslip" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition relative">
+          <svg class="w-6 h-6 md:w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path></svg>
+          <span class="text-xs md:text-sm font-semibold mt-1">สลิปเงิน</span>
+          <span id="badgePayslipNew" class="hidden absolute top-1 right-3.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+        </button>
+      </div>
+
+      <!-- System Branding Footer (ด้านล่างสุด ใต้ nav bar) -->
+      <div class="py-1 px-3 bg-slate-50/90 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[10px] md:text-xs text-slate-500 select-none">
+        <span class="text-xs flex-shrink-0">⏱️</span>
+        <span class="font-bold text-slate-700 tracking-tight">ระบบลงเวลาทำงาน (PTN Time)</span>
+        <span class="text-slate-300">•</span>
+        <span class="text-slate-500 font-normal truncate" id="headerCompanyName">บจก. พีทีเอ็น ฟาร์มาเซ็นเตอร์</span>
+      </div>
     </nav>
 
     <!-- EMPLOYEE PICKER MODAL (Upgraded: Searchable & Interactive Card List) -->
@@ -1381,6 +1392,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=10.0"></script>
+  <script src="js/app.js?v=10.1"></script>
 </body>
 </html>
