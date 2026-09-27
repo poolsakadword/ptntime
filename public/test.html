@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PTN Time — ตัวอย่าง: ปรับช่องสรุปเวลาให้เล็กลง อยู่ในแถวเดียวกัน</title>
+  <title>PTN Time — ตัวอย่าง: ปรับดีไซน์ปุ่มลงเวลา</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0284c7">
 
@@ -37,6 +37,44 @@
       color: #ffffff !important;
       font-weight: 600 !important;
     }
+
+    /* Radar Wave Ripple Animation (Style 3) */
+    .radar-circle {
+      position: relative;
+    }
+    .radar-circle::before, .radar-circle::after {
+      content: '';
+      position: absolute;
+      inset: -12px;
+      border-radius: 9999px;
+      border: 2px solid rgba(16, 185, 129, 0.4);
+      animation: radar-ping 2.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }
+    .radar-circle::after {
+      animation-delay: 1.25s;
+    }
+    @keyframes radar-ping {
+      0% { transform: scale(0.9); opacity: 1; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+
+    /* Neo-Glass Border Glow (Style 2) */
+    .neo-glass-glow {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      border: 2px solid rgba(16, 185, 129, 0.5);
+      box-shadow: 0 0 25px -4px rgba(16, 185, 129, 0.45);
+    }
+
+    /* Horizontal Pill Gradient (Style 1) */
+    .pill-gradient-emerald {
+      background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+      box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.45);
+    }
+    .pill-gradient-rose {
+      background: linear-gradient(135deg, #f43f5e 0%, #e11d48 50%, #be123c 100%);
+      box-shadow: 0 10px 25px -5px rgba(244, 63, 94, 0.45);
+    }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center p-3 sm:p-6">
@@ -45,10 +83,10 @@
   <div class="w-full max-w-md bg-white rounded-3xl p-4 shadow-md border border-slate-200 mb-4 space-y-3">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <span class="text-xl">📊</span>
+        <span class="text-xl">✨</span>
         <div>
-          <h2 class="text-sm font-bold text-slate-900">ตัวอย่าง: ช่องสรุปเวลา 1 แถวเดียว</h2>
-          <p class="text-[11px] text-slate-500">ปรับให้เล็กลง กระชับ และเรียง 4 ช่องในแถวเดียวกัน</p>
+          <h2 class="text-sm font-bold text-slate-900">เลือกดูดีไซน์ "ปุ่มลงเวลา"</h2>
+          <p class="text-[11px] text-slate-500">เปรียบเทียบ 3 สไตล์โมเดิร์น กับแบบเดิม</p>
         </div>
       </div>
       <a href="index.html" class="text-xs text-sky-600 hover:text-sky-800 font-semibold flex items-center gap-1">
@@ -57,25 +95,28 @@
       </a>
     </div>
 
-    <!-- Toggle Compare Mode -->
-    <div class="grid grid-cols-3 gap-1.5 text-xs">
-      <button type="button" onclick="selectTimelineStyle('optA')" id="btnOptA" class="active-toggle py-2 px-2 rounded-xl bg-slate-100 text-slate-700 transition text-center font-medium shadow-xs">
-        แบบ A (การ์ดมินิ 1 แถว)
+    <!-- 4 Button Styles Switcher -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+      <button type="button" onclick="selectBtnStyle('style1')" id="btnTabStyle1" class="active-toggle py-2 px-2 rounded-xl bg-slate-100 text-slate-700 transition text-center font-medium shadow-xs">
+        1. แคปซูล (Pill)
       </button>
-      <button type="button" onclick="selectTimelineStyle('optB')" id="btnOptB" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
-        แบบ B (สลิมบาร์ ไร้กรอบ)
+      <button type="button" onclick="selectBtnStyle('style2')" id="btnTabStyle2" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        2. กระจกฝ้า (Glass)
       </button>
-      <button type="button" onclick="selectTimelineStyle('old')" id="btnOld" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
-        แบบเดิม (2 แถว หนา)
+      <button type="button" onclick="selectBtnStyle('style3')" id="btnTabStyle3" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        3. วงกลม (Radar)
+      </button>
+      <button type="button" onclick="selectBtnStyle('styleOld')" id="btnTabStyleOld" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        แบบเดิม (บล็อกหนา)
       </button>
     </div>
 
-    <!-- Data Simulation Toggle -->
+    <!-- Status Simulator Toggle -->
     <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-      <span class="text-slate-500 text-[11px] font-medium">จำลองข้อมูลเวลา:</span>
-      <div class="flex gap-1 text-[11px]">
-        <button type="button" onclick="setMockData('empty')" id="btnDataEmpty" class="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">ยังไม่ลง (--:--)</button>
-        <button type="button" onclick="setMockData('progress')" id="btnDataProgress" class="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-semibold">มีเวลาจริง</button>
+      <span class="text-slate-500 text-[11px] font-medium">จำลองสถานะ:</span>
+      <div class="flex gap-1.5 text-[11px]">
+        <button type="button" onclick="setSimState('IN')" id="simBtnIn" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-semibold">☀️ ลงเวลาเข้า</button>
+        <button type="button" onclick="setSimState('OUT')" id="simBtnOut" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium">🚪 ลงเวลาออก</button>
       </div>
     </div>
   </div>
@@ -119,11 +160,11 @@
         <!-- Integrated Status Strip -->
         <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between gap-2 px-1 text-xs">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-base">💼</span>
-            <span class="font-medium text-slate-200 truncate">ปฏิบัติงานช่วงบ่าย</span>
+            <span class="text-base" id="statIcon">🌅</span>
+            <span class="font-medium text-slate-200 truncate" id="statText">ยังไม่ได้ลงเวลาวันนี้</span>
           </div>
-          <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800">
-            กำลังทำงาน
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800" id="statBadge">
+            ยังไม่ลงเวลา
           </span>
         </div>
       </div>
@@ -139,110 +180,129 @@
         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">ในพิกัด</span>
       </div>
 
-      <!-- 3. HERO ACTION BUTTON -->
-      <button type="button" class="w-full py-5 px-4 rounded-2xl text-white shadow-md flex flex-col items-center justify-center space-y-1 bg-rose-600 hover:bg-rose-700 transition active:scale-[0.98]">
-        <span class="text-2xl">🚪</span>
-        <div class="text-lg font-bold tracking-tight text-white">
-          แตะเพื่อลงเวลาออกงาน
-        </div>
-        <div class="text-[11px] font-normal text-rose-100">
-          สแกน QR Code ประจำสาขา เพื่อสรุปเวลางานประจำวัน
-        </div>
-      </button>
-
-      <!-- ========================================================================= -->
-      <!-- 4. ช่องสรุปเวลาเข้างาน (เปรียบเทียบ 3 รูปแบบ) -->
-      <!-- ========================================================================= -->
-
-      <!-- [รูปแบบ A: การ์ดมินิ รวม 4 ช่องใน 1 แถวเดียว - แนะนำ!] -->
-      <div id="viewOptA" class="bg-white rounded-2xl p-3 border border-slate-200 shadow-xs space-y-2">
-        <div class="flex items-center justify-between text-xs">
-          <span class="font-semibold text-slate-800 flex items-center gap-1 text-[11px]">
-            <span>📋</span> สรุปเวลาทำงานวันนี้
-          </span>
-          <div class="flex items-center gap-1.5 text-[10px]">
-            <span class="font-semibold text-emerald-700" id="optALate">ตรงเวลา</span>
-            <span class="text-slate-300">•</span>
-            <span class="text-slate-500" id="optASummary">ปกติ 8 ชม.</span>
-          </div>
-        </div>
-
-        <!-- 4 ช่องใน 1 แถวเดียว (grid-cols-4) -->
-        <div class="grid grid-cols-4 gap-1 text-center">
-          <!-- ช่อง 1: เข้าเช้า -->
-          <div class="p-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80">
-            <div class="text-[9px] sm:text-[10px] text-emerald-800 font-medium">เข้าเช้า</div>
-            <div class="text-xs sm:text-sm font-bold font-mono text-emerald-950 mt-0.5" id="optATime1">09:28</div>
-          </div>
-          <!-- ช่อง 2: ออกพัก -->
-          <div class="p-1.5 rounded-xl bg-amber-50/80 border border-amber-200/80">
-            <div class="text-[9px] sm:text-[10px] text-amber-800 font-medium">ออกพัก</div>
-            <div class="text-xs sm:text-sm font-bold font-mono text-amber-950 mt-0.5" id="optATime2">13:00</div>
-          </div>
-          <!-- ช่อง 3: เข้าบ่าย -->
-          <div class="p-1.5 rounded-xl bg-teal-50/80 border border-teal-200/80">
-            <div class="text-[9px] sm:text-[10px] text-teal-800 font-medium">เข้าบ่าย</div>
-            <div class="text-xs sm:text-sm font-bold font-mono text-teal-950 mt-0.5" id="optATime3">13:58</div>
-          </div>
-          <!-- ช่อง 4: เลิกงาน -->
-          <div class="p-1.5 rounded-xl bg-rose-50/80 border border-rose-200/80">
-            <div class="text-[9px] sm:text-[10px] text-rose-800 font-medium">เลิกงาน</div>
-            <div class="text-xs sm:text-sm font-bold font-mono text-rose-950 mt-0.5" id="optATime4">--:--</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- [รูปแบบ B: สลิมบาร์ ไร้กรอบการ์ดใหญ่ 1 แถวบางเฉียบ] -->
-      <div id="viewOptB" class="hidden space-y-1">
+      <!-- 3. Slim Timeline Bar (แบบ B 1 แถว) -->
+      <div class="space-y-1">
         <div class="flex items-center justify-between px-1 text-[11px] text-slate-500">
           <span>เวลาทำงานวันนี้:</span>
-          <span class="text-slate-600 font-medium" id="optBSummary">สาย 0 น. • ปกติ 8 ชม.</span>
+          <span class="text-slate-600 font-medium">เกณฑ์ 09:30 น. • ปกติ 0 ชม.</span>
         </div>
         <div class="grid grid-cols-4 gap-1 text-center">
-          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[9px] text-slate-400">เข้าเช้า</div>
-            <div class="text-xs sm:text-sm font-bold font-mono text-emerald-600 mt-0.5" id="optBTime1">09:28</div>
+          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
+            <div class="text-[9px] text-slate-500">☀️ เข้าเช้า</div>
+            <div class="text-[11px] font-bold font-mono text-emerald-700 mt-0.5" id="tlTime1">--:--:--</div>
           </div>
-          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[9px] text-slate-400">ออกพัก</div>
-            <div class="text-xs sm:text-sm font-bold font-mono text-amber-600 mt-0.5" id="optBTime2">13:00</div>
+          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
+            <div class="text-[9px] text-slate-500">☕ ออกพัก</div>
+            <div class="text-[11px] font-bold font-mono text-amber-700 mt-0.5" id="tlTime2">--:--:--</div>
           </div>
-          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[9px] text-slate-400">เข้าบ่าย</div>
-            <div class="text-xs sm:text-sm font-bold font-mono text-teal-600 mt-0.5" id="optBTime3">13:58</div>
+          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
+            <div class="text-[9px] text-slate-500">💼 กลับงาน</div>
+            <div class="text-[11px] font-bold font-mono text-teal-700 mt-0.5" id="tlTime3">--:--:--</div>
           </div>
-          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[9px] text-slate-400">เลิกงาน</div>
-            <div class="text-xs sm:text-sm font-bold font-mono text-slate-400 mt-0.5" id="optBTime4">--:--</div>
+          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
+            <div class="text-[9px] text-slate-500">🚪 ออกงาน</div>
+            <div class="text-[11px] font-bold font-mono text-slate-600 mt-0.5" id="tlTime4">--:--:--</div>
           </div>
         </div>
       </div>
 
-      <!-- [รูปแบบ เดิม: การ์ดใหญ่ 2 แถว x 2 คอลัมน์ เทอะทะ] -->
-      <div id="viewOld" class="hidden bg-white rounded-3xl p-4 border border-slate-200 shadow-sm space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-          <span class="text-xs font-semibold text-slate-800">📋 สรุปเวลาทำงานวันนี้</span>
-          <span class="text-[11px] text-slate-500" id="oldLate">ตรงเวลา</span>
+      <!-- ========================================================================= -->
+      <!-- 4. พื้นที่แสดงปุ่มลงเวลา (HERO BUTTON STYLES) -->
+      <!-- ========================================================================= -->
+
+      <!-- [สไตล์ที่ 1: แคปซูลแนวนอน โมเดิร์น สไตล์ iOS - แนะนำ ⭐] -->
+      <div id="wrapperStyle1" class="pt-1">
+        <button type="button" id="btnStyle1" class="pill-gradient-emerald w-full py-3.5 px-4 rounded-full text-white flex items-center justify-between transition-all active:scale-[0.98] group">
+          <!-- Left Icon Circle -->
+          <div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shadow-inner border border-white/30 flex-shrink-0 group-hover:scale-105 transition-transform" id="s1IconBox">
+            <span id="s1Icon">☀️</span>
+          </div>
+          <!-- Center Text -->
+          <div class="flex-1 text-left px-3.5 min-w-0">
+            <div class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight truncate" id="s1Title">
+              แตะเพื่อลงเวลาเข้างาน
+            </div>
+            <div class="text-[11px] text-emerald-100 font-normal mt-0.5 truncate" id="s1Sub">
+              สแกน QR Code ประจำสาขา หรือเซลฟี่
+            </div>
+          </div>
+          <!-- Right Arrow Pill -->
+          <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white text-sm shadow-2xs flex-shrink-0 group-hover:translate-x-1 transition-transform">
+            <i class="fa-solid fa-arrow-right"></i>
+          </div>
+        </button>
+      </div>
+
+      <!-- [สไตล์ที่ 2: กระจกฝ้าเรืองแสง Neo-Glass Glow] -->
+      <div id="wrapperStyle2" class="hidden pt-1">
+        <button type="button" id="btnStyle2" class="neo-glass-glow w-full py-4 px-5 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98] group">
+          <div class="flex items-center space-x-3 text-left min-w-0">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-md flex-shrink-0" id="s2IconBox">
+              <span id="s2Icon">☀️</span>
+            </div>
+            <div class="min-w-0">
+              <div class="text-base font-bold text-slate-900 leading-tight truncate" id="s2Title">
+                แตะเพื่อลงเวลาเข้างาน
+              </div>
+              <div class="text-[11px] text-emerald-700 font-medium mt-0.5 truncate" id="s2Sub">
+                สแกน QR Code ประจำสาขา
+              </div>
+            </div>
+          </div>
+          <div class="p-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 group-hover:bg-slate-200 transition">
+            <i class="fa-solid fa-camera"></i>
+            <span>สแกน</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- [สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนลายนิ้วมือ/QR - Circular Radar Ring] -->
+      <div id="wrapperStyle3" class="hidden py-3 flex flex-col items-center justify-center text-center space-y-2">
+        <button type="button" id="btnStyle3" class="radar-circle w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-xl shadow-emerald-500/35 flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer">
+          <span class="text-3xl sm:text-4xl" id="s3Icon">☀️</span>
+          <span class="text-xs sm:text-sm font-bold tracking-tight text-white mt-1" id="s3Title">แตะลงเวลา</span>
+          <span class="text-[10px] text-emerald-100 font-normal">สแกน QR</span>
+        </button>
+        <span class="text-[11px] text-slate-400 font-normal">แตะปุ่มวงกลมเพื่อเปิดกล้องสแกน</span>
+      </div>
+
+      <!-- [แบบเดิม: บล็อกสี่เหลี่ยมแนวตั้ง หนา] -->
+      <div id="wrapperStyleOld" class="hidden pt-1">
+        <button type="button" class="w-full py-6 px-4 rounded-3xl text-white shadow-xl flex flex-col items-center justify-center space-y-2 bg-emerald-600">
+          <div class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-3xl shadow-inner border border-white/25">
+            <span>☀️</span>
+          </div>
+          <div class="text-center">
+            <div class="text-xl font-bold tracking-normal text-white">
+              แตะเพื่อลงเวลาเข้างาน
+            </div>
+            <div class="text-xs text-emerald-100 mt-0.5">
+              สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Secondary Action & Direct GPS Buttons -->
+      <div class="space-y-1.5 pt-0.5">
+        <div class="w-full py-2 px-3 bg-gradient-to-r from-rose-50 to-orange-50 border border-dashed border-rose-300 rounded-xl flex items-center justify-between text-rose-800 shadow-2xs">
+          <div class="flex items-center space-x-2 text-left min-w-0">
+            <span class="text-base flex-shrink-0">🚪</span>
+            <span class="text-xs font-bold text-rose-900 truncate">
+              หรือแตะเพื่อลงเวลาออกงานทันที
+            </span>
+          </div>
+          <div class="flex items-center space-x-1 text-rose-600 font-bold text-xs bg-white px-2 py-0.5 rounded-lg border border-rose-200 shadow-2xs flex-shrink-0 ml-2">
+            <span>ออกงาน &rarr;</span>
+          </div>
         </div>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-            <div class="text-[10px] text-emerald-800">☀️ เข้างานเช้า (IN)</div>
-            <div class="text-base font-bold font-mono text-emerald-950 mt-1" id="oldTime1">09:28:15</div>
-          </div>
-          <div class="p-2.5 rounded-2xl bg-amber-50 border border-amber-200">
-            <div class="text-[10px] text-amber-800">☕ ออกไปพัก (Break OUT)</div>
-            <div class="text-base font-bold font-mono text-amber-950 mt-1" id="oldTime2">13:00:00</div>
-          </div>
-          <div class="p-2.5 rounded-2xl bg-teal-50 border border-teal-200">
-            <div class="text-[10px] text-teal-800">💼 กลับเข้างาน (Break IN)</div>
-            <div class="text-base font-bold font-mono text-teal-950 mt-1" id="oldTime3">13:58:20</div>
-          </div>
-          <div class="p-2.5 rounded-2xl bg-rose-50 border border-rose-200">
-            <div class="text-[10px] text-rose-800">🚪 ออกงาน (OUT)</div>
-            <div class="text-base font-bold font-mono text-rose-950 mt-1" id="oldTime4">--:--:--</div>
-          </div>
+
+        <div class="text-center pt-0.5">
+          <button type="button" class="text-xs text-slate-500 hover:text-slate-800 font-medium inline-flex items-center gap-1 transition">
+            <span>📸</span>
+            <span>ถ่ายรูปด้วย GPS โดยตรง (ไม่ต้องใช้ QR)</span>
+          </button>
         </div>
-        <div class="text-center text-[11px] text-slate-500 pt-0.5" id="oldSummary">ปกติ 8 ชม.</div>
       </div>
 
       <!-- 5. Quick Shortcuts (4 ช่อง) -->
@@ -271,85 +331,89 @@
 
   <!-- Comparison Summary Card -->
   <div class="w-full max-w-md mt-4 bg-white rounded-2xl p-4 border border-slate-200 shadow-sm text-xs space-y-2.5">
-    <div class="font-bold text-slate-900 text-sm">💡 เปรียบเทียบความแตกต่าง:</div>
+    <div class="font-bold text-slate-900 text-sm">💡 รายละเอียดของทั้ง 3 สไตล์:</div>
     <ul class="space-y-2 text-slate-600">
       <li class="flex items-start gap-2">
-        <span class="font-bold text-sky-600 min-w-[75px]">แบบ A (แนะนำ):</span>
-        <span><strong>การ์ดมินิ 4 ช่องในแถวเดียว</strong> — ย่อขนาดลง 50% จัด 4 ขั้นตอน (เข้าเช้า / พักเที่ยง / เข้าบ่าย / เลิกงาน) เรียงแถวแนวนอนแถวเดียว มีหัวสรุปเวลาด้านบน กะทัดรัด สะอาดตา</span>
+        <span class="font-bold text-emerald-600 min-w-[75px]">สไตล์ที่ 1:</span>
+        <span><strong>แคปซูลแนวนอน (Horizontal Pill — แนะนำ ⭐)</strong> — ปรับเป็นทรงแคปซูลแนวนอน (สูงเพียง ~64px) ลดความหนาลง 60% มีวงกลมไอคอนฝั่งซ้าย + ลูกศรฝั่งขวา กดง่าย สไตล์ iOS</span>
       </li>
       <li class="flex items-start gap-2">
-        <span class="font-bold text-teal-600 min-w-[75px]">แบบ B:</span>
-        <span><strong>สลิมบาร์ ไร้กรอบ</strong> — ตัดกรอบการ์ดขาวใหญ่ออก เหลือเพียงบล็อกตัวเลข 4 ช่อง วางเรียงบนพื้นหลังโดยตรง ประหยัดพื้นที่สูงสุด</span>
+        <span class="font-bold text-teal-600 min-w-[75px]">สไตล์ที่ 2:</span>
+        <span><strong>กระจกฝ้าเรืองแสง (Neo-Glass)</strong> — พื้นหลังกระจกโปร่งแสงพร้อมขอบนีออนเรืองแสง ดูโมเดิร์น ไฮเทค ตัวหนังสือคมชัด</span>
       </li>
       <li class="flex items-start gap-2">
-        <span class="font-bold text-slate-400 min-w-[75px]">แบบเดิม:</span>
-        <span><strong>2 แถว x 2 ช่อง</strong> — แยกเป็น 2 แถวหนา ทำให้กินพื้นที่แนวตั้งไปมาก (~160px) และดันปุ่มลัดตกลงไปด้านล่าง</span>
+        <span class="font-bold text-sky-600 min-w-[75px]">สไตล์ที่ 3:</span>
+        <span><strong>ทรงกลมเรดาร์ (Circular Radar)</strong> — ปุ่มกลมตรงกลางพร้อมคลื่นเรดาร์แผ่ขยาย (Ripple Wave) สไตล์ระบบสแกนไบโอเมตริกซ์ เด่นชัดที่สุด</span>
       </li>
     </ul>
   </div>
 
   <script>
-    let currentStyle = 'optA';
-    let currentData = 'progress';
+    let currentBtnStyle = 'style1';
+    let currentSimState = 'IN';
 
-    function selectTimelineStyle(style) {
-      currentStyle = style;
-      document.getElementById('btnOptA').className = style === 'optA' 
-        ? 'active-toggle py-2 px-2 rounded-xl transition text-center font-medium shadow-xs'
-        : 'py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
-      
-      document.getElementById('btnOptB').className = style === 'optB'
-        ? 'active-toggle py-2 px-2 rounded-xl transition text-center font-medium shadow-xs'
-        : 'py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+    function selectBtnStyle(style) {
+      currentBtnStyle = style;
 
-      document.getElementById('btnOld').className = style === 'old'
-        ? 'active-toggle py-2 px-2 rounded-xl transition text-center font-medium shadow-xs'
-        : 'py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
-
-      document.getElementById('viewOptA').classList.toggle('hidden', style !== 'optA');
-      document.getElementById('viewOptB').classList.toggle('hidden', style !== 'optB');
-      document.getElementById('viewOld').classList.toggle('hidden', style !== 'old');
+      ['style1', 'style2', 'style3', 'styleOld'].forEach(s => {
+        const tabBtn = document.getElementById('btnTab' + s.charAt(0).toUpperCase() + s.slice(1));
+        const wrapper = document.getElementById('wrapper' + s.charAt(0).toUpperCase() + s.slice(1));
+        if (s === style) {
+          tabBtn.className = 'active-toggle py-2 px-2 rounded-xl transition text-center font-medium shadow-xs';
+          wrapper.classList.remove('hidden');
+        } else {
+          tabBtn.className = 'py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+          wrapper.classList.add('hidden');
+        }
+      });
     }
 
-    function setMockData(mode) {
-      currentData = mode;
-      document.getElementById('btnDataEmpty').className = mode === 'empty'
-        ? 'px-2 py-1 rounded-lg bg-amber-100 text-amber-800 font-semibold'
-        : 'px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200';
+    function setSimState(st) {
+      currentSimState = st;
+      document.getElementById('simBtnIn').className = st === 'IN'
+        ? 'px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-semibold'
+        : 'px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium';
       
-      document.getElementById('btnDataProgress').className = mode === 'progress'
-        ? 'px-2 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-semibold'
-        : 'px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200';
+      document.getElementById('simBtnOut').className = st === 'OUT'
+        ? 'px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 font-semibold'
+        : 'px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium';
 
-      const isProg = mode === 'progress';
+      const isIn = (st === 'IN');
 
-      // Opt A
-      document.getElementById('optATime1').textContent = isProg ? '09:28' : '--:--';
-      document.getElementById('optATime2').textContent = isProg ? '13:00' : '--:--';
-      document.getElementById('optATime3').textContent = isProg ? '13:58' : '--:--';
-      document.getElementById('optATime4').textContent = '--:--';
-      document.getElementById('optASummary').textContent = isProg ? 'ปกติ 8 ชม.' : 'ปกติ 0 ชม.';
-      document.getElementById('optALate').textContent = isProg ? 'ตรงเวลา' : 'เกณฑ์ 09:30 น.';
+      // Top Status
+      document.getElementById('statIcon').textContent = isIn ? '🌅' : '💼';
+      document.getElementById('statText').textContent = isIn ? 'ยังไม่ได้ลงเวลาวันนี้' : 'ปฏิบัติงานช่วงบ่าย (เข้า 09:28)';
+      document.getElementById('statBadge').textContent = isIn ? 'ยังไม่ลงเวลา' : 'กำลังทำงาน';
+      document.getElementById('statBadge').className = isIn ? 'px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800' : 'px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800';
 
-      // Opt B
-      document.getElementById('optBTime1').textContent = isProg ? '09:28' : '--:--';
-      document.getElementById('optBTime2').textContent = isProg ? '13:00' : '--:--';
-      document.getElementById('optBTime3').textContent = isProg ? '13:58' : '--:--';
-      document.getElementById('optBTime4').textContent = '--:--';
-      document.getElementById('optBSummary').textContent = isProg ? 'สาย 0 น. • ปกติ 8 ชม.' : 'เกณฑ์ 09:30 น. • ปกติ 0 ชม.';
+      // Timeline
+      document.getElementById('tlTime1').textContent = isIn ? '--:--:--' : '09:28:15';
+      document.getElementById('tlTime2').textContent = isIn ? '--:--:--' : '13:00:00';
+      document.getElementById('tlTime3').textContent = isIn ? '--:--:--' : '13:58:20';
 
-      // Old
-      document.getElementById('oldTime1').textContent = isProg ? '09:28:15' : '--:--:--';
-      document.getElementById('oldTime2').textContent = isProg ? '13:00:00' : '--:--:--';
-      document.getElementById('oldTime3').textContent = isProg ? '13:58:20' : '--:--:--';
-      document.getElementById('oldTime4').textContent = '--:--:--';
-      document.getElementById('oldSummary').textContent = isProg ? 'ปกติ 8 ชม.' : 'ปกติ 0 ชม.';
-      document.getElementById('oldLate').textContent = isProg ? 'ตรงเวลา' : 'เกณฑ์ 09:30 น.';
+      // Style 1 (Pill)
+      const b1 = document.getElementById('btnStyle1');
+      b1.className = (isIn ? 'pill-gradient-emerald' : 'pill-gradient-rose') + ' w-full py-3.5 px-4 rounded-full text-white flex items-center justify-between transition-all active:scale-[0.98] group';
+      document.getElementById('s1Icon').textContent = isIn ? '☀️' : '🚪';
+      document.getElementById('s1Title').textContent = isIn ? 'แตะเพื่อลงเวลาเข้างาน' : 'แตะเพื่อลงเวลาเลิกงาน';
+      document.getElementById('s1Sub').textContent = isIn ? 'สแกน QR Code ประจำสาขา หรือเซลฟี่' : 'สแกน QR Code สรุปเวลางานประจำวัน';
+
+      // Style 2 (Glass)
+      document.getElementById('s2Icon').textContent = isIn ? '☀️' : '🚪';
+      document.getElementById('s2Title').textContent = isIn ? 'แตะเพื่อลงเวลาเข้างาน' : 'แตะเพื่อลงเวลาเลิกงาน';
+      document.getElementById('s2Sub').textContent = isIn ? 'สแกน QR Code ประจำสาขา' : 'สแกนเพื่อสรุปเวลางาน';
+      document.getElementById('s2IconBox').className = (isIn ? 'bg-emerald-500' : 'bg-rose-500') + ' w-11 h-11 rounded-xl text-white flex items-center justify-center text-2xl shadow-md flex-shrink-0';
+
+      // Style 3 (Radar)
+      const b3 = document.getElementById('btnStyle3');
+      b3.className = 'radar-circle w-28 h-28 sm:w-32 sm:h-32 rounded-full ' + (isIn ? 'bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 shadow-emerald-500/35' : 'bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 shadow-rose-500/35') + ' text-white shadow-xl flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer';
+      document.getElementById('s3Icon').textContent = isIn ? '☀️' : '🚪';
+      document.getElementById('s3Title').textContent = isIn ? 'แตะลงเวลา' : 'แตะออกงาน';
     }
 
     // Init
-    selectTimelineStyle('optA');
-    setMockData('progress');
+    selectBtnStyle('style1');
+    setSimState('IN');
   </script>
 </body>
 </html>
