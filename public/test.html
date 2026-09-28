@@ -365,28 +365,30 @@
         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">ในพิกัด ✅</span>
       </div>
 
-      <!-- 3. Slim Timeline Bar (แบบ B 1 แถว) -->
-      <div class="space-y-1">
-        <div class="flex items-center justify-between px-1 text-[11px] text-slate-500">
-          <span>เวลาทำงานวันนี้:</span>
-          <span class="text-slate-600 font-medium">เกณฑ์ 09:30 น. • ปกติ 0 ชม.</span>
+      <!-- 3. Slim Timeline Bar (แบบ B 1 แถว: ตัวหนังสือใหญ่ สบายตา ไม่หนา) -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between px-1 text-xs sm:text-sm text-slate-500 font-normal">
+          <span class="flex items-center gap-1.5 text-slate-700">
+            <span class="text-sm">📋</span> เวลาทำงานวันนี้:
+          </span>
+          <span class="text-slate-600 font-normal">เกณฑ์ 09:30 น. • ปกติ 0 ชม.</span>
         </div>
-        <div class="grid grid-cols-4 gap-1 text-center">
-          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
-            <div class="text-[9px] text-slate-500">☀️ เข้าเช้า</div>
-            <div class="text-[11px] font-bold font-mono text-emerald-700 mt-0.5" id="tlTime1">--:--:--</div>
+        <div class="grid grid-cols-4 gap-1.5 sm:gap-2 text-center">
+          <div class="py-2.5 px-1.5 sm:py-3 sm:px-2 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <div class="text-xs sm:text-sm text-slate-600 font-normal">☀️ เข้าเช้า</div>
+            <div class="text-sm sm:text-base md:text-lg font-normal font-mono text-emerald-700 mt-1" id="tlTime1">--:--:--</div>
           </div>
-          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
-            <div class="text-[9px] text-slate-500">☕ ออกพัก</div>
-            <div class="text-[11px] font-bold font-mono text-amber-700 mt-0.5" id="tlTime2">--:--:--</div>
+          <div class="py-2.5 px-1.5 sm:py-3 sm:px-2 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <div class="text-xs sm:text-sm text-slate-600 font-normal">☕ ออกพัก</div>
+            <div class="text-sm sm:text-base md:text-lg font-normal font-mono text-amber-700 mt-1" id="tlTime2">--:--:--</div>
           </div>
-          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
-            <div class="text-[9px] text-slate-500">💼 กลับงาน</div>
-            <div class="text-[11px] font-bold font-mono text-teal-700 mt-0.5" id="tlTime3">--:--:--</div>
+          <div class="py-2.5 px-1.5 sm:py-3 sm:px-2 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <div class="text-xs sm:text-sm text-slate-600 font-normal">💼 กลับงาน</div>
+            <div class="text-sm sm:text-base md:text-lg font-normal font-mono text-teal-700 mt-1" id="tlTime3">--:--:--</div>
           </div>
-          <div class="py-1.5 px-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
-            <div class="text-[9px] text-slate-500">🚪 ออกงาน</div>
-            <div class="text-[11px] font-bold font-mono text-slate-600 mt-0.5" id="tlTime4">--:--:--</div>
+          <div class="py-2.5 px-1.5 sm:py-3 sm:px-2 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <div class="text-xs sm:text-sm text-slate-600 font-normal">🚪 ออกงาน</div>
+            <div class="text-sm sm:text-base md:text-lg font-normal font-mono text-slate-600 mt-1" id="tlTime4">--:--:--</div>
           </div>
         </div>
       </div>
@@ -397,12 +399,12 @@
 
       <!-- [สไตล์ที่ 3: ทรงกลมเรดาร์ สแกนลายนิ้วมือ/QR - Circular Radar Ring (เลือกใช้ในหน้าจริง - ขยายใหญ่)] -->
       <div id="wrapperStyle3" class="py-3 flex flex-col items-center justify-center text-center space-y-2">
-        <button type="button" onclick="openTestCamera()" id="btnStyle3" class="radar-circle radar-emerald w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-2xl shadow-emerald-500/40 flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer">
-          <span class="text-4xl sm:text-5xl" id="s3Icon">☀️</span>
-          <span class="text-sm sm:text-base font-extrabold tracking-tight text-white mt-1.5" id="s3Title">แตะลงเวลาเข้า</span>
-          <span class="text-[11px] sm:text-xs text-white/95 font-semibold px-2.5 py-0.5 rounded-full bg-white/20 mt-1 border border-white/20" id="s3Badge">สแกน QR</span>
+        <button type="button" onclick="openTestCamera()" id="btnStyle3" class="radar-circle radar-emerald w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-2xl shadow-emerald-500/40 flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer">
+          <span class="text-5xl sm:text-6xl" id="s3Icon">☀️</span>
+          <span class="text-base sm:text-lg font-extrabold tracking-tight text-white mt-2" id="s3Title">แตะลงเวลาเข้า</span>
+          <span class="text-xs sm:text-sm text-white/95 font-semibold px-3 py-0.5 rounded-full bg-white/20 mt-1 border border-white/20" id="s3Badge">สแกน QR</span>
         </button>
-        <span class="text-xs sm:text-sm text-slate-500 font-medium" id="s3Sub">✨ แตะปุ่มเพื่อเปิดกล้องเซลฟี่หน้าเนียน (ไม่เช็ค GPS)</span>
+        <span class="text-xs sm:text-sm text-slate-500 font-normal max-w-[320px] leading-relaxed mt-3.5" id="s3Sub">✨ แตะปุ่มเพื่อเปิดกล้องเซลฟี่หน้าเนียน (ไม่เช็ค GPS)</span>
       </div>
 
       <!-- [สไตล์ที่ 1: แคปซูลแนวนอน โมเดิร์น สไตล์ iOS] -->
@@ -1087,7 +1089,7 @@
 
       // Style 3 (Radar)
       const b3 = document.getElementById('btnStyle3');
-      b3.className = 'radar-circle ' + (isIn ? 'radar-emerald' : 'radar-rose') + ' w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full ' + (isIn ? 'bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 shadow-emerald-500/40' : 'bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 shadow-rose-500/40') + ' text-white shadow-2xl flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer';
+      b3.className = 'radar-circle ' + (isIn ? 'radar-emerald' : 'radar-rose') + ' w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full ' + (isIn ? 'bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 shadow-emerald-500/40' : 'bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 shadow-rose-500/40') + ' text-white shadow-2xl flex flex-col items-center justify-center transition-transform active:scale-95 cursor-pointer';
       document.getElementById('s3Icon').textContent = isIn ? '☀️' : '🚪';
       document.getElementById('s3Title').textContent = isIn ? 'แตะลงเวลาเข้า' : 'แตะลงเวลาออก';
 

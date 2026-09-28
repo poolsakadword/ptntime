@@ -3082,23 +3082,23 @@ async function loadTodayStatus() {
         if (isBreakMode) {
           boxBreakOut.classList.remove('hidden');
           boxBreakIn.classList.remove('hidden');
-          if (timelineContainer) timelineContainer.className = 'grid grid-cols-4 gap-1 text-center';
+          if (timelineContainer) timelineContainer.className = 'grid grid-cols-4 gap-1.5 sm:gap-2 text-center';
         } else {
           boxBreakOut.classList.add('hidden');
           boxBreakIn.classList.add('hidden');
-          if (timelineContainer) timelineContainer.className = 'grid grid-cols-2 gap-1.5 text-center';
+          if (timelineContainer) timelineContainer.className = 'grid grid-cols-2 gap-2 sm:gap-3 text-center';
         }
       }
 
       if (log && log.clock_in) {
         if (lateEl) {
           lateEl.textContent = log.late_minutes > 0 ? `สาย ${log.late_minutes} นาที` : 'ตรงเวลา ปกติ';
-          lateEl.className = log.late_minutes > 0 ? 'text-xs text-amber-700 font-bold' : 'text-xs text-emerald-700 font-semibold';
+          lateEl.className = log.late_minutes > 0 ? 'text-xs sm:text-sm text-amber-700 font-normal' : 'text-xs sm:text-sm text-emerald-700 font-normal';
         }
       } else {
         if (lateEl) {
           lateEl.textContent = 'เกณฑ์ ' + (appSettings.work_start_time || '09:30') + ' น.';
-          lateEl.className = 'text-[11px] md:text-xs text-emerald-700 font-medium';
+          lateEl.className = 'text-xs sm:text-sm text-emerald-700 font-normal';
         }
       }
 
@@ -3127,12 +3127,12 @@ async function loadTodayStatus() {
       const directGpsText = document.getElementById('txtHeroDirectGps');
 
       const heroBtnClasses = {
-        IN: 'radar-circle radar-emerald w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-2xl shadow-emerald-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
-        OUT: 'radar-circle radar-rose w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 text-white shadow-2xl shadow-rose-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
-        BREAK_OUT: 'radar-circle radar-amber w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 text-white shadow-2xl shadow-amber-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
-        BREAK_IN: 'radar-circle radar-sky w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-sky-600 via-cyan-500 to-sky-400 text-white shadow-2xl shadow-sky-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
-        DONE: 'radar-done w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-slate-700 via-slate-600 to-slate-500 text-white shadow-xl shadow-slate-500/30 flex flex-col items-center justify-center transition-all duration-200 cursor-default',
-        LOCKED: 'radar-done w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-full text-slate-300 shadow-xl flex flex-col items-center justify-center bg-slate-700/90 border-2 border-slate-600/80 cursor-pointer'
+        IN: 'radar-circle radar-emerald w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white shadow-2xl shadow-emerald-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        OUT: 'radar-circle radar-rose w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-rose-600 via-pink-500 to-rose-400 text-white shadow-2xl shadow-rose-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        BREAK_OUT: 'radar-circle radar-amber w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 text-white shadow-2xl shadow-amber-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        BREAK_IN: 'radar-circle radar-sky w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-sky-600 via-cyan-500 to-sky-400 text-white shadow-2xl shadow-sky-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer',
+        DONE: 'radar-done w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-slate-700 via-slate-600 to-slate-500 text-white shadow-xl shadow-slate-500/30 flex flex-col items-center justify-center transition-all duration-200 cursor-default',
+        LOCKED: 'radar-done w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full text-slate-300 shadow-xl flex flex-col items-center justify-center bg-slate-700/90 border-2 border-slate-600/80 cursor-pointer'
       };
 
       let currentAction = 'IN';
