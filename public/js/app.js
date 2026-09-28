@@ -1518,7 +1518,7 @@ function getCurrentLocation(silent = false, isManual = false) {
   if (statusText) statusText.textContent = 'กำลังค้นหาพิกัด GPS...';
   if (distText && isManual) distText.textContent = 'กำลังคำนวณระยะห่างล่าสุด...';
   if (badge && isManual) {
-    badge.className = 'px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-black bg-slate-200 text-slate-700 border border-slate-300';
+    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700';
     badge.textContent = 'กำลังตรวจพิกัด...';
   }
 
@@ -1540,18 +1540,18 @@ function getCurrentLocation(silent = false, isManual = false) {
 
       const isInside = dist <= targetRadius;
 
-      if (statusText) statusText.textContent = `พิกัด GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      if (distText) distText.textContent = `ห่างจาก${targetBranchName}: ${dist} ม. (รัศมีอนุญาต ${targetRadius} ม.)`;
+      if (statusText) statusText.textContent = targetBranchName;
+      if (distText) distText.textContent = `ระยะห่าง ${dist} ม. (รัศมีอนุญาต ${targetRadius} ม.)`;
 
-      if (badge && pulse) {
+      if (badge) {
         if (isInside) {
-          badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-700';
-          badge.textContent = `🟢 อยู่ในพื้นที่ ${targetBranchName}`;
-          pulse.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800';
+          badge.textContent = 'ในพิกัด ✅';
+          if (pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
         } else {
-          badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-100 text-rose-700';
-          badge.textContent = `🔴 อยู่นอกพื้นที่ ${targetBranchName}`;
-          pulse.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800';
+          badge.textContent = 'นอกพื้นที่ ⚠️';
+          if (pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
         }
       }
 
@@ -1574,7 +1574,7 @@ function getCurrentLocation(silent = false, isManual = false) {
       console.warn('Geolocation notice:', err.message);
       if (statusText) statusText.textContent = 'ไม่พบพิกัด (กรุณาเปิด GPS/อนุญาตเข้าถึงตำแหน่ง)';
       if (badge) {
-        badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700';
+        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700';
         badge.textContent = '⚠️ GPS ปิดอยู่';
       }
       if (isManual) {
