@@ -1861,28 +1861,28 @@ function updateSmileMeterUI(score, faceActive) {
     if (icon) icon.textContent = '🌟';
     if (moodTag) {
       moodTag.textContent = 'ยิ้มสดใสมาก! 🌸';
-      moodTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300';
+      moodTag.className = 'text-xs sm:text-sm font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300';
     }
     if (badge) {
-      badge.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-emerald-400 shadow-xl text-emerald-950 transition-all duration-300 ring-2 ring-emerald-300/50 scale-105';
+      badge.className = 'flex items-center gap-2.5 px-4.5 py-2 sm:px-5 sm:py-2.5 rounded-full bg-white/95 backdrop-blur-md border border-emerald-400 shadow-xl text-emerald-950 transition-all duration-300 ring-2 ring-emerald-300/50 scale-105';
     }
   } else if (score >= 82) {
     if (icon) icon.textContent = '😊';
     if (moodTag) {
       moodTag.textContent = 'ยิ้มเข้าไว้ ✨';
-      moodTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200';
+      moodTag.className = 'text-xs sm:text-sm font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200';
     }
     if (badge) {
-      badge.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-amber-300 shadow-xl text-amber-950 transition-all duration-300';
+      badge.className = 'flex items-center gap-2.5 px-4.5 py-2 sm:px-5 sm:py-2.5 rounded-full bg-white/95 backdrop-blur-md border border-amber-300 shadow-xl text-amber-950 transition-all duration-300';
     }
   } else {
     if (icon) icon.textContent = '🙂';
     if (moodTag) {
       moodTag.textContent = 'ส่งยิ้มพิมพ์ใจ 💖';
-      moodTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200';
+      moodTag.className = 'text-xs sm:text-sm font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-200';
     }
     if (badge) {
-      badge.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-300 shadow-lg text-slate-800 transition-all duration-300';
+      badge.className = 'flex items-center gap-2.5 px-4.5 py-2 sm:px-5 sm:py-2.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-300 shadow-lg text-slate-800 transition-all duration-300';
     }
   }
 }
