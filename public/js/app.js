@@ -360,6 +360,9 @@ async function loadInitialData() {
       if (data.branches) {
         branchList = data.branches;
       }
+      if (data.companyHolidays && Array.isArray(data.companyHolidays)) {
+        window.companyHolidays = data.companyHolidays;
+      }
 
       // Synchronize currentEmployee with updated data from employeeList
       if (currentEmployee && currentEmployee.empId) {
@@ -3190,6 +3193,32 @@ async function loadTodayStatus() {
 
       window.currentBranchConfig = data.branchConfig || null;
 
+      // Check if today is a company holiday
+      const curIsoDate = new Date().toISOString().substring(0, 10);
+      let todayHoliday = data.holiday || null;
+      if (!todayHoliday && Array.isArray(window.companyHolidays)) {
+        todayHoliday = window.companyHolidays.find(h => h.date === curIsoDate) || null;
+      }
+
+      // Holiday Banner & Notice Elements
+      const holBanner = document.getElementById('todayHolidayBanner');
+      const holTitle = document.getElementById('todayHolidayTitle');
+      const holSub = document.getElementById('todayHolidaySub');
+      const holTag = document.getElementById('todayHolidayTag');
+      const holNotice = document.getElementById('todayHolidayNoticeCard');
+
+      if (todayHoliday) {
+        if (holBanner) {
+          holBanner.classList.remove('hidden');
+          if (holTitle) holTitle.textContent = todayHoliday.holiday_name || 'วันหยุดบริษัท';
+          if (holTag) holTag.textContent = todayHoliday.holiday_type === 'SPECIAL' ? 'วันหยุดพิเศษ' : 'วันหยุดประเพณี';
+          if (holSub) holSub.textContent = `วันนี้เป็น${todayHoliday.holiday_type === 'SPECIAL' ? 'วันหยุดพิเศษ' : 'วันหยุดประเพณี'} / วันหยุดบริษัท`;
+        }
+      } else {
+        if (holBanner) holBanner.classList.add('hidden');
+        if (holNotice) holNotice.classList.add('hidden');
+      }
+
       // =========================================================================
       // CONCEPT 3: HERO ONE-TAP ACTION LOGIC
       // =========================================================================
@@ -3224,20 +3253,40 @@ async function loadTodayStatus() {
         if (!log || !log.clock_in) {
           // State 1: Not clocked in
           currentAction = 'IN';
-          if (statusText) statusText.textContent = 'ยังไม่ได้ลงเวลาวันนี้';
-          if (statusIcon) statusIcon.textContent = '🌅';
-          if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
-            badge.textContent = 'พร้อมลงเวลา';
-          }
-          if (heroTitle) heroTitle.textContent = 'แตะลงเวลาเข้า';
-          if (heroBadge) heroBadge.textContent = 'สแกน QR';
-          if (heroSub) heroSub.textContent = 'สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่';
-          if (heroIcon) heroIcon.textContent = '☀️';
-          if (heroBtn) {
-            heroBtn.className = heroBtnClasses.IN;
-            heroBtn.disabled = false;
-            heroBtn.onclick = () => openQrScannerModal('IN');
+          if (todayHoliday) {
+            if (holNotice) holNotice.classList.remove('hidden');
+            if (statusText) statusText.textContent = `วันหยุดบริษัท: ${todayHoliday.holiday_name || ''}`;
+            if (statusIcon) statusIcon.textContent = '🏖️';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-black bg-amber-200 text-amber-950 border border-amber-300 shadow-xs';
+              badge.textContent = '⭐ วันหยุดบริษัท';
+            }
+            if (heroTitle) heroTitle.textContent = 'วันหยุดพักผ่อน';
+            if (heroBadge) heroBadge.textContent = 'สแกนทำงาน';
+            if (heroSub) heroSub.textContent = 'วันหยุดตามประกาศบริษัท (แตะเพื่อสแกนหากเข้าเวรปฏิบัติงาน)';
+            if (heroIcon) heroIcon.textContent = '🏖️';
+            if (heroBtn) {
+              heroBtn.className = 'radar-circle radar-amber w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-amber-500 via-orange-400 to-amber-300 text-white shadow-2xl shadow-amber-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer';
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('IN');
+            }
+          } else {
+            if (holNotice) holNotice.classList.add('hidden');
+            if (statusText) statusText.textContent = 'ยังไม่ได้ลงเวลาวันนี้';
+            if (statusIcon) statusIcon.textContent = '🌅';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
+              badge.textContent = 'พร้อมลงเวลา';
+            }
+            if (heroTitle) heroTitle.textContent = 'แตะลงเวลาเข้า';
+            if (heroBadge) heroBadge.textContent = 'สแกน QR';
+            if (heroSub) heroSub.textContent = 'สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่';
+            if (heroIcon) heroIcon.textContent = '☀️';
+            if (heroBtn) {
+              heroBtn.className = heroBtnClasses.IN;
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('IN');
+            }
           }
           if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานด้วย GPS โดยตรง (IN)';
           if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
@@ -3434,20 +3483,40 @@ async function loadTodayStatus() {
           secAction = 'OUT';
           secText = 'หรือแตะเพื่อลงเวลาออกงาน (OUT)';
 
-          if (statusText) statusText.textContent = 'ยังไม่ได้ลงเวลาวันนี้';
-          if (statusIcon) statusIcon.textContent = '🌅';
-          if (badge) {
-            badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
-            badge.textContent = 'พร้อมลงเวลา';
-          }
-          if (heroTitle) heroTitle.textContent = 'แตะลงเวลาเข้า';
-          if (heroBadge) heroBadge.textContent = 'สแกน QR';
-          if (heroSub) heroSub.textContent = 'สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่';
-          if (heroIcon) heroIcon.textContent = '☀️';
-          if (heroBtn) {
-            heroBtn.className = heroBtnClasses.IN;
-            heroBtn.disabled = false;
-            heroBtn.onclick = () => openQrScannerModal('IN');
+          if (todayHoliday) {
+            if (holNotice) holNotice.classList.remove('hidden');
+            if (statusText) statusText.textContent = `วันหยุดบริษัท: ${todayHoliday.holiday_name || ''}`;
+            if (statusIcon) statusIcon.textContent = '🏖️';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-black bg-amber-200 text-amber-950 border border-amber-300 shadow-xs';
+              badge.textContent = '⭐ วันหยุดบริษัท';
+            }
+            if (heroTitle) heroTitle.textContent = 'วันหยุดพักผ่อน';
+            if (heroBadge) heroBadge.textContent = 'สแกนทำงาน';
+            if (heroSub) heroSub.textContent = 'วันหยุดตามประกาศบริษัท (แตะเพื่อสแกนหากเข้าเวรปฏิบัติงาน)';
+            if (heroIcon) heroIcon.textContent = '🏖️';
+            if (heroBtn) {
+              heroBtn.className = 'radar-circle radar-amber w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-amber-500 via-orange-400 to-amber-300 text-white shadow-2xl shadow-amber-500/40 flex flex-col items-center justify-center transition-all duration-200 active:scale-95 cursor-pointer';
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('IN');
+            }
+          } else {
+            if (holNotice) holNotice.classList.add('hidden');
+            if (statusText) statusText.textContent = 'ยังไม่ได้ลงเวลาวันนี้';
+            if (statusIcon) statusIcon.textContent = '🌅';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
+              badge.textContent = 'พร้อมลงเวลา';
+            }
+            if (heroTitle) heroTitle.textContent = 'แตะลงเวลาเข้า';
+            if (heroBadge) heroBadge.textContent = 'สแกน QR';
+            if (heroSub) heroSub.textContent = 'สแกน QR Code ประจำสาขา หรือถ่ายรูปเซลฟี่';
+            if (heroIcon) heroIcon.textContent = '☀️';
+            if (heroBtn) {
+              heroBtn.className = heroBtnClasses.IN;
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('IN');
+            }
           }
           if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานด้วย GPS โดยตรง (IN)';
           if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
@@ -3777,58 +3846,130 @@ async function loadEmployeeHistory() {
       document.getElementById('statOtHours').textContent = data.stats.totalOtHours;
       document.getElementById('statAdvance').textContent = data.stats.totalAdvances || 0;
 
-      if (!data.logs || data.logs.length === 0) {
+      // Process company holidays for this period
+      const holidays = data.holidays || window.companyHolidays || [];
+      const periodHolidays = holidays.filter(h => h && h.date && h.date.startsWith(month));
+      
+      const holidaySummaryEl = document.getElementById('historyHolidaySummary');
+      const holidayCountTxt = document.getElementById('txtHistoryHolidayCount');
+      if (holidaySummaryEl) {
+        if (periodHolidays.length > 0) {
+          holidaySummaryEl.classList.remove('hidden');
+          if (holidayCountTxt) holidayCountTxt.textContent = `ในรอบนี้มีวันหยุดบริษัท / นักขัตฤกษ์ ${periodHolidays.length} วัน`;
+        } else {
+          holidaySummaryEl.classList.add('hidden');
+        }
+      }
+
+      const holidayMap = {};
+      periodHolidays.forEach(h => {
+        holidayMap[h.date] = h;
+      });
+
+      const logs = data.logs || [];
+      const logDates = new Set(logs.map(l => l.date));
+
+      // Combine logs and company holidays where employee didn't clock in
+      const combinedItems = [];
+      logs.forEach((l, idx) => {
+        combinedItems.push({ type: 'LOG', date: l.date, log: l, rawIndex: idx });
+      });
+
+      periodHolidays.forEach(h => {
+        if (!logDates.has(h.date)) {
+          combinedItems.push({ type: 'HOLIDAY', date: h.date, holiday: h });
+        }
+      });
+
+      // Sort by date DESC
+      combinedItems.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+      if (combinedItems.length === 0) {
         container.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">ไม่พบประวัติการลงเวลาในรอบนี้</div>';
         return;
       }
 
-      window._currentHistoryLogs = data.logs || [];
+      window._currentHistoryLogs = logs;
       let html = '';
-      data.logs.forEach((l, idx) => {
-        const isLate = (l.late_minutes || 0) > 0;
-        const isBranchEarly = (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
-        html += `
-          <div onclick="openHistoryDetailModal(${idx})" class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 hover:border-sky-300 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center justify-between group">
-            <div class="flex items-center space-x-3">
-              <div class="flex items-center -space-x-2 flex-shrink-0">
-                ${l.in_photo_url ? `
-                  <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${formatDateThaiBE(l.date)} (${l.clock_in})')" />
-                ` : ''}
-                ${l.break_out_photo_url ? `
-                  <img src="${l.break_out_photo_url}" title="รูปถ่ายออกพัก (${l.break_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-amber-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกไปพัก ${formatDateThaiBE(l.date)} (${l.break_out})')" />
-                ` : ''}
-                ${l.break_in_photo_url ? `
-                  <img src="${l.break_in_photo_url}" title="รูปถ่ายเข้าจากพัก (${l.break_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-blue-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_in_photo_url}', 'รูปถ่ายเซลฟี่ตอนกลับเข้างาน ${formatDateThaiBE(l.date)} (${l.break_in})')" />
-                ` : ''}
-                ${l.out_photo_url ? `
-                  <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${formatDateThaiBE(l.date)} (${l.clock_out})')" />
-                ` : ''}
-                ${!l.in_photo_url && !l.out_photo_url && !l.break_out_photo_url && !l.break_in_photo_url ? `
-                  <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-sm">📅</div>
-                ` : ''}
+      combinedItems.forEach(item => {
+        if (item.type === 'HOLIDAY') {
+          const h = item.holiday;
+          html += `
+            <div class="bg-amber-50/90 p-3.5 sm:p-4 rounded-2xl border-2 border-amber-300 shadow-sm flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-200 border-2 border-amber-300 flex items-center justify-center text-lg flex-shrink-0">
+                  ⭐
+                </div>
+                <div class="space-y-0.5">
+                  <div class="font-extrabold text-amber-950 text-sm sm:text-base">${formatDateThaiBE(h.date)}</div>
+                  <div class="text-xs sm:text-sm font-bold text-amber-800">
+                    วันหยุด: ${h.holiday_name} (${h.holiday_type === 'SPECIAL' ? 'วันหยุดพิเศษ' : 'วันหยุดประเพณี'})
+                  </div>
+                </div>
               </div>
-              <div class="space-y-0.5">
-                <div class="font-bold text-slate-900 text-sm sm:text-base">${formatDateThaiBE(l.date)}</div>
-                <div class="flex items-center space-x-2 text-xs sm:text-sm text-slate-600">
-                  <span>เข้า: <b class="text-emerald-700 font-bold">${l.clock_in || '--'}</b></span>
-                  <span>ออก: <b class="text-rose-700 font-bold">${l.clock_out || '--'}</b></span>
-                  <span>(ปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
+              <div class="text-right flex-shrink-0 pl-2">
+                <span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-200 text-amber-950 border border-amber-300 shadow-xs">
+                  วันหยุดบริษัท
+                </span>
+                <div class="text-[11px] sm:text-xs text-amber-700 mt-1 font-medium">หยุดพักผ่อน</div>
+              </div>
+            </div>
+          `;
+        } else {
+          const l = item.log;
+          const idx = item.rawIndex;
+          const isLate = (l.late_minutes || 0) > 0;
+          const isBranchEarly = (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
+          const hOnLog = holidayMap[l.date];
+
+          html += `
+            <div onclick="openHistoryDetailModal(${idx})" class="bg-white p-3.5 sm:p-4 rounded-2xl border ${hOnLog ? 'border-purple-300 bg-purple-50/20' : 'border-slate-200'} hover:border-sky-300 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center justify-between group">
+              <div class="flex items-center space-x-3">
+                <div class="flex items-center -space-x-2 flex-shrink-0">
+                  ${l.in_photo_url ? `
+                    <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${formatDateThaiBE(l.date)} (${l.clock_in})')" />
+                  ` : ''}
+                  ${l.break_out_photo_url ? `
+                    <img src="${l.break_out_photo_url}" title="รูปถ่ายออกพัก (${l.break_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-amber-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกไปพัก ${formatDateThaiBE(l.date)} (${l.break_out})')" />
+                  ` : ''}
+                  ${l.break_in_photo_url ? `
+                    <img src="${l.break_in_photo_url}" title="รูปถ่ายเข้าจากพัก (${l.break_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-blue-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_in_photo_url}', 'รูปถ่ายเซลฟี่ตอนกลับเข้างาน ${formatDateThaiBE(l.date)} (${l.break_in})')" />
+                  ` : ''}
+                  ${l.out_photo_url ? `
+                    <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${formatDateThaiBE(l.date)} (${l.clock_out})')" />
+                  ` : ''}
+                  ${!l.in_photo_url && !l.out_photo_url && !l.break_out_photo_url && !l.break_in_photo_url ? `
+                    <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-sm">📅</div>
+                  ` : ''}
+                </div>
+                <div class="space-y-0.5">
+                  <div class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
+                    <span>${formatDateThaiBE(l.date)}</span>
+                    ${hOnLog ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">วันหยุด: ${hOnLog.holiday_name}</span>` : ''}
+                  </div>
+                  <div class="flex items-center space-x-2 text-xs sm:text-sm text-slate-600">
+                    <span>เข้า: <b class="text-emerald-700 font-bold">${l.clock_in || '--'}</b></span>
+                    <span>ออก: <b class="text-rose-700 font-bold">${l.clock_out || '--'}</b></span>
+                    <span>(ปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
+                  </div>
+                </div>
+              </div>
+              <div class="text-right flex-shrink-0 pl-2">
+                ${hOnLog
+                  ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-900 border border-purple-300 shadow-sm">⭐ ทำงานวันหยุด</span>`
+                  : isBranchEarly
+                    ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">✨ งานเสร็จ (เต็มวัน)</span>`
+                    : isLate 
+                      ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-sm">สาย ${l.late_minutes} น.</span>`
+                      : `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">ปกติ</span>`
+                }
+                <div class="text-[11px] sm:text-xs text-slate-400 mt-1 flex items-center justify-end gap-1 font-medium group-hover:text-sky-600 transition">
+                  <span>แตะดู</span> <i class="fa-solid fa-chevron-right text-[9px]"></i>
                 </div>
               </div>
             </div>
-            <div class="text-right flex-shrink-0 pl-2">
-              ${isBranchEarly
-                ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">✨ งานเสร็จ (เต็มวัน)</span>`
-                : isLate 
-                  ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-sm">สาย ${l.late_minutes} น.</span>`
-                  : `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">ปกติ</span>`
-              }
-              <div class="text-[11px] sm:text-xs text-slate-400 mt-1 flex items-center justify-end gap-1 font-medium group-hover:text-sky-600 transition">
-                <span>แตะดู</span> <i class="fa-solid fa-chevron-right text-[9px]"></i>
-              </div>
-            </div>
-          </div>
-        `;
+          `;
+        }
       });
       container.innerHTML = html;
     }

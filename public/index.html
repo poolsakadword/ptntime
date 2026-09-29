@@ -158,6 +158,20 @@
       <!-- ========================================================================= -->
       <section id="tabClock" class="space-y-5">
 
+        <!-- Special Holiday Alert Banner (แสดงเมื่อตรงกับวันหยุดบริษัท) -->
+        <div id="todayHolidayBanner" class="hidden bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-3 sm:p-3.5 rounded-2xl shadow-md shadow-orange-500/20 flex items-center justify-between gap-3 animate-pulse">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-2xl flex-shrink-0">🎉</span>
+            <div class="min-w-0">
+              <div class="text-[11px] font-semibold text-amber-100" id="todayHolidaySub">วันนี้เป็นวันหยุดพิเศษ / วันหยุดบริษัท</div>
+              <div class="text-xs sm:text-sm font-extrabold truncate text-white" id="todayHolidayTitle">วันสงกรานต์</div>
+            </div>
+          </div>
+          <span id="todayHolidayTag" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-950/40 text-amber-200 border border-amber-300/40 flex-shrink-0">
+            วันหยุดพิเศษ
+          </span>
+        </div>
+
         <!-- 1. Big Digital Clock & Integrated Status (แบบที่ 3: กระชับ รวมสถานะในตัว ไม่เกะกะ) -->
         <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-5 md:p-6 text-white shadow-xl text-center relative overflow-hidden flex flex-col justify-center">
           <div class="absolute -right-6 -top-6 w-36 h-36 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -178,6 +192,17 @@
               </span>
             </div>
           </div>
+        </div>
+
+        <!-- Holiday Notice Card (แสดงเมื่อเป็นวันหยุดและยังไม่ลงเวลา) -->
+        <div id="todayHolidayNoticeCard" class="hidden p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs space-y-1 shadow-xs">
+          <div class="flex items-center gap-1.5 font-bold text-amber-950">
+            <i class="fa-solid fa-circle-info text-amber-600"></i>
+            <span>ประกาศแจ้งวันหยุดบริษัท</span>
+          </div>
+          <p class="text-[11.5px] leading-relaxed text-amber-800" id="todayHolidayNoticeText">
+            วันนี้เป็นวันหยุดตามประกาศบริษัท ไม่ต้องลงเวลาทำงานปกติ และระบบจะไม่บันทึกเป็นการขาดงาน (หากมีเวรมาทำงานจริง สามารถแตะสแกนเพื่อรับค่าตอบแทนพิเศษได้)
+          </p>
         </div>
 
         <!-- 2. Location & GPS Status Bar (กะทัดรัด อยู่เหนือปุ่มลงเวลา เพรียวบาง) -->
@@ -321,6 +346,17 @@
             <div class="text-xs text-slate-500 font-semibold">เบิกเงิน(บ.)</div>
             <div id="statAdvance" class="text-xl font-black text-emerald-600 mt-1">0</div>
           </div>
+        </div>
+
+        <!-- Holiday in period summary tag -->
+        <div id="historyHolidaySummary" class="hidden px-3.5 py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center justify-between shadow-2xs">
+          <span class="flex items-center gap-1.5">
+            <span class="text-base">⭐</span>
+            <span id="txtHistoryHolidayCount">ในรอบนี้มีวันหยุดบริษัท 0 วัน</span>
+          </span>
+          <span class="text-[10px] text-amber-800 font-bold bg-amber-200/80 px-2 py-0.5 rounded-full border border-amber-300">
+            วันหยุดพิเศษ
+          </span>
         </div>
 
         <!-- History List Container -->
@@ -1480,6 +1516,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=10.8"></script>
+  <script src="js/app.js?v=10.9"></script>
 </body>
 </html>

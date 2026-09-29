@@ -1253,10 +1253,12 @@ async function handleAction(db, action, params) {
       const pendingLeave = await db.prepare('SELECT * FROM leave_requests WHERE emp_id = ? AND ? BETWEEN start_date AND end_date').bind(empId, date).first();
       const approvedOt = await db.prepare('SELECT * FROM ot_requests WHERE emp_id = ? AND date = ?').bind(empId, date).first();
       const branchCfg = await getEmployeeBranchConfig(db, empId, null, null, settings);
+      const holiday = await db.prepare('SELECT * FROM company_holidays WHERE date = ?').bind(date).first().catch(() => null);
 
       return {
         success: true,
         log: log || null,
+        holiday: holiday || null,
         leave: pendingLeave || null,
         ot: approvedOt || null,
         settings,
@@ -2051,6 +2053,11 @@ async function handleAction(db, action, params) {
         totalOtHours += (l.ot_hours || 0);
       }
 
+      const holidays = await db.prepare(`
+        SELECT * FROM company_holidays 
+        ORDER BY date ASC
+      `).all().catch(() => ({ results: [] }));
+
       return {
         success: true,
         month,
@@ -2063,6 +2070,7 @@ async function handleAction(db, action, params) {
           totalAdvances: (advances.results || []).filter(ad => ad.status === 'APPROVED').reduce((sum, a) => sum + (a.amount || 0), 0)
         },
         logs: logs.results || [],
+        holidays: holidays.results || [],
         leaves: leaves.results || [],
         ots: ots.results || [],
         advances: advances.results || []
