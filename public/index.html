@@ -58,7 +58,7 @@
   </script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=10.4">
+  <link rel="stylesheet" href="css/style.css?v=10.5">
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col items-center">
 
@@ -963,9 +963,22 @@
         <div id="camFlashOverlay" class="pointer-events-none absolute inset-0 bg-white opacity-0 transition-opacity duration-150 z-20"></div>
       </div>
 
-      <!-- Bottom Bar with Positive Greeting Bubble & Shutter Button -->
-      <div class="relative z-20 pb-6 pt-2 px-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex flex-col items-center justify-center space-y-2">
+      <!-- Bottom Bar with Shutter Button (Enlarged) & Positive Greeting Bubble -->
+      <div class="relative z-20 pb-5 pt-1 px-4 bg-gradient-to-t from-black/95 via-black/75 to-transparent flex flex-col items-center justify-center space-y-2">
         
+        <!-- Shutter Button Area (Moved up right below the face oval guide as requested) -->
+        <div class="flex flex-col items-center justify-center w-full -mt-2">
+          <!-- Shutter Button (Enlarged to 86px / 96px) -->
+          <button type="button" id="btnShutterTrigger" onclick="triggerShutterCapture()" disabled class="w-[86px] h-[86px] sm:w-[96px] sm:h-[96px] rounded-full border-4 border-white bg-transparent flex items-center justify-center active:scale-90 transition p-1.5 group shadow-2xl shutter-btn-outer disabled:opacity-40 disabled:cursor-not-allowed">
+            <span id="btnShutterInner" class="w-full h-full rounded-full bg-white group-active:bg-slate-200 shadow-inner flex items-center justify-center text-slate-800 text-4xl sm:text-5xl font-bold transition-all">
+              📸
+            </span>
+          </button>
+          <span id="camShutterHintText" class="text-xs text-amber-200 font-bold tracking-wider drop-shadow transition-colors mt-1.5 text-center">
+            ⚠️ ส่องใบหน้าให้อยู่ในกรอบเพื่อปลดล็อกชัตเตอร์
+          </span>
+        </div>
+
         <!-- POSITIVE GREETINGS BUBBLE OVERLAY -->
         <div id="camGreetingBubbleContainer" class="pointer-events-none w-full max-w-sm px-2 transition-all duration-300 opacity-0 transform translate-y-2">
           <div id="camGreetingCard" class="relative rounded-2xl p-2.5 bg-white/95 backdrop-blur-md border border-amber-300/80 shadow-2xl text-slate-800 text-center transition-all">
@@ -982,17 +995,6 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-center w-full">
-          <!-- Shutter Button (Locked until face detected) -->
-          <button type="button" id="btnShutterTrigger" onclick="triggerShutterCapture()" disabled class="w-18 h-18 md:w-22 md:h-22 rounded-full border-4 border-white bg-transparent flex items-center justify-center active:scale-90 transition p-1 group shadow-2xl shutter-btn-outer disabled:opacity-40 disabled:cursor-not-allowed">
-            <span id="btnShutterInner" class="w-full h-full rounded-full bg-white group-active:bg-slate-200 shadow-inner flex items-center justify-center text-slate-800 text-3xl font-bold transition-all">
-              📸
-            </span>
-          </button>
-        </div>
-        <span id="camShutterHintText" class="text-xs text-amber-200 font-bold tracking-wider drop-shadow transition-colors">
-          ⚠️ ส่องใบหน้าให้อยู่ในกรอบเพื่อปลดล็อกชัตเตอร์
-        </span>
       </div>
 
       <!-- Hidden canvas for capturing and compression -->
@@ -1478,6 +1480,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=10.6"></script>
+  <script src="js/app.js?v=10.7"></script>
 </body>
 </html>

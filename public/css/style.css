@@ -116,7 +116,20 @@ input, select, textarea {
 }
 
 .shutter-btn-outer {
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+  width: 86px;
+  height: 86px;
+  min-width: 86px;
+  min-height: 86px;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.45), 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+@media (min-width: 640px) {
+  .shutter-btn-outer {
+    width: 96px;
+    height: 96px;
+    min-width: 96px;
+    min-height: 96px;
+  }
 }
 
 .shutter-btn-outer:active {
