@@ -40,6 +40,86 @@ async function callApi(action, payload = {}, retryCount = 0) {
 }
 window.callApi = callApi;
 
+function formatDateThaiBE(dateStr) {
+  if (!dateStr || dateStr === '-') return '-';
+  const s = String(dateStr).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  const parts = s.substring(0, 10).split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parts[1];
+    const d = parts[2];
+    if (!isNaN(y) && y > 0) {
+      const beYear = y < 2400 ? (y + 543) : y;
+      return `${d}/${m}/${beYear}`;
+    }
+  }
+  return dateStr;
+}
+
+function formatThaiDateTimeBE(dtStr) {
+  if (!dtStr || dtStr === '-') return '-';
+  const s = String(dtStr).trim();
+  if (s.indexOf('T') !== -1 || s.indexOf('Z') !== -1) {
+    try {
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) {
+        const bkk = new Date(d.getTime() + (7 * 3600 * 1000) + (d.getTimezoneOffset() * 60 * 1000));
+        const y = bkk.getFullYear() + 543;
+        const m = (bkk.getMonth() + 1 < 10 ? '0' : '') + (bkk.getMonth() + 1);
+        const day = (bkk.getDate() < 10 ? '0' : '') + bkk.getDate();
+        const hh = (bkk.getHours() < 10 ? '0' : '') + bkk.getHours();
+        const mm = (bkk.getMinutes() < 10 ? '0' : '') + bkk.getMinutes();
+        return `${day}/${m}/${y} ${hh}:${mm} น.`;
+      }
+    } catch(e) {}
+  }
+  if (s.length >= 16) {
+    const datePart = s.substring(0, 10);
+    const timePart = s.substring(11, 16);
+    return `${formatDateThaiBE(datePart)} ${timePart} น.`;
+  }
+  return formatDateThaiBE(s);
+}
+
+function normalizeDateToIso(str) {
+  if (!str) return '';
+  const s = String(str).trim();
+  const match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (match) {
+    const d = (match[1].length < 2 ? '0' : '') + match[1];
+    const m = (match[2].length < 2 ? '0' : '') + match[2];
+    let y = parseInt(match[3], 10);
+    if (y > 2400) y -= 543;
+    return `${y}-${m}-${d}`;
+  }
+  return s.substring(0, 10);
+}
+
+function updateLeaveStartDateThaiHint() {
+  const el = document.getElementById('leaveStartDate');
+  const hint = document.getElementById('leaveStartDateThaiHint');
+  if (el && hint) {
+    hint.textContent = el.value ? ('📅 (พ.ศ.): ' + formatDateThaiBE(el.value)) : '';
+  }
+}
+
+function updateLeaveEndDateThaiHint() {
+  const el = document.getElementById('leaveEndDate');
+  const hint = document.getElementById('leaveEndDateThaiHint');
+  if (el && hint) {
+    hint.textContent = el.value ? ('📅 (พ.ศ.): ' + formatDateThaiBE(el.value)) : '';
+  }
+}
+
+function updateOtDateThaiHint() {
+  const el = document.getElementById('otDate');
+  const hint = document.getElementById('otDateThaiHint');
+  if (el && hint) {
+    hint.textContent = el.value ? ('📅 (พ.ศ.): ' + formatDateThaiBE(el.value)) : '';
+  }
+}
+
 // Global State
 let currentEmployee = null;
 let employeeList = [];
@@ -236,9 +316,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const leaveStart = document.getElementById('leaveStartDate');
   const leaveEnd = document.getElementById('leaveEndDate');
   const otDate = document.getElementById('otDate');
-  if (leaveStart) leaveStart.value = today;
-  if (leaveEnd) leaveEnd.value = today;
-  if (otDate) otDate.value = today;
+  if (leaveStart) { leaveStart.value = today; updateLeaveStartDateThaiHint(); }
+  if (leaveEnd) { leaveEnd.value = today; updateLeaveEndDateThaiHint(); }
+  if (otDate) { otDate.value = today; updateOtDateThaiHint(); }
 });
 
 function initLiveClock() {
@@ -3712,23 +3792,23 @@ async function loadEmployeeHistory() {
             <div class="flex items-center space-x-3">
               <div class="flex items-center -space-x-2 flex-shrink-0">
                 ${l.in_photo_url ? `
-                  <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${l.date} (${l.clock_in})')" />
+                  <img src="${l.in_photo_url}" title="รูปถ่ายเข้างาน (${l.clock_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-emerald-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.in_photo_url}', 'รูปถ่ายเซลฟี่ตอนเข้างาน ${formatDateThaiBE(l.date)} (${l.clock_in})')" />
                 ` : ''}
                 ${l.break_out_photo_url ? `
-                  <img src="${l.break_out_photo_url}" title="รูปถ่ายออกพัก (${l.break_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-amber-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกไปพัก ${l.date} (${l.break_out})')" />
+                  <img src="${l.break_out_photo_url}" title="รูปถ่ายออกพัก (${l.break_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-amber-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกไปพัก ${formatDateThaiBE(l.date)} (${l.break_out})')" />
                 ` : ''}
                 ${l.break_in_photo_url ? `
-                  <img src="${l.break_in_photo_url}" title="รูปถ่ายเข้าจากพัก (${l.break_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-blue-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_in_photo_url}', 'รูปถ่ายเซลฟี่ตอนกลับเข้างาน ${l.date} (${l.break_in})')" />
+                  <img src="${l.break_in_photo_url}" title="รูปถ่ายเข้าจากพัก (${l.break_in})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-blue-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.break_in_photo_url}', 'รูปถ่ายเซลฟี่ตอนกลับเข้างาน ${formatDateThaiBE(l.date)} (${l.break_in})')" />
                 ` : ''}
                 ${l.out_photo_url ? `
-                  <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${l.date} (${l.clock_out})')" />
+                  <img src="${l.out_photo_url}" title="รูปถ่ายออกงาน (${l.clock_out})" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-rose-500 shadow cursor-pointer hover:scale-110 hover:z-10 transition" onclick="event.stopPropagation(); previewCertPhoto('${l.out_photo_url}', 'รูปถ่ายเซลฟี่ตอนออกงาน ${formatDateThaiBE(l.date)} (${l.clock_out})')" />
                 ` : ''}
                 ${!l.in_photo_url && !l.out_photo_url && !l.break_out_photo_url && !l.break_in_photo_url ? `
                   <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-sm">📅</div>
                 ` : ''}
               </div>
               <div class="space-y-0.5">
-                <div class="font-bold text-slate-900 text-sm sm:text-base">${l.date}</div>
+                <div class="font-bold text-slate-900 text-sm sm:text-base">${formatDateThaiBE(l.date)}</div>
                 <div class="flex items-center space-x-2 text-xs sm:text-sm text-slate-600">
                   <span>เข้า: <b class="text-emerald-700 font-bold">${l.clock_in || '--'}</b></span>
                   <span>ออก: <b class="text-rose-700 font-bold">${l.clock_out || '--'}</b></span>
@@ -3788,7 +3868,7 @@ function openHistoryDetailModal(idx) {
   }
 
   var dateEl = document.getElementById('hModalDate');
-  if (dateEl) dateEl.textContent = l.date || '-';
+  if (dateEl) dateEl.textContent = formatDateThaiBE(l.date);
 
   // Photos (4-Photo 2x2 Grid)
   // 1. In Photo
@@ -3800,7 +3880,7 @@ function openHistoryDetailModal(idx) {
   if (pInCont) {
     if (l.in_photo_url) {
       pInCont.innerHTML = '<img src="' + l.in_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปเข้างาน">';
-      pInCont.onclick = function() { previewCertPhoto(l.in_photo_url, 'รูปถ่ายเซลฟี่ตอนเข้างาน ' + l.date + ' (' + (l.clock_in || '') + ')'); };
+      pInCont.onclick = function() { previewCertPhoto(l.in_photo_url, 'รูปถ่ายเซลฟี่ตอนเข้างาน ' + formatDateThaiBE(l.date) + ' (' + (l.clock_in || '') + ')'); };
     } else {
       pInCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">ไม่มีรูปภาพ</span>';
       pInCont.onclick = null;
@@ -3814,7 +3894,7 @@ function openHistoryDetailModal(idx) {
   if (pBOutCont) {
     if (l.break_out_photo_url) {
       pBOutCont.innerHTML = '<img src="' + l.break_out_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปออกพัก">';
-      pBOutCont.onclick = function() { previewCertPhoto(l.break_out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกไปพัก ' + l.date + ' (' + (l.break_out || '') + ')'); };
+      pBOutCont.onclick = function() { previewCertPhoto(l.break_out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกไปพัก ' + formatDateThaiBE(l.date) + ' (' + (l.break_out || '') + ')'); };
     } else {
       pBOutCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">' + (l.break_out ? 'ไม่มีรูป' : 'ไม่ได้สแกน') + '</span>';
       pBOutCont.onclick = null;
@@ -3833,7 +3913,7 @@ function openHistoryDetailModal(idx) {
   if (pBInCont) {
     if (l.break_in_photo_url) {
       pBInCont.innerHTML = '<img src="' + l.break_in_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปกลับเข้างาน">';
-      pBInCont.onclick = function() { previewCertPhoto(l.break_in_photo_url, 'รูปถ่ายเซลฟี่ตอนกลับเข้างาน ' + l.date + ' (' + (l.break_in || '') + ')'); };
+      pBInCont.onclick = function() { previewCertPhoto(l.break_in_photo_url, 'รูปถ่ายเซลฟี่ตอนกลับเข้างาน ' + formatDateThaiBE(l.date) + ' (' + (l.break_in || '') + ')'); };
     } else {
       pBInCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">' + (l.break_in ? 'ไม่มีรูป' : 'ไม่ได้สแกน') + '</span>';
       pBInCont.onclick = null;
@@ -3849,7 +3929,7 @@ function openHistoryDetailModal(idx) {
   if (pOutCont) {
     if (l.out_photo_url) {
       pOutCont.innerHTML = '<img src="' + l.out_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปออกงาน">';
-      pOutCont.onclick = function() { previewCertPhoto(l.out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกงาน ' + l.date + ' (' + (l.clock_out || '') + ')'); };
+      pOutCont.onclick = function() { previewCertPhoto(l.out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกงาน ' + formatDateThaiBE(l.date) + ' (' + (l.clock_out || '') + ')'); };
     } else {
       pOutCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">' + (l.clock_out ? 'ไม่มีรูป' : 'ยังไม่ลงเวลา') + '</span>';
       pOutCont.onclick = null;
@@ -4013,8 +4093,8 @@ async function submitLeaveRequest() {
         action: 'submitLeaveRequest',
         empId: currentEmployee.empId,
         leaveType,
-        startDate,
-        endDate,
+        startDate: normalizeDateToIso(startDate),
+        endDate: normalizeDateToIso(endDate),
         daysCount,
         reason,
         medicalCertUrl: certDataUrl
@@ -4069,7 +4149,7 @@ async function submitOtRequest() {
       body: JSON.stringify({
         action: 'submitOtRequest',
         empId: currentEmployee.empId,
-        date,
+        date: normalizeDateToIso(date),
         plannedHours,
         otType,
         reason
@@ -4131,7 +4211,7 @@ async function loadMyRequests() {
                 ${cancelBtn}
               </div>
             </div>
-            <div class="text-slate-600 text-xs font-medium">วันที่ขอ: ${ad.request_date} (วันทำงาน ${ad.days_worked} วัน)</div>
+            <div class="text-slate-600 text-xs font-medium">วันที่ขอ: ${formatDateThaiBE(ad.request_date)} (วันทำงาน ${ad.days_worked} วัน)</div>
             ${ad.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${ad.reason}</div>` : ''}
           </div>
         `;
@@ -4154,7 +4234,7 @@ async function loadMyRequests() {
                 ${cancelBtn}
               </div>
             </div>
-            <div class="text-slate-600 text-xs font-medium">วันที่: ${lv.start_date} ถึง ${lv.end_date} (${lv.days_count} วัน)</div>
+            <div class="text-slate-600 text-xs font-medium">วันที่: ${formatDateThaiBE(lv.start_date)} ถึง ${formatDateThaiBE(lv.end_date)} (${lv.days_count} วัน)</div>
             ${lv.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${lv.reason}</div>` : ''}
           </div>
         `;
@@ -4177,7 +4257,7 @@ async function loadMyRequests() {
                 ${cancelBtn}
               </div>
             </div>
-            <div class="text-slate-600 text-xs font-medium">วันที่: ${ot.date} — ขอ: ${ot.planned_hours} ชม. (จริง: ${ot.actual_hours || 0} ชม.)</div>
+            <div class="text-slate-600 text-xs font-medium">วันที่: ${formatDateThaiBE(ot.date)} — ขอ: ${ot.planned_hours} ชม. (จริง: ${ot.actual_hours || 0} ชม.)</div>
             ${ot.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${ot.reason}</div>` : ''}
           </div>
         `;
@@ -4316,7 +4396,7 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
       <div class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 space-y-2">
         <div class="flex items-center justify-between">
           <span class="font-bold text-emerald-950 text-sm">💵 ขอเบิกเงิน: ${ad.full_name || ad.emp_id}</span>
-          <span class="text-xs text-slate-500 font-medium">${ad.request_date}</span>
+          <span class="text-xs text-slate-500 font-medium">${formatDateThaiBE(ad.request_date)}</span>
         </div>
         <div class="text-xs text-slate-700">
           ยอดเงินขอเบิก: <b class="text-emerald-800 text-base font-extrabold">${ad.amount} บาท</b> (วันทำงาน ${ad.days_worked} วัน)<br>
@@ -4342,11 +4422,11 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
       <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-2">
         <div class="flex items-center justify-between">
           <span class="font-bold text-slate-900 text-sm">🏖️ ขอลางาน: ${lv.full_name || lv.emp_id}</span>
-          <span class="text-xs text-slate-500 font-medium">${lv.created_at?.substring(0, 16) || ''}</span>
+          <span class="text-xs text-slate-500 font-medium">${formatThaiDateTimeBE(lv.created_at)}</span>
         </div>
         <div class="text-xs text-slate-700">
           ประเภท: <b class="text-sky-800 font-bold">${lv.leave_type}</b> (${lv.days_count} วัน)<br>
-          ช่วงวัน: ${lv.start_date} ถึง ${lv.end_date}<br>
+          ช่วงวัน: ${formatDateThaiBE(lv.start_date)} ถึง ${formatDateThaiBE(lv.end_date)}<br>
           ${lv.reason ? `<span class="text-slate-600 mt-1 block">เหตุผล: <i>${lv.reason}</i></span>` : ''}
         </div>
         ${lv.medical_cert_url ? `
@@ -4374,10 +4454,10 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
       <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-2">
         <div class="flex items-center justify-between">
           <span class="font-bold text-slate-900 text-sm">⏱️ ขอ OT: ${ot.full_name || ot.emp_id}</span>
-          <span class="text-xs text-slate-500 font-medium">${ot.created_at?.substring(0, 16) || ''}</span>
+          <span class="text-xs text-slate-500 font-medium">${formatThaiDateTimeBE(ot.created_at)}</span>
         </div>
         <div class="text-xs text-slate-700">
-          วันที่: <b>${ot.date}</b> — จำนวน: <b class="text-indigo-800 font-bold">${ot.planned_hours} ชม.</b> (อัตรา ${ot.ot_type}x)<br>
+          วันที่: <b>${formatDateThaiBE(ot.date)}</b> — จำนวน: <b class="text-indigo-800 font-bold">${ot.planned_hours} ชม.</b> (อัตรา ${ot.ot_type}x)<br>
           ${ot.reason ? `<span class="text-slate-600 mt-1 block">รายละเอียด: <i>${ot.reason}</i></span>` : ''}
         </div>
         <div class="flex space-x-2 pt-1.5">
@@ -5218,7 +5298,7 @@ function renderNotificationList() {
     <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200 transition space-y-1">
       <div class="flex items-center justify-between">
         <span class="font-bold text-slate-800 text-xs">${item.title}</span>
-        <span class="text-[10px] text-slate-400">${item.date} ${item.time}</span>
+        <span class="text-[10px] text-slate-400">${formatDateThaiBE(item.date)} ${item.time}</span>
       </div>
       <div class="text-slate-600 text-[11px] leading-relaxed">${item.body}</div>
     </div>
@@ -5353,13 +5433,13 @@ function checkRequestStatusChanges(leaves = [], ots = [], advances = []) {
       if (lv.status === 'APPROVED') {
         sendPushOrLocalNotification(
           '✅ คำขอลางานได้รับการอนุมัติแล้ว',
-          `คำขอลาวันที่ ${lv.start_date} ได้รับการอนุมัติแล้ว`,
+          `คำขอลาวันที่ ${formatDateThaiBE(lv.start_date)} ได้รับการอนุมัติแล้ว`,
           'leave_approved'
         );
       } else if (lv.status === 'REJECTED') {
         sendPushOrLocalNotification(
           '❌ คำขอลางานถูกปฏิเสธ',
-          `คำขอลาวันที่ ${lv.start_date} ไม่ได้รับการอนุมัติ (${lv.reject_reason || '-'})`,
+          `คำขอลาวันที่ ${formatDateThaiBE(lv.start_date)} ไม่ได้รับการอนุมัติ (${lv.reject_reason || '-'})`,
           'leave_rejected'
         );
       }

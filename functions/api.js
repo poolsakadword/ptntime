@@ -38,6 +38,20 @@ function getMinutesDiff(tStr1, tStr2) {
   return timeToMinutes(tStr2) - timeToMinutes(tStr1);
 }
 
+function normalizeDateToIso(str) {
+  if (!str) return '';
+  const s = String(str).trim();
+  const match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (match) {
+    const d = (match[1].length < 2 ? '0' : '') + match[1];
+    const m = (match[2].length < 2 ? '0' : '') + match[2];
+    let y = parseInt(match[3], 10);
+    if (y > 2400) y -= 543;
+    return `${y}-${m}-${d}`;
+  }
+  return s.substring(0, 10);
+}
+
 // Hash string SHA-256 hex
 async function sha256Hex(str) {
   const encoder = new TextEncoder();
@@ -1946,14 +1960,17 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'กรุณากรอกข้อมูลการลาให้ครบถ้วน' };
       }
 
+      const cleanStart = normalizeDateToIso(startDate);
+      const cleanEnd = normalizeDateToIso(endDate);
+
       await db.prepare(`
         INSERT INTO leave_requests (emp_id, leave_type, start_date, end_date, days_count, reason, medical_cert_url, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')
-      `).bind(empId, leaveType, startDate, endDate, Number(daysCount) || 1.0, reason || '', medicalCertUrl || null).run();
+      `).bind(empId, leaveType, cleanStart, cleanEnd, Number(daysCount) || 1.0, reason || '', medicalCertUrl || null).run();
 
       sendPushToAdmins(db, {
         title: '📋 คำขอยื่นใบลาใหม่',
-        body: `พนักงาน [${empId}] ยื่นขอลา ${leaveType || ''} (${Number(daysCount) || 1} วัน: ${startDate} ถึง ${endDate})`,
+        body: `พนักงาน [${empId}] ยื่นขอลา ${leaveType || ''} (${Number(daysCount) || 1} วัน: ${cleanStart} ถึง ${cleanEnd})`,
         url: '/?tab=attendance&sub=requests',
         tag: `leave-new-${empId}-${Date.now()}`
       }).catch(() => {});
@@ -1976,14 +1993,16 @@ async function handleAction(db, action, params) {
         return { success: false, message: 'ตำแหน่งงานของคุณไม่ได้รับสิทธิ์เบิกค่าล่วงเวลา (OT)' };
       }
 
+      const cleanOtDate = normalizeDateToIso(date);
+
       await db.prepare(`
         INSERT INTO ot_requests (emp_id, date, planned_hours, ot_type, reason, status)
         VALUES (?, ?, ?, ?, ?, 'PENDING')
-      `).bind(empId, date, Number(plannedHours), Number(otType) || 1.5, reason || '').run();
+      `).bind(empId, cleanOtDate, Number(plannedHours), Number(otType) || 1.5, reason || '').run();
 
       sendPushToAdmins(db, {
         title: '⏰ คำขอยื่นทำ OT ใหม่',
-        body: `พนักงาน [${empId}] ขอทำ OT ${plannedHours} ชม. (วันที่ ${date})`,
+        body: `พนักงาน [${empId}] ขอทำ OT ${plannedHours} ชม. (วันที่ ${cleanOtDate})`,
         url: '/?tab=attendance&sub=requests',
         tag: `ot-new-${empId}-${Date.now()}`
       }).catch(() => {});

@@ -407,11 +407,13 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1.5">ตั้งแต่วันที่</label>
-              <input type="date" id="leaveStartDate" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+              <input type="date" id="leaveStartDate" onchange="updateLeaveStartDateThaiHint()" oninput="updateLeaveStartDateThaiHint()" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+              <div id="leaveStartDateThaiHint" class="text-[11px] text-sky-600 font-semibold mt-1"></div>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1.5">ถึงวันที่</label>
-              <input type="date" id="leaveEndDate" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+              <input type="date" id="leaveEndDate" onchange="updateLeaveEndDateThaiHint()" oninput="updateLeaveEndDateThaiHint()" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+              <div id="leaveEndDateThaiHint" class="text-[11px] text-sky-600 font-semibold mt-1"></div>
             </div>
           </div>
 
@@ -441,7 +443,8 @@
 
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1.5">วันที่ทำ OT</label>
-            <input type="date" id="otDate" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+            <input type="date" id="otDate" onchange="updateOtDateThaiHint()" oninput="updateOtDateThaiHint()" class="w-full text-sm p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+            <div id="otDateThaiHint" class="text-[11px] text-amber-600 font-semibold mt-1"></div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
@@ -1475,6 +1478,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=10.5"></script>
+  <script src="js/app.js?v=10.6"></script>
 </body>
 </html>
