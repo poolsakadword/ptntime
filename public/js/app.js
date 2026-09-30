@@ -1161,6 +1161,7 @@ function selectEmployeeCard(empId) {
 }
 
 function resetSelectedEmployee() {
+  clearBreakReminders();
   selectedPickerEmpId = null;
   const sel = document.getElementById('empSelectDropdown');
   if (sel) sel.value = '';
@@ -3040,6 +3041,7 @@ async function submitClockWithPhoto(type, qrToken, photoUrl) {
 
     if (data.success) {
       if (type === 'IN') {
+        clearBreakReminders();
         Swal.fire({
           icon: 'success',
           title: 'บันทึกเวลาเข้างานสำเร็จ!',
@@ -3077,6 +3079,7 @@ async function submitClockWithPhoto(type, qrToken, photoUrl) {
           `
         });
       } else {
+        clearBreakReminders();
         const isEligible = (data.isOtEligible !== false) && (!currentEmployee || currentEmployee.isOtEligible !== false);
         Swal.fire({
           icon: 'success',
@@ -3136,6 +3139,11 @@ async function loadTodayStatus() {
       }
 
       const log = data.log;
+      // Auto-clear break reminders if there is no active break today
+      if (!log || !log.clock_in || !log.break_out || log.break_in || log.clock_out) {
+        clearBreakReminders();
+      }
+
       const isBreakMode = (appSettings.break_tracking_mode === 'BREAK_PUNCH');
       const clockInEl = document.getElementById('todayClockInTime');
       const clockOutEl = document.getElementById('todayClockOutTime');
@@ -3217,6 +3225,20 @@ async function loadTodayStatus() {
       } else {
         if (holBanner) holBanner.classList.add('hidden');
         if (holNotice) holNotice.classList.add('hidden');
+      }
+
+      // Incomplete attendance banner from previous shift
+      const incBanner = document.getElementById('incompleteAttendanceBanner');
+      const incSub = document.getElementById('incompleteAttendanceSub');
+      if (data.prevUnclosedLog) {
+        if (incBanner) {
+          incBanner.classList.remove('hidden');
+          if (incSub) {
+            incSub.textContent = `เมื่อวันที่ ${formatDateThaiBE(data.prevUnclosedLog.date)} คุณไม่ได้สแกนเลิกงาน (หากต้องการปรับปรุงเวลา กรุณาแจ้งฝ่ายบุคคล)`;
+          }
+        }
+      } else {
+        if (incBanner) incBanner.classList.add('hidden');
       }
 
       // =========================================================================
@@ -5486,7 +5508,10 @@ function scheduleBreakReminders(breakOutTimeStr) {
   if (!breakOutTimeStr) return;
 
   const now = new Date();
+  const curIsoDate = now.toISOString().substring(0, 10);
   localStorage.setItem('ptn_break_start_timestamp', now.getTime().toString());
+  localStorage.setItem('ptn_break_date', curIsoDate);
+  localStorage.removeItem('ptn_break_last_notified');
 
   // Timer 50 minutes (50 * 60 * 1000)
   breakTimer50 = setTimeout(() => {
@@ -5513,20 +5538,48 @@ function clearBreakReminders() {
   breakTimer50 = null;
   breakTimer60 = null;
   localStorage.removeItem('ptn_break_start_timestamp');
+  localStorage.removeItem('ptn_break_date');
+  localStorage.removeItem('ptn_break_last_notified');
 }
 
-// Check Break duration when reopening app
+// Check Break duration when reopening or focusing app
 function checkActiveBreakOnWake() {
   const stored = localStorage.getItem('ptn_break_start_timestamp');
   if (!stored) return;
+
+  const storedDate = localStorage.getItem('ptn_break_date');
+  const todayStr = new Date().toISOString().substring(0, 10);
+
+  // Safeguard 1: Cross-day check - if break was from a previous day, purge immediately without notifying
+  if (storedDate && storedDate !== todayStr) {
+    clearBreakReminders();
+    return;
+  }
+
   const elapsedMinutes = Math.floor((Date.now() - parseInt(stored, 10)) / 60000);
+
+  // Safeguard 2: Out-of-bounds check - if negative or exceeded 5 hours (300 mins), clear stale break state
+  if (elapsedMinutes < 0 || elapsedMinutes > 300) {
+    clearBreakReminders();
+    return;
+  }
+
+  // Safeguard 3: Cooldown check - prevent spamming alarms on every tab switch / app focus (minimum 15 mins interval)
+  const lastNotified = parseInt(localStorage.getItem('ptn_break_last_notified') || '0', 10);
+  const now = Date.now();
+  if (now - lastNotified < 15 * 60 * 1000) {
+    return;
+  }
+
   if (elapsedMinutes >= 60) {
+    localStorage.setItem('ptn_break_last_notified', now.toString());
     sendPushOrLocalNotification(
       '⚠️ คุณพักเกินเกณฑ์ 60 นาทีแล้ว!',
       `ขณะนี้คุณพักไปแล้ว ${elapsedMinutes} นาที กรุณาสแกนกลับเข้าทำงานทันที`,
       'break_over'
     );
   } else if (elapsedMinutes >= 50) {
+    localStorage.setItem('ptn_break_last_notified', now.toString());
     sendPushOrLocalNotification(
       '☕ ใกล้หมดเวลาพักแล้ว!',
       `คุณพักไปแล้ว ${elapsedMinutes} นาที (เหลือ ${60 - elapsedMinutes} นาที) กรุณาเตรียมสแกนเข้าทำงาน`,
