@@ -3227,20 +3227,6 @@ async function loadTodayStatus() {
         if (holNotice) holNotice.classList.add('hidden');
       }
 
-      // Incomplete attendance banner from previous shift
-      const incBanner = document.getElementById('incompleteAttendanceBanner');
-      const incSub = document.getElementById('incompleteAttendanceSub');
-      if (data.prevUnclosedLog) {
-        if (incBanner) {
-          incBanner.classList.remove('hidden');
-          if (incSub) {
-            incSub.textContent = `เมื่อวันที่ ${formatDateThaiBE(data.prevUnclosedLog.date)} คุณไม่ได้สแกนเลิกงาน (หากต้องการปรับปรุงเวลา กรุณาแจ้งฝ่ายบุคคล)`;
-          }
-        }
-      } else {
-        if (incBanner) incBanner.classList.add('hidden');
-      }
-
       // =========================================================================
       // CONCEPT 3: HERO ONE-TAP ACTION LOGIC
       // =========================================================================

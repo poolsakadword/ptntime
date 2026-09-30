@@ -1256,17 +1256,6 @@ async function handleAction(db, action, params) {
       const branchCfg = await getEmployeeBranchConfig(db, empId, null, null, settings);
       const holiday = await db.prepare('SELECT * FROM company_holidays WHERE date = ?').bind(date).first().catch(() => null);
 
-      // Check for unclosed attendance from previous days
-      let prevUnclosedLog = null;
-      try {
-        prevUnclosedLog = await db.prepare(`
-          SELECT id, date, clock_in, break_out, break_in, clock_out 
-          FROM time_logs 
-          WHERE emp_id = ? AND date < ? AND clock_in IS NOT NULL AND clock_out IS NULL 
-          ORDER BY date DESC LIMIT 1
-        `).bind(empId, date).first();
-      } catch (e) {}
-
       return {
         success: true,
         log: log || null,
@@ -1274,8 +1263,7 @@ async function handleAction(db, action, params) {
         leave: pendingLeave || null,
         ot: approvedOt || null,
         settings,
-        branchConfig: branchCfg || null,
-        prevUnclosedLog: prevUnclosedLog || null
+        branchConfig: branchCfg || null
       };
     }
 
