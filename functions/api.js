@@ -659,7 +659,7 @@ async function getSettings(db) {
   return map;
 }
 
-function validateTimeWindow(settings, actionType, curTimeStr) {
+function validateTimeWindow(settings, actionType, curTimeStr, hasApprovedLeave = false) {
   if (String(settings.enable_time_window_restrictions) !== 'true') return null;
   let start = '00:00';
   let end = '23:59';
@@ -667,7 +667,8 @@ function validateTimeWindow(settings, actionType, curTimeStr) {
   switch (actionType) {
     case 'IN':
       start = settings.window_in_start || '06:00';
-      end = settings.window_in_end || '12:00';
+      // Support afternoon clock-in up to 16:00 (or up to work_end_time if has approved leave)
+      end = hasApprovedLeave ? (settings.work_end_time || '19:00') : (settings.window_in_end || '16:00');
       label = 'เข้างาน (IN)';
       break;
     case 'BREAK_OUT':
@@ -1289,8 +1290,18 @@ async function handleAction(db, action, params) {
       // Load branch configuration for this employee
       const branchCfg = await getEmployeeBranchConfig(db, empId, lat, lng, settings);
 
+      // Auto-detect approved leave on this date (e.g. morning leave allowing afternoon clock-in)
+      let hasApprovedLeaveToday = false;
+      try {
+        const approvedLeaveToday = await db.prepare(`
+          SELECT id, leave_type FROM leave_requests 
+          WHERE emp_id = ? AND status = 'APPROVED' AND ? >= start_date AND ? <= end_date
+        `).bind(empId, date, date).first();
+        if (approvedLeaveToday) hasApprovedLeaveToday = true;
+      } catch (e) {}
+
       // Check Time Window Lock
-      const winErr = validateTimeWindow(settings, 'IN', timeStr);
+      const winErr = validateTimeWindow(settings, 'IN', timeStr, hasApprovedLeaveToday);
       if (winErr) return { success: false, message: winErr };
 
       // Check Device Lock
@@ -1350,16 +1361,6 @@ async function handleAction(db, action, params) {
       const diffMinutes = getMinutesDiff(branchCfg.workStartTime, timeStr.substring(0, 5));
       const lateMinutes = isSunday ? 0 : Math.max(0, diffMinutes - (branchCfg.graceMinutes || 0));
       const status = isSunday ? 'SUNDAY_WORK' : (lateMinutes > 0 ? 'LATE' : 'NORMAL');
-
-      // Auto-detect approved leave on this date
-      let hasApprovedLeaveToday = false;
-      try {
-        const approvedLeaveToday = await db.prepare(`
-          SELECT id, leave_type FROM leave_requests 
-          WHERE emp_id = ? AND status = 'APPROVED' AND ? >= start_date AND ? <= end_date
-        `).bind(empId, date, date).first();
-        if (approvedLeaveToday) hasApprovedLeaveToday = true;
-      } catch (e) {}
 
       // Auto-resolve any previous unclosed shifts (e.g. yesterday's clock_in without clock_out, unclosed break_out)
       try {
@@ -2758,11 +2759,21 @@ async function handleAction(db, action, params) {
     }
 
     case 'checkAndSendMissingClockOutAlerts': {
+      const curMins = timeToMinutes(curTimeStr);
+      // Only alert within post-work evening window (19:00 - 21:30)
+      // Do NOT alert during daytime or late night past cutoff
+      if (curMins < timeToMinutes('19:00') || curMins > timeToMinutes('21:30')) {
+        return { success: true, message: 'ไม่อยู่ในช่วงเวลาเตือนออกงาน (เตือนเฉพาะช่วง 19:00 - 21:30 น.)', sentCount: 0 };
+      }
+
       const logs = await db.prepare(`
-        SELECT l.emp_id, l.clock_in, l.clock_out, e.full_name, e.nickname
+        SELECT l.emp_id, l.clock_in, l.clock_out, l.status, e.full_name, e.nickname
         FROM time_logs l
         LEFT JOIN employees e ON l.emp_id = e.emp_id
-        WHERE l.date = ? AND l.clock_in IS NOT NULL AND (l.clock_out IS NULL OR l.clock_out = '')
+        WHERE l.date = ? 
+          AND l.clock_in IS NOT NULL 
+          AND (l.clock_out IS NULL OR l.clock_out = '')
+          AND (l.status IS NULL OR l.status NOT IN ('ABSENT', 'INCOMPLETE'))
       `).bind(today).all().catch(() => ({ results: [] }));
 
       let sentCount = 0;

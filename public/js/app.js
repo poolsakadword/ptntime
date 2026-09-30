@@ -3275,6 +3275,17 @@ async function loadTodayStatus() {
         if (!log || !log.clock_in) {
           // State 1: Not clocked in
           currentAction = 'IN';
+          secAction = null; // No clock-out allowed if never clocked in
+
+          const nowObj = new Date();
+          const curHM = String(nowObj.getHours()).padStart(2, '0') + ':' + String(nowObj.getMinutes()).padStart(2, '0');
+          const lunchStart = (window.currentBranchConfig && window.currentBranchConfig.lunchStartTime) || appSettings.lunch_start_time || '13:00';
+          const workEnd = (window.currentBranchConfig && window.currentBranchConfig.workEndTime) || appSettings.work_end_time || '19:00';
+          const shiftCutoffMins = timeToMinutes(workEnd) + 30; // e.g. 19:30
+          const curMins = timeToMinutes(curHM);
+          const isPastCutoff = (curMins >= shiftCutoffMins);
+          const isAfternoon = (!isPastCutoff && curMins >= timeToMinutes(lunchStart));
+
           if (todayHoliday) {
             if (holNotice) holNotice.classList.remove('hidden');
             if (statusText) statusText.textContent = `วันหยุดบริษัท: ${todayHoliday.holiday_name || ''}`;
@@ -3292,6 +3303,54 @@ async function loadTodayStatus() {
               heroBtn.disabled = false;
               heroBtn.onclick = () => openQrScannerModal('IN');
             }
+          } else if (isPastCutoff) {
+            // Cut off as absent - never clocked in all day
+            if (holNotice) holNotice.classList.add('hidden');
+            if (statusText) statusText.textContent = 'ไม่พบการลงเวลาของวันนี้ (สถานะ: ขาดงาน)';
+            if (statusIcon) statusIcon.textContent = '🚫';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-rose-100 text-rose-800 border border-rose-200';
+              badge.textContent = '🔴 ขาดงาน';
+            }
+            if (heroTitle) heroTitle.textContent = 'พ้นเวลางานแล้ว';
+            if (heroBadge) heroBadge.textContent = 'หมดเวลา';
+            if (heroSub) heroSub.textContent = 'ไม่พบบันทึกเวลาเข้างานของวันนี้ (หากมาปฏิบัติงานจริง กรุณาติดต่อ HR)';
+            if (heroIcon) heroIcon.textContent = '🚫';
+            if (heroBtn) {
+              heroBtn.className = heroBtnClasses.LOCKED;
+              heroBtn.disabled = true;
+              heroBtn.onclick = () => {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'พ้นเวลาการลงเวลาของวันนี้แล้ว',
+                  text: 'ระบบไม่พบบันทึกเวลาเข้างานของวันนี้ จึงไม่มีการบันทึกเวลาทำงาน หากคุณมาปฏิบัติงานจริง กรุณาติดต่อ HR เพื่อทำการปรับปรุงเวลา',
+                  confirmButtonText: 'รับทราบ'
+                });
+              };
+            }
+            if (directGpsText) directGpsText.textContent = 'สิ้นสุดเวลาลงเวลาประจำวัน';
+            if (directGpsBtn) directGpsBtn.onclick = null;
+          } else if (isAfternoon) {
+            // Afternoon arrival - allow Clock IN
+            if (holNotice) holNotice.classList.add('hidden');
+            const hasLeave = (data.leave && data.leave.status === 'APPROVED');
+            if (statusText) statusText.textContent = hasLeave ? 'มีใบลาช่วงเช้า (พร้อมเข้างานช่วงบ่าย)' : 'ยังไม่ได้ลงเวลาเข้างาน (ช่วงบ่าย)';
+            if (statusIcon) statusIcon.textContent = '☀️';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
+              badge.textContent = hasLeave ? 'ลาเช้า / เข้าบ่าย' : 'พร้อมลงเวลาบ่าย';
+            }
+            if (heroTitle) heroTitle.textContent = 'แตะเข้างานบ่าย';
+            if (heroBadge) heroBadge.textContent = 'สแกน QR';
+            if (heroSub) heroSub.textContent = 'แตะเพื่อลงเวลาเข้าปฏิบัติงานช่วงบ่าย (Clock IN)';
+            if (heroIcon) heroIcon.textContent = '☀️';
+            if (heroBtn) {
+              heroBtn.className = heroBtnClasses.IN;
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('IN');
+            }
+            if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานบ่ายด้วย GPS โดยตรง (IN)';
+            if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
           } else {
             if (holNotice) holNotice.classList.add('hidden');
             if (statusText) statusText.textContent = 'ยังไม่ได้ลงเวลาวันนี้';
@@ -3309,9 +3368,9 @@ async function loadTodayStatus() {
               heroBtn.disabled = false;
               heroBtn.onclick = () => openQrScannerModal('IN');
             }
+            if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานด้วย GPS โดยตรง (IN)';
+            if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
           }
-          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานด้วย GPS โดยตรง (IN)';
-          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
 
         } else if (log.clock_in && !log.break_out && !log.clock_out) {
           // State 2: Clocked in morning, no break out yet
@@ -3502,8 +3561,16 @@ async function loadTodayStatus() {
         // Mode 1: Standard 2-Punch (AUTO_DEDUCT)
         if (!log || !log.clock_in) {
           currentAction = 'IN';
-          secAction = 'OUT';
-          secText = 'หรือแตะเพื่อลงเวลาออกงาน (OUT)';
+          secAction = null; // No clock-out allowed if never clocked in
+
+          const nowObj = new Date();
+          const curHM = String(nowObj.getHours()).padStart(2, '0') + ':' + String(nowObj.getMinutes()).padStart(2, '0');
+          const lunchStart = (window.currentBranchConfig && window.currentBranchConfig.lunchStartTime) || appSettings.lunch_start_time || '13:00';
+          const workEnd = (window.currentBranchConfig && window.currentBranchConfig.workEndTime) || appSettings.work_end_time || '19:00';
+          const shiftCutoffMins = timeToMinutes(workEnd) + 30; // e.g. 19:30
+          const curMins = timeToMinutes(curHM);
+          const isPastCutoff = (curMins >= shiftCutoffMins);
+          const isAfternoon = (!isPastCutoff && curMins >= timeToMinutes(lunchStart));
 
           if (todayHoliday) {
             if (holNotice) holNotice.classList.remove('hidden');
@@ -3522,6 +3589,54 @@ async function loadTodayStatus() {
               heroBtn.disabled = false;
               heroBtn.onclick = () => openQrScannerModal('IN');
             }
+          } else if (isPastCutoff) {
+            // Cut off as absent - never clocked in all day
+            if (holNotice) holNotice.classList.add('hidden');
+            if (statusText) statusText.textContent = 'ไม่พบการลงเวลาของวันนี้ (สถานะ: ขาดงาน)';
+            if (statusIcon) statusIcon.textContent = '🚫';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-bold bg-rose-100 text-rose-800 border border-rose-200';
+              badge.textContent = '🔴 ขาดงาน';
+            }
+            if (heroTitle) heroTitle.textContent = 'พ้นเวลางานแล้ว';
+            if (heroBadge) heroBadge.textContent = 'หมดเวลา';
+            if (heroSub) heroSub.textContent = 'ไม่พบบันทึกเวลาเข้างานของวันนี้ (หากมาปฏิบัติงานจริง กรุณาติดต่อ HR)';
+            if (heroIcon) heroIcon.textContent = '🚫';
+            if (heroBtn) {
+              heroBtn.className = heroBtnClasses.LOCKED;
+              heroBtn.disabled = true;
+              heroBtn.onclick = () => {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'พ้นเวลาการลงเวลาของวันนี้แล้ว',
+                  text: 'ระบบไม่พบบันทึกเวลาเข้างานของวันนี้ จึงไม่มีการบันทึกเวลาทำงาน หากคุณมาปฏิบัติงานจริง กรุณาติดต่อ HR เพื่อทำการปรับปรุงเวลา',
+                  confirmButtonText: 'รับทราบ'
+                });
+              };
+            }
+            if (directGpsText) directGpsText.textContent = 'สิ้นสุดเวลาลงเวลาประจำวัน';
+            if (directGpsBtn) directGpsBtn.onclick = null;
+          } else if (isAfternoon) {
+            // Afternoon arrival - allow Clock IN
+            if (holNotice) holNotice.classList.add('hidden');
+            const hasLeave = (data.leave && data.leave.status === 'APPROVED');
+            if (statusText) statusText.textContent = hasLeave ? 'มีใบลาช่วงเช้า (พร้อมเข้างานช่วงบ่าย)' : 'ยังไม่ได้ลงเวลาเข้างาน (ช่วงบ่าย)';
+            if (statusIcon) statusIcon.textContent = '☀️';
+            if (badge) {
+              badge.className = 'px-3 py-1 rounded-xl text-xs md:text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200';
+              badge.textContent = hasLeave ? 'ลาเช้า / เข้าบ่าย' : 'พร้อมลงเวลาบ่าย';
+            }
+            if (heroTitle) heroTitle.textContent = 'แตะเข้างานบ่าย';
+            if (heroBadge) heroBadge.textContent = 'สแกน QR';
+            if (heroSub) heroSub.textContent = 'แตะเพื่อลงเวลาเข้าปฏิบัติงานช่วงบ่าย (Clock IN)';
+            if (heroIcon) heroIcon.textContent = '☀️';
+            if (heroBtn) {
+              heroBtn.className = heroBtnClasses.IN;
+              heroBtn.disabled = false;
+              heroBtn.onclick = () => openQrScannerModal('IN');
+            }
+            if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานบ่ายด้วย GPS โดยตรง (IN)';
+            if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
           } else {
             if (holNotice) holNotice.classList.add('hidden');
             if (statusText) statusText.textContent = 'ยังไม่ได้ลงเวลาวันนี้';
@@ -3539,9 +3654,9 @@ async function loadTodayStatus() {
               heroBtn.disabled = false;
               heroBtn.onclick = () => openQrScannerModal('IN');
             }
+            if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานด้วย GPS โดยตรง (IN)';
+            if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
           }
-          if (directGpsText) directGpsText.textContent = 'ถ่ายรูปเข้างานด้วย GPS โดยตรง (IN)';
-          if (directGpsBtn) directGpsBtn.onclick = () => startDirectGpsClock('IN');
 
         } else if (log.clock_in && !log.clock_out) {
           currentAction = 'OUT';
