@@ -3989,17 +3989,75 @@ async function loadEmployeeHistory() {
         holidayMap[h.date] = h;
       });
 
+      // Process leaves for this period
+      const rawLeaves = data.leaves || [];
+      window._currentHistoryLeaves = rawLeaves;
+
+      const approvedLeaves = rawLeaves.filter(lv => lv && lv.status === 'APPROVED');
+      const leaveSummaryEl = document.getElementById('historyLeaveSummary');
+      const leaveCountTxt = document.getElementById('txtHistoryLeaveCount');
+      if (leaveSummaryEl) {
+        if (approvedLeaves.length > 0) {
+          const totalLeaveDays = approvedLeaves.reduce((sum, lv) => sum + (Number(lv.days_count) || 1), 0);
+          leaveSummaryEl.classList.remove('hidden');
+          if (leaveCountTxt) leaveCountTxt.textContent = `ในรอบนี้มีวันลาที่ได้รับอนุมัติ ${totalLeaveDays} วัน (${approvedLeaves.length} รายการ)`;
+        } else {
+          leaveSummaryEl.classList.add('hidden');
+        }
+      }
+
       const logs = data.logs || [];
       const logDates = new Set(logs.map(l => l.date));
 
-      // Combine logs and company holidays where employee didn't clock in
+      // Build leave map by date and collect standalone leaves (days without punch)
+      const leaveMap = {}; // dateStr -> array of { leave, rawLeaveIndex }
+      const standaloneLeaveDates = new Map(); // dateStr -> { leave, rawLeaveIndex }
+
+      rawLeaves.forEach((lv, lIdx) => {
+        if (!lv || !lv.start_date) return;
+        let sDate = lv.start_date;
+        let eDate = lv.end_date || lv.start_date;
+        if (sDate > eDate) { const tmp = sDate; sDate = eDate; eDate = tmp; }
+
+        let cur = new Date(sDate + 'T00:00:00Z');
+        const end = new Date(eDate + 'T00:00:00Z');
+        while (cur <= end) {
+          const dStr = cur.toISOString().substring(0, 10);
+          if (dStr.startsWith(month)) {
+            if (!leaveMap[dStr]) leaveMap[dStr] = [];
+            leaveMap[dStr].push({ leave: lv, rawLeaveIndex: lIdx });
+
+            // If employee did NOT clock in on this date, register as standalone leave item
+            if (!logDates.has(dStr)) {
+              if (!standaloneLeaveDates.has(dStr)) {
+                standaloneLeaveDates.set(dStr, { leave: lv, rawLeaveIndex: lIdx });
+              }
+            }
+          }
+          cur.setUTCDate(cur.getUTCDate() + 1);
+        }
+      });
+      window._currentHistoryLeaveMap = leaveMap;
+
+      // Combine logs, standalone leaves, and company holidays
       const combinedItems = [];
       logs.forEach((l, idx) => {
         combinedItems.push({ type: 'LOG', date: l.date, log: l, rawIndex: idx });
       });
 
+      // Add standalone leaves where employee didn't clock in
+      standaloneLeaveDates.forEach((val, dStr) => {
+        combinedItems.push({
+          type: 'LEAVE',
+          date: dStr,
+          leave: val.leave,
+          rawLeaveIndex: val.rawLeaveIndex
+        });
+      });
+
+      // Add company holidays where neither log nor leave exists
       periodHolidays.forEach(h => {
-        if (!logDates.has(h.date)) {
+        if (!logDates.has(h.date) && !standaloneLeaveDates.has(h.date)) {
           combinedItems.push({ type: 'HOLIDAY', date: h.date, holiday: h });
         }
       });
@@ -4038,15 +4096,65 @@ async function loadEmployeeHistory() {
               </div>
             </div>
           `;
+        } else if (item.type === 'LEAVE') {
+          const lv = item.leave;
+          const lIdx = item.rawLeaveIndex;
+          const isApproved = lv.status === 'APPROVED';
+          const isRejected = lv.status === 'REJECTED';
+
+          const leaveName = LEAVE_TYPE_LABELS[lv.leave_type] || lv.leave_type || 'ลางาน';
+          const isSick = lv.leave_type && lv.leave_type.startsWith('SICK');
+          const isAnnual = lv.leave_type === 'ANNUAL';
+          const icon = isSick ? '🩺' : (isAnnual ? '🌴' : '🏖️');
+          const timeSlotText = lv.time_slot === 'MORNING' ? ' (ครึ่งวันเช้า)' : (lv.time_slot === 'AFTERNOON' ? ' (ครึ่งวันบ่าย)' : ' (เต็มวัน)');
+
+          const badgeClass = isApproved
+            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+            : (isRejected ? 'bg-rose-100 text-rose-900 border-rose-300' : 'bg-amber-100 text-amber-900 border-amber-300');
+          const badgeText = isApproved ? '✓ อนุมัติแล้ว' : (isRejected ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
+
+          const cardBorder = isApproved
+            ? 'border-sky-300 bg-sky-50/60 hover:border-sky-400'
+            : (isRejected ? 'border-rose-200 bg-rose-50/40 hover:border-rose-300' : 'border-amber-200 bg-amber-50/40 hover:border-amber-300');
+
+          html += `
+            <div onclick="openHistoryLeaveModal(${lIdx})" class="p-3.5 sm:p-4 rounded-2xl border-2 ${cardBorder} shadow-sm flex items-center justify-between cursor-pointer active:scale-[0.98] transition group">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-full ${isApproved ? 'bg-sky-100 border-2 border-sky-300 text-sky-800' : 'bg-amber-100 border-2 border-amber-300 text-amber-800'} flex items-center justify-center text-lg flex-shrink-0 shadow-xs">
+                  ${icon}
+                </div>
+                <div class="space-y-0.5">
+                  <div class="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
+                    <span>${formatDateThaiBE(item.date)}</span>
+                    ${lv.medical_cert_url ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">📎 มีเอกสาร</span>` : ''}
+                  </div>
+                  <div class="text-xs sm:text-sm font-bold text-sky-900">
+                    ${leaveName}${timeSlotText} ${lv.days_count ? `(${lv.days_count} วัน)` : ''}
+                  </div>
+                  ${lv.reason ? `<div class="text-[11px] sm:text-xs text-slate-500 truncate max-w-[200px] sm:max-w-xs">เหตุผล: ${lv.reason}</div>` : ''}
+                </div>
+              </div>
+              <div class="text-right flex-shrink-0 pl-2">
+                <span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-extrabold border shadow-xs ${badgeClass}">
+                  ${badgeText}
+                </span>
+                <div class="text-[11px] sm:text-xs text-slate-400 mt-1 flex items-center justify-end gap-1 font-medium group-hover:text-sky-600 transition">
+                  <span>แตะดู</span> <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                </div>
+              </div>
+            </div>
+          `;
         } else {
           const l = item.log;
           const idx = item.rawIndex;
           const isLate = (l.late_minutes || 0) > 0;
           const isBranchEarly = (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
           const hOnLog = holidayMap[l.date];
+          const leavesOnDate = leaveMap[l.date] || [];
+          const primaryLeaveItem = leavesOnDate.length > 0 ? leavesOnDate[0].leave : null;
 
           html += `
-            <div onclick="openHistoryDetailModal(${idx})" class="bg-white p-3.5 sm:p-4 rounded-2xl border ${hOnLog ? 'border-purple-300 bg-purple-50/20' : 'border-slate-200'} hover:border-sky-300 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center justify-between group">
+            <div onclick="openHistoryDetailModal(${idx})" class="bg-white p-3.5 sm:p-4 rounded-2xl border ${hOnLog ? 'border-purple-300 bg-purple-50/20' : (primaryLeaveItem ? 'border-sky-300 bg-sky-50/20' : 'border-slate-200')} hover:border-sky-300 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center justify-between group">
               <div class="flex items-center space-x-3">
                 <div class="flex items-center -space-x-2 flex-shrink-0">
                   ${l.in_photo_url ? `
@@ -4069,6 +4177,7 @@ async function loadEmployeeHistory() {
                   <div class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
                     <span>${formatDateThaiBE(l.date)}</span>
                     ${hOnLog ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">วันหยุด: ${hOnLog.holiday_name}</span>` : ''}
+                    ${primaryLeaveItem ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-sky-100 text-sky-900 border border-sky-300">🏖️ ${LEAVE_TYPE_LABELS[primaryLeaveItem.leave_type] || 'ลางาน'} (${primaryLeaveItem.status === 'APPROVED' ? 'อนุมัติ' : 'รออนุมัติ'})</span>` : ''}
                   </div>
                   <div class="flex items-center space-x-2 text-xs sm:text-sm text-slate-600">
                     <span>เข้า: <b class="text-emerald-700 font-bold">${l.clock_in || '--'}</b></span>
@@ -4228,6 +4337,25 @@ function openHistoryDetailModal(idx) {
     hoursEl.textContent = (l.work_hours || 0) + ' ชม.' + otTxt;
   }
 
+  // Leave Info Box in detail modal
+  var leaveBox = document.getElementById('hModalLeaveBox');
+  var leaveTitle = document.getElementById('hModalLeaveTitle');
+  var leaveDesc = document.getElementById('hModalLeaveDesc');
+  var leavesForDay = (window._currentHistoryLeaveMap && window._currentHistoryLeaveMap[l.date]) || [];
+  if (leaveBox && leaveTitle && leaveDesc) {
+    if (leavesForDay.length > 0) {
+      var primaryLv = leavesForDay[0].leave;
+      var lvName = LEAVE_TYPE_LABELS[primaryLv.leave_type] || primaryLv.leave_type;
+      var lvStatusText = primaryLv.status === 'APPROVED' ? 'อนุมัติแล้ว' : (primaryLv.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รออนุมัติ');
+      var lvSlotText = primaryLv.time_slot === 'MORNING' ? 'ครึ่งวันเช้า' : (primaryLv.time_slot === 'AFTERNOON' ? 'ครึ่งวันบ่าย' : 'เต็มวัน');
+      leaveBox.classList.remove('hidden');
+      leaveTitle.innerHTML = '🏖️ ข้อมูลการลา: ' + lvName + ' (' + lvStatusText + ')';
+      leaveDesc.innerHTML = 'ช่วงเวลา: <strong>' + lvSlotText + '</strong>' + (primaryLv.reason ? ' | เหตุผล: ' + primaryLv.reason : '') + (primaryLv.approver_id ? ' (ผู้อนุมัติ: ' + primaryLv.approver_id + ')' : '');
+    } else {
+      leaveBox.classList.add('hidden');
+    }
+  }
+
   // Wage box
   var wageBox = document.getElementById('hModalWageBox');
   var wageTitle = document.getElementById('hModalWageTitle');
@@ -4270,6 +4398,90 @@ function openHistoryDetailModal(idx) {
 function closeHistoryDetailModal() {
   var m = document.getElementById('modalHistoryDetail');
   if (m) m.classList.add('hidden');
+}
+
+function openHistoryLeaveModal(idx) {
+  const leaves = window._currentHistoryLeaves || [];
+  const lv = leaves[idx];
+  if (!lv) return;
+
+  const leaveName = LEAVE_TYPE_LABELS[lv.leave_type] || lv.leave_type || 'ลางาน';
+  const isApproved = lv.status === 'APPROVED';
+  const isRejected = lv.status === 'REJECTED';
+  const statusBadge = isApproved
+    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">✓ อนุมัติแล้ว</span>'
+    : (isRejected
+      ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">✕ ไม่อนุมัติ</span>'
+      : '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">⏳ รออนุมัติ</span>');
+
+  let dateRangeText = formatDateThaiBE(lv.start_date);
+  if (lv.end_date && lv.end_date !== lv.start_date) {
+    dateRangeText += ' ถึง ' + formatDateThaiBE(lv.end_date);
+  }
+
+  let slotText = 'เต็มวัน';
+  if (lv.time_slot === 'MORNING') slotText = 'ครึ่งวันเช้า';
+  if (lv.time_slot === 'AFTERNOON') slotText = 'ครึ่งวันบ่าย';
+
+  let certHtml = '';
+  if (lv.medical_cert_url) {
+    certHtml = `
+      <div class="mt-3 pt-3 border-t border-slate-200">
+        <div class="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+          <span>📎</span> เอกสารแนบ / ภาพถ่ายใบรับรอง:
+        </div>
+        <img src="${lv.medical_cert_url}" alt="เอกสารแนบ" 
+          onclick="previewCertPhoto('${lv.medical_cert_url}', 'เอกสารแนบการลา: ${leaveName} (${dateRangeText})')"
+          class="max-h-48 rounded-xl border border-slate-300 shadow-sm cursor-pointer hover:opacity-90 object-cover mx-auto" />
+      </div>
+    `;
+  }
+
+  Swal.fire({
+    title: '<div class="text-base font-extrabold text-slate-800 flex items-center justify-center gap-2"><span>🏖️</span><span>รายละเอียดการลา</span></div>',
+    html: `
+      <div class="text-left text-xs sm:text-sm space-y-2.5 text-slate-700 mt-2">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+          <span class="text-slate-500 font-medium">ประเภทการลา:</span>
+          <span class="font-bold text-sky-800">${leaveName}</span>
+        </div>
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+          <span class="text-slate-500 font-medium">วันที่ลา:</span>
+          <span class="font-bold text-slate-900">${dateRangeText}</span>
+        </div>
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+          <span class="text-slate-500 font-medium">ช่วงเวลา / จำนวน:</span>
+          <span class="font-bold text-slate-800">${slotText} (${lv.days_count || 1} วัน)</span>
+        </div>
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+          <span class="text-slate-500 font-medium">สถานะ:</span>
+          <div>${statusBadge}</div>
+        </div>
+        ${lv.reason ? `
+          <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-slate-700">
+            <span class="font-bold text-slate-800">เหตุผลการลา:</span> ${lv.reason}
+          </div>
+        ` : ''}
+        ${isApproved && lv.approver_id ? `
+          <div class="text-[11px] text-slate-500 bg-emerald-50/70 p-2 rounded-xl border border-emerald-200">
+            <div>อนุมัติโดย: <b class="text-emerald-900">${lv.approver_id}</b></div>
+            ${lv.approved_at ? `<div>เวลาอนุมัติ: ${lv.approved_at}</div>` : ''}
+          </div>
+        ` : ''}
+        ${isRejected && lv.rejection_reason ? `
+          <div class="text-[11px] text-rose-700 bg-rose-50 p-2 rounded-xl border border-rose-200">
+            <div>เหตุผลที่ไม่อนุมัติ: <b>${lv.rejection_reason}</b></div>
+          </div>
+        ` : ''}
+        ${certHtml}
+      </div>
+    `,
+    confirmButtonText: 'ปิด',
+    confirmButtonColor: '#0284c7',
+    customClass: {
+      popup: 'rounded-3xl shadow-2xl p-4 sm:p-6'
+    }
+  });
 }
 
 // ==============================================================================

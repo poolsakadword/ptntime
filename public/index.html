@@ -360,6 +360,17 @@
           </span>
         </div>
 
+        <!-- Leave in period summary tag -->
+        <div id="historyLeaveSummary" class="hidden px-3.5 py-2.5 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 text-xs font-semibold flex items-center justify-between shadow-2xs">
+          <span class="flex items-center gap-1.5">
+            <span class="text-base">🏖️</span>
+            <span id="txtHistoryLeaveCount">ในรอบนี้มีวันลาที่ได้รับอนุมัติ 0 วัน</span>
+          </span>
+          <span class="text-[10px] text-sky-800 font-bold bg-sky-200/80 px-2 py-0.5 rounded-full border border-sky-300">
+            ประวัติการลา
+          </span>
+        </div>
+
         <!-- History List Container -->
         <div class="space-y-2.5" id="historyListContainer">
           <div class="text-center py-8 text-sm text-slate-400 font-medium">กำลังโหลดข้อมูลประวัติ...</div>
@@ -1401,6 +1412,16 @@
               <span class="text-sky-600 font-bold">⏱️</span> เวลางานรวม:
             </span>
             <span id="hModalHours" class="font-extrabold text-slate-900 text-sm sm:text-base">-- ชม.</span>
+          </div>
+        </div>
+
+        <!-- Leave Info Box (If employee took leave on this day) -->
+        <div id="hModalLeaveBox" class="hidden border rounded-2xl p-3.5 space-y-1 bg-sky-50 border-sky-200 text-sky-900">
+          <div class="font-bold text-xs sm:text-sm flex items-center gap-1.5" id="hModalLeaveTitle">
+            🏖️ ข้อมูลการลาในวันนี้:
+          </div>
+          <div class="text-xs sm:text-sm leading-relaxed" id="hModalLeaveDesc">
+            --
           </div>
         </div>
 

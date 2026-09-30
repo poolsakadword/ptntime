@@ -2070,9 +2070,11 @@ async function handleAction(db, action, params) {
 
       const leaves = await db.prepare(`
         SELECT * FROM leave_requests 
-        WHERE emp_id = ? AND (start_date LIKE ? OR end_date LIKE ?)
+        WHERE emp_id = ? AND (
+          start_date LIKE ? OR end_date LIKE ? OR (start_date <= ? AND end_date >= ?)
+        )
         ORDER BY start_date DESC
-      `).bind(empId, `${month}%`, `${month}%`).all().catch(() => ({ results: [] }));
+      `).bind(empId, `${month}%`, `${month}%`, `${month}-31`, `${month}-01`).all().catch(() => ({ results: [] }));
 
       const ots = await db.prepare(`
         SELECT * FROM ot_requests 
