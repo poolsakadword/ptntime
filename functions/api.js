@@ -2323,6 +2323,27 @@ async function handleAction(db, action, params) {
       return { success: true, message: 'บันทึกการตั้งค่าระบบลงเวลาเรียบร้อยแล้ว' };
     }
 
+    case 'adminResetEmployeeTodayLog': {
+      const { empId, date } = params;
+      const targetDate = date || today;
+      await db.prepare('DELETE FROM time_logs WHERE emp_id = ? AND date = ?').bind(empId, targetDate).run();
+      return { success: true, message: `ล้างประวัติการลงเวลาของ [${empId}] วันที่ ${targetDate} สำเร็จ` };
+    }
+
+    case 'adminAdjustEmployeeTodayLog': {
+      const { empId, date, clockIn, lateMinutes, status, remark } = params;
+      const targetDate = date || today;
+      await db.prepare(`
+        UPDATE time_logs 
+        SET clock_in = COALESCE(?, clock_in),
+            late_minutes = COALESCE(?, late_minutes),
+            status = COALESCE(?, status),
+            remark = COALESCE(?, remark)
+        WHERE emp_id = ? AND date = ?
+      `).bind(clockIn !== undefined ? clockIn : null, lateMinutes !== undefined ? lateMinutes : null, status || null, remark || null, empId, targetDate).run();
+      return { success: true, message: `ปรับปรุงเวลาเข้างานของ [${empId}] วันที่ ${targetDate} สำเร็จ` };
+    }
+
     // Toggle Branch Early Dismissal Mode (โหมดงานเสร็จ - จ่ายเต็มวัน)
     case 'toggleBranchEarlyDismissal': {
       const branchId = String(params.branchId || params.branch_id || '').trim();
