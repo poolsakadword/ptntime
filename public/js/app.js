@@ -675,15 +675,17 @@ function updateShiftDisplay() {
   const shiftEl = document.getElementById('shiftTickerText');
   const lunchEl = document.getElementById('shiftLunchText');
   const branchBadge = document.getElementById('shiftBranchBadge');
+  const lateEl = document.getElementById('todayLateInfo');
 
-  const targetBranch = getCurrentEmployeeTargetBranch();
+  const targetBranch = window.currentBranchConfig || getCurrentEmployeeTargetBranch();
   const isRoaming = currentEmployee && (currentEmployee.allowAllBranches === true || currentEmployee.allow_all_branches === 'true');
 
-  const startTime = targetBranch ? (targetBranch.work_start_time || appSettings.work_start_time) : appSettings.work_start_time;
-  const endTime = targetBranch ? (targetBranch.work_end_time || appSettings.work_end_time) : appSettings.work_end_time;
-  const lunchStart = targetBranch ? (targetBranch.lunch_start_time || appSettings.lunch_start_time) : appSettings.lunch_start_time;
-  const lunchEnd = targetBranch ? (targetBranch.lunch_end_time || appSettings.lunch_end_time) : appSettings.lunch_end_time;
-  const branchName = isRoaming ? `${targetBranch.branch_name} (Roaming)` : (targetBranch ? targetBranch.branch_name : 'สำนักงานใหญ่');
+  const startTime = targetBranch ? (targetBranch.workStartTime || targetBranch.work_start_time || appSettings.work_start_time || '09:30') : (appSettings.work_start_time || '09:30');
+  const endTime = targetBranch ? (targetBranch.workEndTime || targetBranch.work_end_time || appSettings.work_end_time || '19:00') : (appSettings.work_end_time || '19:00');
+  const lunchStart = targetBranch ? (targetBranch.lunchStartTime || targetBranch.lunch_start_time || appSettings.lunch_start_time || '13:00') : (appSettings.lunch_start_time || '13:00');
+  const lunchEnd = targetBranch ? (targetBranch.lunchEndTime || targetBranch.lunch_end_time || appSettings.lunch_end_time || '14:00') : (appSettings.lunch_end_time || '14:00');
+  const bName = targetBranch ? (targetBranch.branchName || targetBranch.branch_name || 'สำนักงานใหญ่') : 'สำนักงานใหญ่';
+  const branchName = isRoaming ? `${bName} (Roaming)` : bName;
 
   if (shiftEl) {
     shiftEl.textContent = `${startTime} - ${endTime} น.`;
@@ -698,6 +700,10 @@ function updateShiftDisplay() {
     } else {
       branchBadge.className = 'text-[11px] bg-sky-100 text-sky-800 font-semibold px-2 py-0.5 rounded-full border border-sky-200';
     }
+  }
+  if (lateEl && (!window.currentTodayLog || !window.currentTodayLog.clock_in)) {
+    lateEl.textContent = `เกณฑ์ ${startTime} น.`;
+    lateEl.className = 'text-xs sm:text-sm text-emerald-700 font-normal';
   }
 }
 
@@ -1257,9 +1263,10 @@ function openEmployeeProfileModal() {
 
   if (deptEl) deptEl.textContent = currentEmployee.department || 'พนักงาน';
   if (branchEl) branchEl.textContent = bTag;
-  if (shiftEl && window.currentBranchConfig) {
-    const sIn = window.currentBranchConfig.standardClockIn || '09:30';
-    const sOut = window.currentBranchConfig.standardClockOut || '19:00';
+  if (shiftEl) {
+    const bCfg = window.currentBranchConfig || targetBranch;
+    const sIn = bCfg ? (bCfg.workStartTime || bCfg.work_start_time || '09:30') : '09:30';
+    const sOut = bCfg ? (bCfg.workEndTime || bCfg.work_end_time || '19:00') : '19:00';
     shiftEl.textContent = `${sIn} - ${sOut} น.`;
   }
 
@@ -3181,6 +3188,10 @@ async function loadTodayStatus() {
         }
       }
 
+      window.currentTodayLog = log || null;
+      window.currentBranchConfig = data.branchConfig || null;
+      updateShiftDisplay();
+
       if (log && log.clock_in) {
         if (lateEl) {
           lateEl.textContent = log.late_minutes > 0 ? `สาย ${log.late_minutes} นาที` : 'ตรงเวลา ปกติ';
@@ -3188,7 +3199,9 @@ async function loadTodayStatus() {
         }
       } else {
         if (lateEl) {
-          lateEl.textContent = 'เกณฑ์ ' + (appSettings.work_start_time || '09:30') + ' น.';
+          const targetBranch = data.branchConfig || getCurrentEmployeeTargetBranch();
+          const targetStartTime = targetBranch ? (targetBranch.workStartTime || targetBranch.work_start_time || appSettings.work_start_time || '09:30') : (appSettings.work_start_time || '09:30');
+          lateEl.textContent = 'เกณฑ์ ' + targetStartTime + ' น.';
           lateEl.className = 'text-xs sm:text-sm text-emerald-700 font-normal';
         }
       }
@@ -3198,8 +3211,6 @@ async function loadTodayStatus() {
       } else {
         if (workSummaryEl) workSummaryEl.textContent = 'ปกติ 0 ชม.';
       }
-
-      window.currentBranchConfig = data.branchConfig || null;
 
       // Check if today is a company holiday
       const curIsoDate = new Date().toISOString().substring(0, 10);
