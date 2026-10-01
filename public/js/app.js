@@ -3969,9 +3969,13 @@ async function loadEmployeeHistory() {
       document.getElementById('statOtHours').textContent = data.stats.totalOtHours;
       document.getElementById('statAdvance').textContent = data.stats.totalAdvances || 0;
 
+      // Cycle range from API (e.g. 2026-09-26 to 2026-10-25)
+      const startDate = data.startDate || `${month}-01`;
+      const endDate = data.endDate || `${month}-31`;
+
       // Process company holidays for this period
       const holidays = data.holidays || window.companyHolidays || [];
-      const periodHolidays = holidays.filter(h => h && h.date && h.date.startsWith(month));
+      const periodHolidays = holidays.filter(h => h && h.date && h.date >= startDate && h.date <= endDate);
       
       const holidaySummaryEl = document.getElementById('historyHolidaySummary');
       const holidayCountTxt = document.getElementById('txtHistoryHolidayCount');
@@ -4023,7 +4027,7 @@ async function loadEmployeeHistory() {
         const end = new Date(eDate + 'T00:00:00Z');
         while (cur <= end) {
           const dStr = cur.toISOString().substring(0, 10);
-          if (dStr.startsWith(month)) {
+          if (dStr >= startDate && dStr <= endDate) {
             if (!leaveMap[dStr]) leaveMap[dStr] = [];
             leaveMap[dStr].push({ leave: lv, rawLeaveIndex: lIdx });
 
@@ -4650,11 +4654,16 @@ async function loadMyRequests() {
   const container = document.getElementById('myRequestsList');
   if (container) container.innerHTML = '<div class="text-center py-4 text-slate-400">กำลังโหลดรายการคำขอ...</div>';
 
+  const picker = document.getElementById('statusMonthPicker');
   const today = new Date().toISOString().substring(0, 10);
   const curMonth = today.substring(0, 7);
+  if (picker && !picker.value) {
+    picker.value = curMonth;
+  }
+  const month = (picker && picker.value) ? picker.value : curMonth;
 
   try {
-    const res = await fetch(`${API_URL}?action=getEmployeeHistory&empId=${currentEmployee.empId}&month=${curMonth}`);
+    const res = await fetch(`${API_URL}?action=getEmployeeHistory&empId=${currentEmployee.empId}&month=${month}`);
     const data = await res.json();
     if (data.success) {
       let html = '';
@@ -4666,7 +4675,7 @@ async function loadMyRequests() {
       checkRequestStatusChanges(leaves, ots, advances);
 
       if (leaves.length === 0 && ots.length === 0 && advances.length === 0) {
-        container.innerHTML = '<div class="text-center py-6 text-slate-400">ยังไม่มีรายการคำขอในเดือนนี้</div>';
+        container.innerHTML = `<div class="text-center py-6 text-slate-400">ยังไม่มีรายการคำขอในงวดนี้ (${data.startDate || month} ถึง ${data.endDate || month})</div>`;
         return;
       }
 

@@ -2057,36 +2057,62 @@ async function handleAction(db, action, params) {
       return { success: true, message: 'ส่งคำขอทำงานล่วงเวลาเรียบร้อยแล้ว' };
     }
 
-    // 12. History for Employee
+    // 12. History for Employee (Cut-off period 26th previous month to 25th current month)
     case 'getEmployeeHistory': {
       const empId = params.empId;
       const month = params.month || today.substring(0, 7);
 
+      // Determine cycle date range (26th of previous month to 25th of current month)
+      const cutoffDay = Number(settings.cutoff_day) || 25;
+      const [pYear, pMonth] = month.split('-').map(Number);
+      let startDateStr, endDateStr;
+
+      if (cutoffDay >= 30) {
+        const daysInMonth = new Date(pYear, pMonth, 0).getDate();
+        const endDay = Math.min(cutoffDay, daysInMonth);
+        startDateStr = `${pYear}-${String(pMonth).padStart(2, '0')}-01`;
+        endDateStr = `${pYear}-${String(pMonth).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+      } else {
+        const prevMonth = pMonth === 1 ? 12 : pMonth - 1;
+        const prevYear = pMonth === 1 ? pYear - 1 : pYear;
+        const startDay = cutoffDay + 1;
+        startDateStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`;
+        endDateStr = `${pYear}-${String(pMonth).padStart(2, '0')}-${String(cutoffDay).padStart(2, '0')}`;
+      }
+
+      // 1. Time logs within cycle range
       const logs = await db.prepare(`
         SELECT * FROM time_logs 
-        WHERE emp_id = ? AND date LIKE ? 
+        WHERE emp_id = ? AND date >= ? AND date <= ? 
         ORDER BY date DESC
-      `).bind(empId, `${month}%`).all().catch(() => ({ results: [] }));
+      `).bind(empId, startDateStr, endDateStr).all().catch(() => ({ results: [] }));
 
+      // 2. Leave requests overlapping cycle range
       const leaves = await db.prepare(`
         SELECT * FROM leave_requests 
         WHERE emp_id = ? AND (
-          start_date LIKE ? OR end_date LIKE ? OR (start_date <= ? AND end_date >= ?)
+          (start_date >= ? AND start_date <= ?) OR 
+          (end_date >= ? AND end_date <= ?) OR 
+          (start_date <= ? AND end_date >= ?)
         )
         ORDER BY start_date DESC
-      `).bind(empId, `${month}%`, `${month}%`, `${month}-31`, `${month}-01`).all().catch(() => ({ results: [] }));
+      `).bind(empId, startDateStr, endDateStr, startDateStr, endDateStr, startDateStr, endDateStr).all().catch(() => ({ results: [] }));
 
+      // 3. OT requests within cycle range
       const ots = await db.prepare(`
         SELECT * FROM ot_requests 
-        WHERE emp_id = ? AND date LIKE ? 
+        WHERE emp_id = ? AND date >= ? AND date <= ? 
         ORDER BY date DESC
-      `).bind(empId, `${month}%`).all().catch(() => ({ results: [] }));
+      `).bind(empId, startDateStr, endDateStr).all().catch(() => ({ results: [] }));
 
+      // 4. Advance requests within cycle range (or matching period)
       const advances = await db.prepare(`
         SELECT * FROM advance_requests 
-        WHERE emp_id = ? AND period = ?
+        WHERE emp_id = ? AND (
+          (request_date >= ? AND request_date <= ?) OR period = ?
+        )
         ORDER BY request_date DESC
-      `).bind(empId, month).all().catch(() => ({ results: [] }));
+      `).bind(empId, startDateStr, endDateStr, month).all().catch(() => ({ results: [] }));
 
       let totalWorkDays = 0;
       let totalLateMinutes = 0;
@@ -2108,6 +2134,8 @@ async function handleAction(db, action, params) {
       return {
         success: true,
         month,
+        startDate: startDateStr,
+        endDate: endDateStr,
         stats: {
           totalWorkDays,
           totalLateMinutes,

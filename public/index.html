@@ -522,6 +522,12 @@
 
         <!-- Sub Tab 4: Requests Status List -->
         <div id="subTabStatusContent" class="space-y-3 hidden">
+          <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+            <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <span>📅</span> คัดกรองตามงวด:
+            </span>
+            <input type="month" id="statusMonthPicker" onchange="loadMyRequests()" class="text-xs bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
           <div id="myRequestsList" class="space-y-2.5 text-xs">
             <div class="text-center py-8 text-slate-400 font-medium text-sm">กำลังโหลดรายการคำขอ...</div>
           </div>
