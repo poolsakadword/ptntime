@@ -40,6 +40,20 @@ async function callApi(action, payload = {}, retryCount = 0) {
 }
 window.callApi = callApi;
 
+function timeToMinutes(tStr) {
+  if (!tStr) return 0;
+  const parts = String(tStr).split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return h * 60 + m;
+}
+
+function minutesToTime(totalMins) {
+  const h = Math.floor(totalMins / 60) % 24;
+  const m = Math.floor(totalMins % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 function formatDateThaiBE(dateStr) {
   if (!dateStr || dateStr === '-') return '-';
   const s = String(dateStr).trim();

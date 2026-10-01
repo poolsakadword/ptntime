@@ -69,6 +69,48 @@ async function getDynamicQrToken(windowOffset = 0) {
   return 'PTN-' + fullHash.substring(0, 10).toUpperCase();
 }
 
+async function verifyQrToken(qrToken, settings) {
+  if (!qrToken) return { valid: false, message: 'กรุณาสแกน QR Code ประจำสาขา' };
+  const token = String(qrToken).trim();
+
+  // 1. Check Dynamic Token with extended window (-4 to +1 window = up to 100 seconds to allow for camera/selfie/upload delay)
+  for (const offset of [0, -1, -2, -3, -4, 1]) {
+    const dynToken = await getDynamicQrToken(offset);
+    if (token === dynToken) return { valid: true, type: 'DYNAMIC' };
+  }
+
+  // 2. Check Static Token (HQ, branch codes, standard keys)
+  const validStatics = [
+    settings.static_qr_key,
+    STATIC_QR_CODE_KEY,
+    'PTN-OFFICE-STATIC-QR-2026-HQ',
+    'PTN-OFFICE-STATIC-QR-2026-B01',
+    'PTN-OFFICE-STATIC-QR-2026-B02',
+    'PTN-OFFICE-STATIC-QR-2026-B03',
+    'PTN-OFFICE-STATIC-QR-2026-B04',
+    'PTN-STATIC-QR-2026',
+    'PTN-B01',
+    'PTN-B02',
+    'PTN-B03',
+    'PTN-B04',
+    'B01',
+    'B02',
+    'B03',
+    'B04'
+  ];
+  if (validStatics.includes(token)) return { valid: true, type: 'STATIC' };
+
+  // If token is a URL pointing to PTN Time or Payroll
+  if (token.includes('ptntime.pages.dev') || token.includes('ptn-payroll')) {
+    return { valid: true, type: 'STATIC' };
+  }
+
+  return { 
+    valid: false, 
+    message: 'QR Code ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาสแกนใหม่อีกครั้ง (หรือขอ QR Code ใหม่จากหน้าจอเคาน์เตอร์)' 
+  };
+}
+
 const MASTER_UNLOCK_SALT = 'PTN_MASTER_UNLOCK_TOKEN_SALT_2026';
 async function getMasterUnlockToken(windowOffset = 0) {
   // 60-second window
@@ -247,6 +289,7 @@ async function ensureTables(db) {
   await db.prepare("ALTER TABLE time_logs ADD COLUMN branch_name TEXT").run().catch(() => {});
   await db.prepare("ALTER TABLE branches ADD COLUMN early_dismissal_full_pay INTEGER DEFAULT 0").run().catch(() => {});
   await db.prepare("ALTER TABLE time_logs ADD COLUMN is_full_pay INTEGER DEFAULT 0").run().catch(() => {});
+  await db.prepare("UPDATE branches SET radius_meters = 100 WHERE branch_id = 'B03' AND radius_meters < 100").run().catch(() => {});
   // 7. company_holidays (Company Holidays & Official Holidays)
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS company_holidays (
@@ -1312,17 +1355,9 @@ async function handleAction(db, action, params) {
       }
 
       if (qrToken) {
-        const curDynToken = await getDynamicQrToken(0);
-        const prevDynToken = await getDynamicQrToken(-1);
-        const isDynamicMatch = (qrToken === curDynToken || qrToken === prevDynToken);
-        const isStaticMatch = (qrToken === settings.static_qr_key || qrToken === STATIC_QR_CODE_KEY);
-
-        if (settings.qr_mode === 'DYNAMIC_ONLY' && !isDynamicMatch) {
-          return { success: false, message: 'QR Code บนหน้าจอหมดอายุแล้ว กรุณาสแกนใหม่จากหน้าจอเคาน์เตอร์' };
-        } else if (settings.qr_mode === 'STATIC_ONLY' && !isStaticMatch) {
-          return { success: false, message: 'ป้าย QR Code ไม่ถูกต้อง' };
-        } else if (settings.qr_mode === 'HYBRID' && !isDynamicMatch && !isStaticMatch) {
-          return { success: false, message: 'QR Code ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาสแกนใหม่อีกครั้ง' };
+        const qrCheck = await verifyQrToken(qrToken, settings);
+        if (!qrCheck.valid) {
+          return { success: false, message: qrCheck.message };
         }
       }
 
@@ -1469,17 +1504,9 @@ async function handleAction(db, action, params) {
       }
 
       if (qrToken) {
-        const curDynToken = await getDynamicQrToken(0);
-        const prevDynToken = await getDynamicQrToken(-1);
-        const isDynamicMatch = (qrToken === curDynToken || qrToken === prevDynToken);
-        const isStaticMatch = (qrToken === settings.static_qr_key || qrToken === STATIC_QR_CODE_KEY);
-
-        if (settings.qr_mode === 'DYNAMIC_ONLY' && !isDynamicMatch) {
-          return { success: false, message: 'QR Code บนหน้าจอหมดอายุแล้ว กรุณาสแกนใหม่จากหน้าจอเคาน์เตอร์' };
-        } else if (settings.qr_mode === 'STATIC_ONLY' && !isStaticMatch) {
-          return { success: false, message: 'ป้าย QR Code ไม่ถูกต้อง' };
-        } else if (settings.qr_mode === 'HYBRID' && !isDynamicMatch && !isStaticMatch) {
-          return { success: false, message: 'QR Code ไม่ถูกต้องหรือหมดอายุแล้ว' };
+        const qrCheck = await verifyQrToken(qrToken, settings);
+        if (!qrCheck.valid) {
+          return { success: false, message: qrCheck.message };
         }
       }
 
@@ -1555,17 +1582,9 @@ async function handleAction(db, action, params) {
       }
 
       if (qrToken) {
-        const curDynToken = await getDynamicQrToken(0);
-        const prevDynToken = await getDynamicQrToken(-1);
-        const isDynamicMatch = (qrToken === curDynToken || qrToken === prevDynToken);
-        const isStaticMatch = (qrToken === settings.static_qr_key || qrToken === STATIC_QR_CODE_KEY);
-
-        if (settings.qr_mode === 'DYNAMIC_ONLY' && !isDynamicMatch) {
-          return { success: false, message: 'QR Code บนหน้าจอหมดอายุแล้ว กรุณาสแกนใหม่จากหน้าจอเคาน์เตอร์' };
-        } else if (settings.qr_mode === 'STATIC_ONLY' && !isStaticMatch) {
-          return { success: false, message: 'ป้าย QR Code ไม่ถูกต้อง' };
-        } else if (settings.qr_mode === 'HYBRID' && !isDynamicMatch && !isStaticMatch) {
-          return { success: false, message: 'QR Code ไม่ถูกต้องหรือหมดอายุแล้ว' };
+        const qrCheck = await verifyQrToken(qrToken, settings);
+        if (!qrCheck.valid) {
+          return { success: false, message: qrCheck.message };
         }
       }
 
@@ -1699,17 +1718,9 @@ async function handleAction(db, action, params) {
       }
 
       if (qrToken) {
-        const curDynToken = await getDynamicQrToken(0);
-        const prevDynToken = await getDynamicQrToken(-1);
-        const isDynamicMatch = (qrToken === curDynToken || qrToken === prevDynToken);
-        const isStaticMatch = (qrToken === settings.static_qr_key || qrToken === STATIC_QR_CODE_KEY);
-
-        if (settings.qr_mode === 'DYNAMIC_ONLY' && !isDynamicMatch) {
-          return { success: false, message: 'QR Code บนหน้าจอหมดอายุแล้ว กรุณาสแกนใหม่จากหน้าจอเคาน์เตอร์' };
-        } else if (settings.qr_mode === 'STATIC_ONLY' && !isStaticMatch) {
-          return { success: false, message: 'ป้าย QR Code ไม่ถูกต้อง' };
-        } else if (settings.qr_mode === 'HYBRID' && !isDynamicMatch && !isStaticMatch) {
-          return { success: false, message: 'QR Code ไม่ถูกต้องหรือหมดอายุแล้ว' };
+        const qrCheck = await verifyQrToken(qrToken, settings);
+        if (!qrCheck.valid) {
+          return { success: false, message: qrCheck.message };
         }
       }
 
