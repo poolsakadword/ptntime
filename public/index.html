@@ -152,6 +152,31 @@
       </div>
     </div>
 
+    <!-- PWA Install Prompt Banner (Shown for users who haven't installed app to Home Screen) -->
+    <div id="pwaInstallBanner" class="hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-700 text-white p-3 sm:p-3.5 shadow-md flex items-center justify-between gap-3 border-b border-emerald-500/40 animate-fadeIn">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl shrink-0 border border-white/25 shadow-sm">
+          📲
+        </div>
+        <div class="min-w-0">
+          <div class="text-xs sm:text-sm font-extrabold flex items-center gap-1.5 leading-tight">
+            <span>ติดตั้งแอป PTN Time ลงบนมือถือ</span>
+            <span class="text-[10px] bg-white/25 px-1.5 py-0.5 rounded-full font-bold">แนะนำ</span>
+          </div>
+          <p class="text-[11px] text-emerald-100 opacity-95 truncate mt-0.5">
+            ลงเวลาได้รวดเร็วใน 3 วินาที ไม่ต้องเปิดผ่านเบราว์เซอร์
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button type="button" onclick="triggerPwaInstall()" class="px-3 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-emerald-800 font-black text-xs rounded-xl shadow transition flex items-center gap-1">
+          <span>⚡</span>
+          <span>ติดตั้งทันที</span>
+        </button>
+        <button type="button" onclick="dismissPwaBanner()" class="p-1 text-white/80 hover:text-white text-base leading-none" title="ปิดการแจ้งเตือน">&times;</button>
+      </div>
+    </div>
+
     <!-- MAIN VIEWS CONTAINER -->
     <main class="flex-1 p-4 md:p-6 overflow-y-auto space-y-6">
 
@@ -1704,9 +1729,55 @@
       </div>
     </div>
 
+    <!-- iOS PWA Manual Installation Guide Modal -->
+    <div id="modalPwaIosInstall" class="hidden fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-4">
+      <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border border-slate-200 space-y-4 animate-pop">
+        <div class="flex items-center justify-between border-b pb-3 border-slate-100">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🍏</span>
+            <div>
+              <h3 class="text-sm font-black text-slate-800">ติดตั้งแอปบน iPhone / iPad</h3>
+              <p class="text-[11px] text-slate-500">ทำตาม 3 ขั้นตอนง่ายๆ ใน 10 วินาที</p>
+            </div>
+          </div>
+          <button type="button" onclick="closeModal('modalPwaIosInstall')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-600">
+          <div class="flex items-start gap-2.5 p-2.5 rounded-2xl bg-sky-50 border border-sky-100">
+            <span class="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold shrink-0">1</span>
+            <div>
+              <p class="font-bold text-slate-800">แตะปุ่ม "แชร์" (Share)</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">ไอคอนสี่เหลี่ยมลูกศรชี้ขึ้น <strong>(⬆️)</strong> ที่แถบเมนูด้านล่างสุดของ Safari</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-2.5 p-2.5 rounded-2xl bg-sky-50 border border-sky-100">
+            <span class="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold shrink-0">2</span>
+            <div>
+              <p class="font-bold text-slate-800">เลือก "เพิ่มไปยังหน้าจอโฮม"</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">เลื่อนเมนูลงมาแล้วแตะที่ <strong>"Add to Home Screen" (➕)</strong></p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-2.5 p-2.5 rounded-2xl bg-sky-50 border border-sky-100">
+            <span class="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold shrink-0">3</span>
+            <div>
+              <p class="font-bold text-slate-800">แตะ "เพิ่ม" (Add)</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">แตะปุ่ม <strong>"เพิ่ม"</strong> ที่มุมขวาบน จะได้ไอคอนแอป PTN Time บนหน้าจอทันที</p>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" onclick="closeModal('modalPwaIosInstall')" class="w-full py-3 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold rounded-2xl shadow transition text-xs">
+          เข้าใจแล้ว
+        </button>
+      </div>
+    </div>
+
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=11.0"></script>
+  <script src="js/app.js?v=11.1"></script>
 </body>
 </html>

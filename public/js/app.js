@@ -306,6 +306,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Initialize PWA Service Worker & Push Notification Handlers
   initServiceWorker().catch(() => {});
   checkNotificationBanner();
+  checkPwaInstallState();
   updateNotifBadge();
   checkActiveBreakOnWake();
   checkBroadcastNotifications().catch(() => {});
@@ -5678,21 +5679,102 @@ async function requestNotificationPermission() {
   return await subscribeWebPush(false);
 }
 
-function dismissNotifBanner() {
-  document.getElementById('notifPermissionBanner')?.classList.add('hidden');
-  localStorage.setItem('ptn_dismiss_notif_banner', 'true');
+// ==============================================================================
+// 15.1 PWA INSTALLATION PROMPT & BANNER ENGINE
+// ==============================================================================
+let deferredPwaPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent Chrome 67 and earlier from automatically showing the prompt
+  e.preventDefault();
+  // Stash the event so it can be triggered later.
+  deferredPwaPrompt = e;
+  checkPwaInstallState();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPwaPrompt = null;
+  document.getElementById('pwaInstallBanner')?.classList.add('hidden');
+  localStorage.setItem('ptn_pwa_installed', 'true');
+  Swal.fire({
+    icon: 'success',
+    title: 'ติดตั้งสำเร็จ!',
+    text: 'ขอบคุณที่ติดตั้งแอป PTN Time ลงบนหน้าจอหลัก',
+    timer: 2000,
+    showConfirmButton: false
+  });
+});
+
+function isAppRunningInStandalone() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                       window.navigator.standalone === true ||
+                       document.referrer.includes('android-app://');
+  return isStandalone;
 }
 
-function checkNotificationBanner() {
-  const banner = document.getElementById('notifPermissionBanner');
+function checkPwaInstallState() {
+  const banner = document.getElementById('pwaInstallBanner');
   if (!banner) return;
-  const isGranted = ('Notification' in window) && Notification.permission === 'granted';
-  const isSubscribed = !!currentPushSubscription;
-  if (isSubscribed || (isGranted && localStorage.getItem('ptn_dismiss_notif_banner') === 'true')) {
+
+  // If already opened as installed App (Standalone mode), hide banner completely!
+  if (isAppRunningInStandalone()) {
     banner.classList.add('hidden');
-  } else {
-    banner.classList.remove('hidden');
+    return;
   }
+
+  // If user dismissed banner recently within 3 days, don't nag
+  const lastDismiss = localStorage.getItem('ptn_dismiss_pwa_banner');
+  if (lastDismiss && (Date.now() - Number(lastDismiss)) < (3 * 24 * 60 * 60 * 1000)) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  // Show banner for browser visitors
+  banner.classList.remove('hidden');
+}
+
+function dismissPwaBanner() {
+  document.getElementById('pwaInstallBanner')?.classList.add('hidden');
+  localStorage.setItem('ptn_dismiss_pwa_banner', Date.now().toString());
+}
+
+async function triggerPwaInstall() {
+  // 1. If native Android/Chrome prompt is available
+  if (deferredPwaPrompt) {
+    try {
+      deferredPwaPrompt.prompt();
+      const choiceResult = await deferredPwaPrompt.userChoice;
+      if (choiceResult.outcome === 'accepted') {
+        document.getElementById('pwaInstallBanner')?.classList.add('hidden');
+      }
+      deferredPwaPrompt = null;
+    } catch(err) {
+      console.warn('PWA prompt error:', err);
+    }
+    return;
+  }
+
+  // 2. If on iOS (iPhone / iPad) Safari
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIos) {
+    openModal('modalPwaIosInstall');
+    return;
+  }
+
+  // 3. Android without prompt event or desktop: guide user
+  Swal.fire({
+    title: 'วิธีติดตั้งแอป',
+    html: `
+      <div class="text-left text-xs space-y-2 text-slate-600">
+        <p>1. แตะปุ่ม <strong>จุด 3 จุด (⋮)</strong> ที่มุมขวาบนของเบราว์เซอร์ Chrome</p>
+        <p>2. เลือกเมนู <strong>"ติดตั้งแอป" (Install)</strong> หรือ <strong>"เพิ่มลงในหน้าจอหลัก"</strong></p>
+        <p>3. กดยืนยันเพื่อนำไอคอนแอปไปไว้บนหน้าจอมือถือ</p>
+      </div>
+    `,
+    icon: 'info',
+    confirmButtonText: 'รับทราบ',
+    confirmButtonColor: '#0284c7'
+  });
 }
 
 // Send Push or Local Notification
