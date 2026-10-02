@@ -248,3 +248,260 @@ input, select, textarea {
   display: none !important;
 }
 
+/* ==============================================================================
+   OFFICIAL PAYSLIP VOUCHER PRINT STYLES (A4 / A5 FORM)
+   ============================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 13px !important;
+  }
+
+  /* Hide all app UI components */
+  header, nav, #appHeader, #tabNav, #modalCameraFullscreen,
+  .no-print, button, #payslipPeriodSelect, #payslipPrintArea,
+  #liveClock, #shiftTickerText, #cameraContainer, .sweet-alert, .swal2-container {
+    display: none !important;
+  }
+
+  /* Hide parent containers except print area */
+  main > *:not(#tab-payslip) {
+    display: none !important;
+  }
+
+  #tab-payslip, #payslipDetailContainer {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Show the official printable voucher */
+  .payslip-official-doc {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    font-family: 'Sarabun', 'Prompt', -apple-system, sans-serif !important;
+    color: #111827 !important;
+  }
+
+  .print-voucher-border {
+    border: 1.5px solid #1e293b !important;
+    padding: 16px 20px !important;
+    border-radius: 4px !important;
+    background: #ffffff !important;
+  }
+
+  .print-header-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 2px solid #0f172a !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .print-comp-title {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    margin: 0 0 2px 0 !important;
+    color: #0f172a !important;
+  }
+
+  .print-comp-sub {
+    font-size: 11px !important;
+    color: #475569 !important;
+    margin: 1px 0 !important;
+  }
+
+  .print-doc-meta {
+    text-align: right !important;
+  }
+
+  .print-doc-badge {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    border: 1.5px solid #0f172a !important;
+    padding: 3px 10px !important;
+    display: inline-block !important;
+    background: #f8fafc !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .print-period-text {
+    font-size: 12px !important;
+    margin-top: 5px !important;
+    color: #1e293b !important;
+  }
+
+  .print-date-text {
+    font-size: 11px !important;
+    color: #64748b !important;
+  }
+
+  /* Tables */
+  .print-info-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 12px !important;
+    font-size: 12px !important;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .print-info-table td {
+    padding: 5px 8px !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .print-info-table td.lbl {
+    color: #475569 !important;
+    background: #f1f5f9 !important;
+  }
+
+  .print-info-table td.val {
+    color: #0f172a !important;
+  }
+
+  .print-calc-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1.5px solid #334155 !important;
+    margin-bottom: 10px !important;
+  }
+
+  .print-calc-table th {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    padding: 6px !important;
+    border: 1px solid #cbd5e1 !important;
+    text-align: center !important;
+  }
+
+  .print-inner-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .print-inner-table td {
+    padding: 4px 8px !important;
+    font-size: 11.5px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    color: #334155 !important;
+  }
+
+  .print-inner-table td.val {
+    text-align: right !important;
+    font-family: monospace !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+  }
+
+  .print-inner-table tr.blank-row td {
+    border-bottom: none !important;
+    height: 18px !important;
+  }
+
+  .summary-cell {
+    background: #f1f5f9 !important;
+    padding: 6px 10px !important;
+    border-top: 1.5px solid #334155 !important;
+  }
+
+  .flex-between {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+  }
+
+  /* Net Pay Box */
+  .print-netpay-box {
+    border: 2px solid #0f172a !important;
+    background: #f8fafc !important;
+    padding: 8px 12px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 8px !important;
+    border-radius: 2px !important;
+  }
+
+  .lbl-small {
+    font-size: 11px !important;
+    color: #475569 !important;
+    display: block !important;
+  }
+
+  .val-thai-baht {
+    font-size: 12.5px !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+  }
+
+  .lbl-netpay {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #334155 !important;
+    margin-right: 6px !important;
+  }
+
+  .val-netpay-num {
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    font-family: monospace !important;
+    text-decoration: underline !important;
+    color: #0f172a !important;
+  }
+
+  /* Stats bar */
+  .print-stats-bar {
+    font-size: 10.5px !important;
+    color: #64748b !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    padding: 4px 8px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* Signatures */
+  .print-sign-grid {
+    display: flex !important;
+    justify-content: space-around !important;
+    padding-top: 10px !important;
+    text-align: center !important;
+  }
+
+  .sign-col {
+    width: 42% !important;
+  }
+
+  .sign-dots {
+    font-size: 11px !important;
+    color: #334155 !important;
+    margin-bottom: 22px !important;
+  }
+
+  .sign-label {
+    font-size: 11px !important;
+    color: #64748b !important;
+  }
+}
+
+

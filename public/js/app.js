@@ -6285,6 +6285,114 @@ function renderPayslipVoucher(slip, companyInfo) {
 
   const unpaidSickEl = document.getElementById('slipUnpaidSickDays');
   if (unpaidSickEl) unpaidSickEl.textContent = `${slip.unpaidSickLeaveDays || 0} วัน`;
+
+  // --------------------------------------------------------------------------
+  // Populate Official Printable Paper Voucher (#payslipOfficialPrintDoc)
+  // --------------------------------------------------------------------------
+  try {
+    const setText = (id, txt) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    };
+
+    setText('prnCompanyTitle', companyInfo?.name || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด');
+    setText('prnCompanyAddress', companyInfo?.address || '123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000');
+    setText('prnCompanyTaxId', companyInfo?.taxId || '0105550000000');
+    setText('prnPeriodText', slip.period || '-');
+    setText('prnPayDateText', slip.payDate || new Date().toLocaleDateString('th-TH'));
+
+    setText('prnEmpId', slip.empId || (currentEmployee ? currentEmployee.empId : '-'));
+    setText('prnEmpName', slip.name || (currentEmployee ? currentEmployee.name : '-'));
+    setText('prnEmpRole', currentEmployee?.role || currentEmployee?.position || '-');
+    setText('prnEmpDept', currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01');
+    setText('prnBankName', slip.bankName || 'ธนาคารกสิกรไทย');
+    setText('prnBankAcc', slip.bankAccountMasked || '***-*-*----');
+
+    // Earnings
+    setText('prnBaseSalary', fmt(slip.baseSalary));
+    setText('prnOtHours', (slip.otHours && slip.otHours > 0) ? `(${slip.otHours} ชม.)` : '');
+    setText('prnOtPay', fmt(slip.otPay));
+    setText('prnAllowance', fmt(slip.allowance));
+    setText('prnBonus', fmt(slip.bonus));
+    setText('prnTotalGross', fmt(slip.grossPay));
+
+    // Deductions
+    setText('prnTax', fmt(slip.tax));
+    setText('prnSso', fmt(slip.sso));
+    setText('prnPf', fmt(slip.pf));
+    setText('prnAdvance', fmt(slip.advanceDeduct));
+    setText('prnLate', fmt(slip.lateDeduct));
+    setText('prnLeaveDed', fmt(slip.leaveDeduct));
+    setText('prnOtherDed', fmt(slip.otherDeduct));
+    setText('prnTotalDeduct', fmt(slip.totalDeductions));
+
+    // Net Pay & Thai Baht
+    setText('prnNetPayNum', `฿ ${fmt(slip.netPay)}`);
+    setText('prnThaiBahtNetText', bahtTextHelper(slip.netPay));
+
+    // Mini Stats
+    setText('prnStatAbsent', slip.absentDays || 0);
+    setText('prnStatLeave', slip.leaveDays || 0);
+    setText('prnStatSick', (slip.sickLeaveDays || 0) + (slip.unpaidSickLeaveDays || 0));
+    setText('prnPrintTimestamp', `สร้างเมื่อ ${new Date().toLocaleString('th-TH')}`);
+  } catch(e) {
+    console.error('Error populating official print payslip:', e);
+  }
+}
+
+// Helper: Convert number to Thai Baht Text
+function bahtTextHelper(num) {
+  num = Number(num) || 0;
+  if (num === 0) return '(ศูนย์บาทถ้วน)';
+  var isNeg = num < 0;
+  num = Math.abs(num);
+
+  var parts = num.toFixed(2).split('.');
+  var integerPart = parts[0];
+  var decimalPart = parts[1];
+
+  var digits = ['ศูนย์','หนึ่ง','สอง','สาม','สี่','ห้า','หก','เจ็ด','แปด','เก้า'];
+  var units = ['','สิบ','ร้อย','พัน','หมื่น','แสน','ล้าน'];
+
+  function convertGroup(nStr) {
+    var res = '';
+    var len = nStr.length;
+    for (var i = 0; i < len; i++) {
+      var d = parseInt(nStr.charAt(i), 10);
+      var pos = len - i - 1;
+      if (d !== 0) {
+        if (pos === 1 && d === 1) {
+          res += 'สิบ';
+        } else if (pos === 1 && d === 2) {
+          res += 'ยี่สิบ';
+        } else if (pos === 0 && d === 1 && len > 1 && res !== '') {
+          res += 'เอ็ด';
+        } else {
+          res += digits[d] + units[pos];
+        }
+      }
+    }
+    return res;
+  }
+
+  var intText = '';
+  if (integerPart.length > 6) {
+    var millionPart = integerPart.substring(0, integerPart.length - 6);
+    var remainderPart = integerPart.substring(integerPart.length - 6);
+    intText = convertGroup(millionPart) + 'ล้าน' + convertGroup(remainderPart);
+  } else {
+    intText = convertGroup(integerPart);
+  }
+  if (!intText) intText = 'ศูนย์';
+
+  var decText = '';
+  if (decimalPart === '00') {
+    decText = 'ถ้วน';
+  } else {
+    decText = convertGroup(decimalPart) + 'สตางค์';
+  }
+
+  return '(' + (isNeg ? 'ลบ' : '') + intText + 'บาท' + decText + ')';
 }
 
 function onPayslipPeriodChange(val) {

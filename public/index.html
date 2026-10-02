@@ -726,6 +726,163 @@
 
           </div>
 
+          <!-- Official Printable Payslip Voucher (Hidden on screen, Visible only on print) -->
+          <div id="payslipOfficialPrintDoc" class="hidden payslip-official-doc">
+            <div class="print-voucher-border">
+              <!-- Company Header -->
+              <div class="print-header-row">
+                <div class="print-comp-info">
+                  <h2 class="print-comp-title" id="prnCompanyTitle">บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด</h2>
+                  <p class="print-comp-sub" id="prnCompanyAddress">123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000</p>
+                  <p class="print-comp-sub">เลขประจำตัวผู้เสียภาษี: <span id="prnCompanyTaxId">0105550000000</span></p>
+                </div>
+                <div class="print-doc-meta">
+                  <div class="print-doc-badge">ใบจ่ายเงินเดือน / PAYSLIP</div>
+                  <div class="print-period-text">งวดประจำเดือน: <strong id="prnPeriodText">-</strong></div>
+                  <div class="print-date-text">วันที่จ่าย: <span id="prnPayDateText">-</span></div>
+                </div>
+              </div>
+
+              <!-- Employee Info Table -->
+              <table class="print-info-table">
+                <tr>
+                  <td style="width: 18%;" class="lbl">รหัสพนักงาน:</td>
+                  <td style="width: 32%;" class="val"><strong id="prnEmpId">-</strong></td>
+                  <td style="width: 18%;" class="lbl">ชื่อ-นามสกุล:</td>
+                  <td style="width: 32%;" class="val"><strong id="prnEmpName">-</strong></td>
+                </tr>
+                <tr>
+                  <td class="lbl">ตำแหน่ง:</td>
+                  <td class="val" id="prnEmpRole">-</td>
+                  <td class="lbl">แผนก/สาขา:</td>
+                  <td class="val" id="prnEmpDept">-</td>
+                </tr>
+                <tr>
+                  <td class="lbl">การจ่ายเงิน:</td>
+                  <td class="val" id="prnBankName">-</td>
+                  <td class="lbl">เลขที่บัญชี:</td>
+                  <td class="val font-mono" id="prnBankAcc">-</td>
+                </tr>
+              </table>
+
+              <!-- Earnings & Deductions Table -->
+              <table class="print-calc-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50%;">รายการได้ (EARNINGS)</th>
+                    <th style="width: 50%;">รายการหัก (DEDUCTIONS)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="vertical-align: top; padding: 0;">
+                      <table class="print-inner-table">
+                        <tr>
+                          <td>เงินเดือนพื้นฐาน</td>
+                          <td class="val" id="prnBaseSalary">0.00</td>
+                        </tr>
+                        <tr>
+                          <td>ค่าล่วงเวลา (OT) <span id="prnOtHours" class="text-xs"></span></td>
+                          <td class="val" id="prnOtPay">0.00</td>
+                        </tr>
+                        <tr>
+                          <td>เบี้ยขยัน</td>
+                          <td class="val" id="prnAllowance">0.00</td>
+                        </tr>
+                        <tr>
+                          <td>โบนัส / เงินพิเศษ</td>
+                          <td class="val" id="prnBonus">0.00</td>
+                        </tr>
+                        <tr class="blank-row">
+                          <td>&nbsp;</td>
+                          <td>&nbsp;</td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td style="vertical-align: top; padding: 0;">
+                      <table class="print-inner-table">
+                        <tr>
+                          <td>ภาษีหัก ณ ที่จ่าย</td>
+                          <td class="val" id="prnTax">0.00</td>
+                        </tr>
+                        <tr>
+                          <td>เงินสมทบประกันสังคม (SSO)</td>
+                          <td class="val" id="prnSso">0.00</td>
+                        </tr>
+                        <tr>
+                          <td>กองทุนสำรองเลี้ยงชีพ (PF)</td>
+                          <td class="val" id="prnPf">0.00</td>
+                        </tr>
+                        <tr>
+                          <td>หักเงินเบิกล่วงหน้า (Advance)</td>
+                          <td class="val" id="prnAdvance">0.00</td>
+                        </tr>
+                        <tr>
+                          <td>หักมาสาย / ออกก่อนเวลา</td>
+                          <td class="val" id="prnLate">0.00</td>
+                        </tr>
+                        <tr>
+                          <td>หักลากิจ / ขาดงาน</td>
+                          <td class="val" id="prnLeaveDed">0.00</td>
+                        </tr>
+                        <tr id="prnOtherDedRow">
+                          <td>หักอื่นๆ</td>
+                          <td class="val" id="prnOtherDed">0.00</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th class="summary-cell">
+                      <div class="flex-between">
+                        <span>รวมเงินได้ทั้งสิ้น</span>
+                        <span id="prnTotalGross">0.00</span>
+                      </div>
+                    </th>
+                    <th class="summary-cell">
+                      <div class="flex-between">
+                        <span>รวมรายการหักทั้งสิ้น</span>
+                        <span id="prnTotalDeduct">0.00</span>
+                      </div>
+                    </th>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <!-- Net Pay Row -->
+              <div class="print-netpay-box">
+                <div class="netpay-text-group">
+                  <span class="lbl-small">จำนวนเงินสุทธิ (ตัวอักษร):</span>
+                  <strong class="val-thai-baht" id="prnThaiBahtNetText">-</strong>
+                </div>
+                <div class="netpay-num-group">
+                  <span class="lbl-netpay">เงินได้สุทธิ (Net Pay):</span>
+                  <span class="val-netpay-num" id="prnNetPayNum">฿ 0.00</span>
+                </div>
+              </div>
+
+              <!-- Mini Attendance Stats Row -->
+              <div class="print-stats-bar">
+                <span>สถิติประจำงวด: ขาดงาน <strong id="prnStatAbsent">0</strong> วัน | ลากิจ <strong id="prnStatLeave">0</strong> วัน | ลาป่วย <strong id="prnStatSick">0</strong> วัน</span>
+                <span class="print-timestamp" id="prnPrintTimestamp">เอกสารสร้างจากระบบคอมพิวเตอร์ PTN Time</span>
+              </div>
+
+              <!-- Signatures Row -->
+              <div class="print-sign-grid">
+                <div class="sign-col">
+                  <div class="sign-dots">ลงชื่อ ..............................................................</div>
+                  <div class="sign-label">( พนักงานผู้รับเงิน )</div>
+                </div>
+                <div class="sign-col">
+                  <div class="sign-dots">ลงชื่อ ..............................................................</div>
+                  <div class="sign-label">( ผู้มีอำนาจจ่ายเงิน / ฝ่ายการเงิน )</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Bottom Security Reminder -->
           <div class="text-center text-[11px] text-slate-400 py-1">
             🔒 เอกสารนี้เป็นข้อมูลลับเฉพาะบุคคล ออกโดยระบบอัตโนมัติ PTN Payroll
