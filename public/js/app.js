@@ -6166,6 +6166,7 @@ async function loadEmployeePayslips(period = null, pin = null) {
 
       if (data.payslip) {
         currentPayslipData = data.payslip;
+        window.lastCompanyInfo = data.companyInfo;
         renderPayslipVoucher(data.payslip, data.companyInfo);
       } else {
         Swal.fire({
@@ -6418,7 +6419,387 @@ function lockPayslip() {
 }
 
 function printPayslipDocument() {
-  window.print();
+  if (!currentPayslipData) {
+    Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูลสลิปสำหรับพิมพ์', 'warning');
+    return;
+  }
+
+  const slip = currentPayslipData;
+  const comp = window.lastCompanyInfo || {};
+  const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const compName = comp.name || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด';
+  const compAddr = comp.address || '123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000';
+  const compTax = comp.taxId || '0105550000000';
+  const empId = slip.empId || (currentEmployee ? currentEmployee.empId : '-');
+  const empName = slip.name || (currentEmployee ? currentEmployee.name : '-');
+  const empRole = currentEmployee?.role || currentEmployee?.position || '-';
+  const empDept = currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01';
+  const bankName = slip.bankName || 'ธนาคารกสิกรไทย';
+  const bankAcc = slip.bankAccountMasked || '***-*-*----';
+  const period = slip.period || '-';
+  const payDate = slip.payDate || new Date().toLocaleDateString('th-TH');
+  const otHoursText = (slip.otHours && slip.otHours > 0) ? `(${slip.otHours} ชม.)` : '';
+  const thaiBaht = bahtTextHelper(slip.netPay);
+  const nowStr = new Date().toLocaleString('th-TH');
+
+  const printHtml = `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ใบจ่ายเงินเดือน (Payslip) - ${empName} (${period})</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&family=Prompt:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      font-family: 'Sarabun', 'Prompt', sans-serif;
+      margin: 0;
+      padding: 12px;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .no-print-bar {
+      max-width: 800px;
+      margin: 0 auto 15px auto;
+      background: #1e293b;
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .btn-print {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-close {
+      background: #475569;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-left: 8px;
+    }
+    .voucher-card {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1.5px solid #1e293b;
+      border-radius: 4px;
+      padding: 18px 22px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .comp-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 2px 0;
+      color: #0f172a;
+    }
+    .comp-sub {
+      font-size: 11px;
+      color: #475569;
+      margin: 1px 0;
+    }
+    .doc-badge {
+      font-size: 14px;
+      font-weight: 800;
+      border: 1.5px solid #0f172a;
+      padding: 3px 10px;
+      display: inline-block;
+      background: #f8fafc;
+      text-align: right;
+    }
+    .period-text {
+      font-size: 12px;
+      margin-top: 5px;
+      text-align: right;
+    }
+    .date-text {
+      font-size: 11px;
+      color: #64748b;
+      text-align: right;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .info-table {
+      margin-bottom: 12px;
+      font-size: 12px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+    }
+    .info-table td {
+      padding: 5px 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .info-table td.lbl {
+      color: #475569;
+      background: #f1f5f9;
+      width: 18%;
+    }
+    .info-table td.val {
+      color: #0f172a;
+      width: 32%;
+    }
+    .calc-table {
+      border: 1.5px solid #334155;
+      margin-bottom: 10px;
+    }
+    .calc-table th {
+      background: #e2e8f0;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px;
+      border: 1px solid #cbd5e1;
+      text-align: center;
+    }
+    .inner-table td {
+      padding: 4px 8px;
+      font-size: 11.5px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+    }
+    .inner-table td.num {
+      text-align: right;
+      font-family: monospace;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .summary-cell {
+      background: #f1f5f9;
+      padding: 6px 10px;
+      border-top: 1.5px solid #334155;
+      font-size: 12px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .netpay-box {
+      border: 2px solid #0f172a;
+      background: #f8fafc;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      border-radius: 2px;
+    }
+    .stats-bar {
+      font-size: 10.5px;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      padding: 4px 8px;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .sign-grid {
+      display: flex;
+      justify-content: space-around;
+      padding-top: 10px;
+      text-align: center;
+    }
+    .sign-col {
+      width: 42%;
+    }
+    .sign-dots {
+      font-size: 11px;
+      color: #334155;
+      margin-bottom: 22px;
+    }
+    .sign-label {
+      font-size: 11px;
+      color: #64748b;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+      .no-print-bar {
+        display: none !important;
+      }
+      .voucher-card {
+        border: 1.5px solid #1e293b !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        padding: 12px 16px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print-bar">
+    <div><strong>🖨️ ใบจ่ายเงินเดือน (e-Payslip)</strong> &bull; ${empName} (${period})</div>
+    <div>
+      <button type="button" class="btn-print" onclick="window.print()">สั่งพิมพ์ / บันทึก PDF</button>
+      <button type="button" class="btn-close" onclick="window.close()">ปิดหน้าต่าง</button>
+    </div>
+  </div>
+
+  <div class="voucher-card">
+    <div class="header-row">
+      <div>
+        <h2 class="comp-title">${compName}</h2>
+        <p class="comp-sub">${compAddr}</p>
+        <p class="comp-sub">เลขประจำตัวผู้เสียภาษี: ${compTax}</p>
+      </div>
+      <div>
+        <div class="doc-badge">ใบจ่ายเงินเดือน / PAYSLIP</div>
+        <div class="period-text">งวดประจำเดือน: <strong>${period}</strong></div>
+        <div class="date-text">วันที่จ่าย: ${payDate}</div>
+      </div>
+    </div>
+
+    <table class="info-table">
+      <tr>
+        <td class="lbl">รหัสพนักงาน:</td>
+        <td class="val"><strong>${empId}</strong></td>
+        <td class="lbl">ชื่อ-นามสกุล:</td>
+        <td class="val"><strong>${empName}</strong></td>
+      </tr>
+      <tr>
+        <td class="lbl">ตำแหน่ง:</td>
+        <td class="val">${empRole}</td>
+        <td class="lbl">แผนก/สาขา:</td>
+        <td class="val">${empDept}</td>
+      </tr>
+      <tr>
+        <td class="lbl">การจ่ายเงิน:</td>
+        <td class="val">${bankName}</td>
+        <td class="lbl">เลขที่บัญชี:</td>
+        <td class="val" style="font-family:monospace;">${bankAcc}</td>
+      </tr>
+    </table>
+
+    <table class="calc-table">
+      <thead>
+        <tr>
+          <th style="width:50%;">รายการได้ (EARNINGS)</th>
+          <th style="width:50%;">รายการหัก (DEDUCTIONS)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="vertical-align: top; padding: 0;">
+            <table class="inner-table">
+              <tr><td>เงินเดือนพื้นฐาน</td><td class="num">${fmt(slip.baseSalary)}</td></tr>
+              <tr><td>ค่าล่วงเวลา (OT) ${otHoursText}</td><td class="num">${fmt(slip.otPay)}</td></tr>
+              <tr><td>เบี้ยขยัน</td><td class="num">${fmt(slip.allowance)}</td></tr>
+              <tr><td>โบนัส / เงินพิเศษ</td><td class="num">${fmt(slip.bonus)}</td></tr>
+              <tr style="height:18px;"><td>&nbsp;</td><td>&nbsp;</td></tr>
+            </table>
+          </td>
+          <td style="vertical-align: top; padding: 0;">
+            <table class="inner-table">
+              <tr><td>ภาษีหัก ณ ที่จ่าย</td><td class="num">${fmt(slip.tax)}</td></tr>
+              <tr><td>เงินสมทบประกันสังคม (SSO)</td><td class="num">${fmt(slip.sso)}</td></tr>
+              <tr><td>กองทุนสำรองเลี้ยงชีพ (PF)</td><td class="num">${fmt(slip.pf)}</td></tr>
+              <tr><td>หักเงินเบิกล่วงหน้า (Advance)</td><td class="num">${fmt(slip.advanceDeduct)}</td></tr>
+              <tr><td>หักมาสาย / ออกก่อนเวลา</td><td class="num">${fmt(slip.lateDeduct)}</td></tr>
+              <tr><td>หักลากิจ / ขาดงาน</td><td class="num">${fmt(slip.leaveDeduct)}</td></tr>
+              ${slip.otherDeduct > 0 ? `<tr><td>หักอื่นๆ</td><td class="num">${fmt(slip.otherDeduct)}</td></tr>` : ''}
+            </table>
+          </td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="summary-cell">
+            <div class="flex-between">
+              <span>รวมเงินได้ทั้งสิ้น</span>
+              <span style="font-family:monospace;">${fmt(slip.grossPay)}</span>
+            </div>
+          </td>
+          <td class="summary-cell">
+            <div class="flex-between">
+              <span>รวมรายการหักทั้งสิ้น</span>
+              <span style="font-family:monospace;">${fmt(slip.totalDeductions)}</span>
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="netpay-box">
+      <div>
+        <span style="font-size:11px;color:#475569;display:block;">จำนวนเงินสุทธิ (ตัวอักษร):</span>
+        <strong style="font-size:12.5px;color:#0f172a;">${thaiBaht}</strong>
+      </div>
+      <div style="text-align:right;">
+        <span style="font-size:12px;font-weight:700;color:#334155;margin-right:6px;">เงินได้สุทธิ (Net Pay):</span>
+        <span style="font-size:18px;font-weight:900;font-family:monospace;text-decoration:underline;">฿ ${fmt(slip.netPay)}</span>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <span>สถิติประจำงวด: ขาดงาน <strong>${slip.absentDays || 0}</strong> วัน | ลากิจ <strong>${slip.leaveDays || 0}</strong> วัน | ลาป่วย <strong>${(slip.sickLeaveDays || 0) + (slip.unpaidSickLeaveDays || 0)}</strong> วัน</span>
+      <span>${nowStr}</span>
+    </div>
+
+    <div class="sign-grid">
+      <div class="sign-col">
+        <div class="sign-dots">ลงชื่อ ..............................................................</div>
+        <div class="sign-label">( พนักงานผู้รับเงิน )</div>
+      </div>
+      <div class="sign-col">
+        <div class="sign-dots">ลงชื่อ ..............................................................</div>
+        <div class="sign-label">( ผู้มีอำนาจจ่ายเงิน / ฝ่ายการเงิน )</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 400);
+    };
+  <\/script>
+</body>
+</html>`;
+
+  const printWin = window.open('', '_blank');
+  if (printWin) {
+    printWin.document.open();
+    printWin.document.write(printHtml);
+    printWin.document.close();
+  } else {
+    // Fallback if popup blocked
+    window.print();
+  }
 }
 
 // ==============================================================================
