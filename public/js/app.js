@@ -6413,9 +6413,205 @@ function lockPayslip() {
     icon: 'info',
     title: 'ล็อกหน้าจอแล้ว',
     text: 'ล็อกการแสดงสลิปเงินเดือนเรียบร้อยแล้ว',
-    timer: 1200,
-    showConfirmButton: false
+// ==============================================================================
+// SAVE PAYSLIP AS IMAGE (PNG) USING HTML2CANVAS
+// ==============================================================================
+async function savePayslipAsImage() {
+  if (!currentPayslipData) {
+    Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูลสลิปสำหรับบันทึกรูป', 'warning');
+    return;
+  }
+
+  const slip = currentPayslipData;
+  const comp = window.lastCompanyInfo || {};
+  const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const compName = comp.name || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด';
+  const compAddr = comp.address || '123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000';
+  const compTax = comp.taxId || '0105550000000';
+  const empId = slip.empId || (currentEmployee ? currentEmployee.empId : '-');
+  const empName = slip.name || (currentEmployee ? currentEmployee.name : '-');
+  const empRole = currentEmployee?.role || currentEmployee?.position || '-';
+  const empDept = currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01';
+  const bankName = slip.bankName || 'ธนาคารกสิกรไทย';
+  const bankAcc = slip.bankAccountMasked || '***-*-*----';
+  const period = slip.period || '-';
+  const payDate = slip.payDate || new Date().toLocaleDateString('th-TH');
+  const otHoursText = (slip.otHours && slip.otHours > 0) ? `(${slip.otHours} ชม.)` : '';
+  const thaiBaht = bahtTextHelper(slip.netPay);
+  const nowStr = new Date().toLocaleString('th-TH');
+
+  Swal.fire({
+    title: 'กำลังสร้างรูปภาพสลิป...',
+    text: 'กรุณารอสักครู่ ระบบกำลังเรนเดอร์เอกสารความละเอียดสูง',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
   });
+
+  // Create an offscreen voucher container with explicit desktop dimensions for sharp image rendering
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '-9999px';
+  wrapper.style.top = '0';
+  wrapper.style.width = '780px';
+  wrapper.style.background = '#ffffff';
+  wrapper.style.padding = '24px 28px';
+  wrapper.style.color = '#0f172a';
+  wrapper.style.fontFamily = "'Prompt', 'Sarabun', sans-serif";
+  wrapper.style.boxSizing = 'border-box';
+  wrapper.style.border = '2px solid #0f172a';
+  wrapper.style.borderRadius = '4px';
+
+  wrapper.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0f172a; padding-bottom:10px; margin-bottom:12px;">
+      <div>
+        <h2 style="font-size:18px; font-weight:700; margin:0 0 2px 0; color:#0f172a;">${compName}</h2>
+        <p style="font-size:11px; color:#475569; margin:1px 0;">${compAddr}</p>
+        <p style="font-size:11px; color:#475569; margin:1px 0;">เลขประจำตัวผู้เสียภาษี: ${compTax}</p>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:14px; font-weight:800; border:1.5px solid #0f172a; padding:3px 10px; display:inline-block; background:#f8fafc;">ใบจ่ายเงินเดือน / PAYSLIP</div>
+        <div style="font-size:12px; margin-top:5px;">งวดประจำเดือน: <strong>${period}</strong></div>
+        <div style="font-size:11px; color:#64748b;">วันที่จ่าย: ${payDate}</div>
+      </div>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:12px; border:1px solid #cbd5e1; background:#f8fafc;">
+      <tr>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; width:18%; color:#475569; background:#f1f5f9;">รหัสพนักงาน:</td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; width:32%; color:#0f172a;"><strong>${empId}</strong></td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; width:18%; color:#475569; background:#f1f5f9;">ชื่อ-นามสกุล:</td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; width:32%; color:#0f172a;"><strong>${empName}</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; color:#475569; background:#f1f5f9;">ตำแหน่ง:</td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; color:#0f172a;">${empRole}</td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; color:#475569; background:#f1f5f9;">แผนก/สาขา:</td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; color:#0f172a;">${empDept}</td>
+      </tr>
+      <tr>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; color:#475569; background:#f1f5f9;">การจ่ายเงิน:</td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; color:#0f172a;">${bankName}</td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; color:#475569; background:#f1f5f9;">เลขที่บัญชี:</td>
+        <td style="padding:5px 8px; border:1px solid #e2e8f0; color:#0f172a; font-family:monospace;">${bankAcc}</td>
+      </tr>
+    </table>
+
+    <table style="width:100%; border-collapse:collapse; border:1.5px solid #334155; margin-bottom:10px;">
+      <thead>
+        <tr>
+          <th style="width:50%; background:#e2e8f0; color:#0f172a; font-size:12px; font-weight:700; padding:6px; border:1px solid #cbd5e1; text-align:center;">รายการได้ (EARNINGS)</th>
+          <th style="width:50%; background:#e2e8f0; color:#0f172a; font-size:12px; font-weight:700; padding:6px; border:1px solid #cbd5e1; text-align:center;">รายการหัก (DEDUCTIONS)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="vertical-align:top; padding:0;">
+            <table style="width:100%; border-collapse:collapse;">
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">เงินเดือนพื้นฐาน</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.baseSalary)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">ค่าล่วงเวลา (OT) ${otHoursText}</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.otPay)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">เบี้ยขยัน</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.allowance)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">โบนัส / เงินพิเศษ</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.bonus)}</td></tr>
+              <tr style="height:18px;"><td style="padding:4px 8px;">&nbsp;</td><td style="padding:4px 8px;">&nbsp;</td></tr>
+            </table>
+          </td>
+          <td style="vertical-align:top; padding:0;">
+            <table style="width:100%; border-collapse:collapse;">
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">ภาษีหัก ณ ที่จ่าย</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.tax)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">เงินสมทบประกันสังคม (SSO)</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.sso)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">กองทุนสำรองเลี้ยงชีพ (PF)</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.pf)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักเงินเบิกล่วงหน้า (Advance)</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.advanceDeduct)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักมาสาย / ออกก่อนเวลา</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.lateDeduct)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักลากิจ / ขาดงาน</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.leaveDeduct)}</td></tr>
+              ${slip.otherDeduct > 0 ? `<tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักอื่นๆ</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.otherDeduct)}</td></tr>` : ''}
+            </table>
+          </td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td style="background:#f1f5f9; padding:6px 10px; border-top:1.5px solid #334155; font-size:12px; font-weight:700; color:#0f172a;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span>รวมเงินได้ทั้งสิ้น</span>
+              <span style="font-family:monospace;">${fmt(slip.grossPay)}</span>
+            </div>
+          </td>
+          <td style="background:#f1f5f9; padding:6px 10px; border-top:1.5px solid #334155; font-size:12px; font-weight:700; color:#0f172a;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span>รวมรายการหักทั้งสิ้น</span>
+              <span style="font-family:monospace;">${fmt(slip.totalDeductions)}</span>
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div style="border:2px solid #0f172a; background:#f8fafc; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-radius:2px;">
+      <div>
+        <span style="font-size:11px; color:#475569; display:block;">จำนวนเงินสุทธิ (ตัวอักษร):</span>
+        <strong style="font-size:12.5px; color:#0f172a;">${thaiBaht}</strong>
+      </div>
+      <div style="text-align:right;">
+        <span style="font-size:12px; font-weight:700; color:#334155; margin-right:6px;">เงินได้สุทธิ (Net Pay):</span>
+        <span style="font-size:18px; font-weight:900; font-family:monospace; text-decoration:underline;">฿ ${fmt(slip.netPay)}</span>
+      </div>
+    </div>
+
+    <div style="font-size:10.5px; color:#64748b; border:1px solid #e2e8f0; background:#f8fafc; padding:4px 8px; display:flex; justify-content:space-between; margin-bottom:14px;">
+      <span>สถิติประจำงวด: ขาดงาน <strong>${slip.absentDays || 0}</strong> วัน | ลากิจ <strong>${slip.leaveDays || 0}</strong> วัน | ลาป่วย <strong>${(slip.sickLeaveDays || 0) + (slip.unpaidSickLeaveDays || 0)}</strong> วัน</span>
+      <span>${nowStr}</span>
+    </div>
+
+    <div style="display:flex; justify-content:space-around; padding-top:10px; text-align:center;">
+      <div style="width:42%;">
+        <div style="font-size:11px; color:#334155; margin-bottom:22px;">ลงชื่อ ..............................................................</div>
+        <div style="font-size:11px; color:#64748b;">( พนักงานผู้รับเงิน )</div>
+      </div>
+      <div style="width:42%;">
+        <div style="font-size:11px; color:#334155; margin-bottom:22px;">ลงชื่อ ..............................................................</div>
+        <div style="font-size:11px; color:#64748b;">( ผู้มีอำนาจจ่ายเงิน / ฝ่ายการเงิน )</div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(wrapper);
+
+  try {
+    if (typeof html2canvas !== 'function') {
+      throw new Error('ไม่พบไลบรารี html2canvas');
+    }
+
+    const canvas = await html2canvas(wrapper, {
+      scale: 2, // High resolution (retina crisp quality)
+      useCORS: true,
+      backgroundColor: '#ffffff'
+    });
+
+    // Generate download link
+    const imageUri = canvas.toDataURL('image/png');
+    const filename = `Payslip_${empId}_${period.replace(/\//g, '-')}.png`;
+
+    const downloadLink = document.createElement('a');
+    downloadLink.href = imageUri;
+    downloadLink.download = filename;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'บันทึกรูปภาพเรียบร้อย!',
+      text: `ดาวน์โหลดไฟล์ ${filename} แล้ว`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch(e) {
+    console.error('Save payslip image error:', e);
+    Swal.fire('ไม่สามารถบันทึกรูปได้', e.message || 'เกิดข้อผิดพลาดในการบันทึกรูปภาพ', 'error');
+  } finally {
+    if (wrapper.parentNode) {
+      document.body.removeChild(wrapper);
+    }
+  }
 }
 
 function printPayslipDocument() {

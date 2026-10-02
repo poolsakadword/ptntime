@@ -45,6 +45,8 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <!-- QRCode.js CDN for Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- html2canvas CDN for saving payslip image -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <!-- Google MediaPipe Tasks Vision for AI Face Detection -->
   <script type="module">
@@ -581,6 +583,10 @@
               </select>
             </div>
             <div class="flex items-center gap-1.5">
+              <button type="button" onclick="savePayslipAsImage()" class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition active:scale-95 flex items-center gap-1" title="บันทึกสลิปเป็นรูปภาพ (JPG/PNG)">
+                <span>🖼️</span>
+                <span class="hidden sm:inline">บันทึกรูป</span>
+              </button>
               <button type="button" onclick="printPayslipDocument()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition active:scale-95 flex items-center gap-1" title="พิมพ์หรือบันทึก PDF">
                 <span>🖨️</span>
                 <span class="hidden sm:inline">พิมพ์/PDF</span>
