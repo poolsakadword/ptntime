@@ -2488,13 +2488,14 @@ async function handleAction(db, action, params) {
       }
 
       // 2. Query company info from settings
-      const compRows = await db.prepare('SELECT key, value FROM settings WHERE key IN ("CompanyName", "CompanyAddress", "CompanyTaxId")').all().catch(() => ({ results: [] }));
+      const compRows = await db.prepare('SELECT key, value FROM settings WHERE key IN ("CompanyName", "Address", "CompanyAddress", "TaxId", "CompanyTaxId", "Phone")').all().catch(() => ({ results: [] }));
       const compMap = {};
       for (const r of (compRows.results || [])) compMap[r.key] = r.value;
       const companyInfo = {
         name: compMap.CompanyName || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด',
-        address: compMap.CompanyAddress || '',
-        taxId: compMap.CompanyTaxId || ''
+        address: compMap.Address || compMap.CompanyAddress || '919/30 ม.10 ต.นครสวรรค์ตก อ.เมือง จ.นครสวรรค์ 60000',
+        phone: compMap.Phone || '056-345625, 056-371370',
+        taxId: compMap.TaxId || compMap.CompanyTaxId || '0605556001337'
       };
 
       // 3. Query all periods where this employee has calculations in payroll_calcs

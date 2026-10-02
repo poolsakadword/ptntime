@@ -6297,8 +6297,8 @@ function renderPayslipVoucher(slip, companyInfo) {
     };
 
     setText('prnCompanyTitle', companyInfo?.name || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด');
-    setText('prnCompanyAddress', companyInfo?.address || '123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000');
-    setText('prnCompanyTaxId', companyInfo?.taxId || '0105550000000');
+    setText('prnCompanyAddress', companyInfo?.address || '919/30 ม.10 ต.นครสวรรค์ตก อ.เมือง จ.นครสวรรค์ 60000');
+    setText('prnCompanyTaxId', companyInfo?.taxId || '0605556001337');
     setText('prnPeriodText', slip.period || '-');
     setText('prnPayDateText', slip.payDate || new Date().toLocaleDateString('th-TH'));
 
@@ -6435,8 +6435,9 @@ async function savePayslipAsImage() {
   const comp = window.lastCompanyInfo || {};
   const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const compName = comp.name || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด';
-  const compAddr = comp.address || '123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000';
-  const compTax = comp.taxId || '0105550000000';
+  const compAddr = comp.address || '919/30 ม.10 ต.นครสวรรค์ตก อ.เมือง จ.นครสวรรค์ 60000';
+  const compTax = comp.taxId || '0605556001337';
+  const compPhone = comp.phone || '056-345625, 056-371370';
   const empId = slip.empId || (currentEmployee ? currentEmployee.empId : '-');
   const empName = slip.fullName || slip.full_name || slip.name || currentEmployee?.full_name || currentEmployee?.fullName || currentEmployee?.name || '-';
   const empRole = slip.position || currentEmployee?.position || currentEmployee?.role || 'พนักงาน';
@@ -6633,8 +6634,9 @@ function printPayslipDocument() {
   const comp = window.lastCompanyInfo || {};
   const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const compName = comp.name || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด';
-  const compAddr = comp.address || '123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000';
-  const compTax = comp.taxId || '0105550000000';
+  const compAddr = comp.address || '919/30 ม.10 ต.นครสวรรค์ตก อ.เมือง จ.นครสวรรค์ 60000';
+  const compTax = comp.taxId || '0605556001337';
+  const compPhone = comp.phone || '056-345625, 056-371370';
   const empId = slip.empId || (currentEmployee ? currentEmployee.empId : '-');
   const empName = slip.fullName || slip.full_name || slip.name || currentEmployee?.full_name || currentEmployee?.fullName || currentEmployee?.name || '-';
   const empRole = slip.position || currentEmployee?.position || currentEmployee?.role || 'พนักงาน';
