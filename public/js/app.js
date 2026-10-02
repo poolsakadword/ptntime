@@ -6302,12 +6302,16 @@ function renderPayslipVoucher(slip, companyInfo) {
     setText('prnPeriodText', slip.period || '-');
     setText('prnPayDateText', slip.payDate || new Date().toLocaleDateString('th-TH'));
 
+    const resolvedEmpName = slip.fullName || slip.full_name || slip.name || currentEmployee?.full_name || currentEmployee?.fullName || currentEmployee?.name || '-';
+    const resolvedRole = slip.position || currentEmployee?.position || currentEmployee?.role || 'พนักงาน';
+    const resolvedDept = slip.department || currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01';
+
     setText('prnEmpId', slip.empId || (currentEmployee ? currentEmployee.empId : '-'));
-    setText('prnEmpName', slip.name || (currentEmployee ? currentEmployee.name : '-'));
-    setText('prnEmpRole', currentEmployee?.role || currentEmployee?.position || '-');
-    setText('prnEmpDept', currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01');
+    setText('prnEmpName', resolvedEmpName);
+    setText('prnEmpRole', resolvedRole);
+    setText('prnEmpDept', resolvedDept);
     setText('prnBankName', slip.bankName || 'ธนาคารกสิกรไทย');
-    setText('prnBankAcc', slip.bankAccountMasked || '***-*-*----');
+    setText('prnBankAcc', slip.bankAccount || slip.bankAccountMasked || '***-*-*----');
 
     // Earnings
     setText('prnBaseSalary', fmt(slip.baseSalary));
@@ -6434,11 +6438,11 @@ async function savePayslipAsImage() {
   const compAddr = comp.address || '123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000';
   const compTax = comp.taxId || '0105550000000';
   const empId = slip.empId || (currentEmployee ? currentEmployee.empId : '-');
-  const empName = slip.name || (currentEmployee ? currentEmployee.name : '-');
-  const empRole = currentEmployee?.role || currentEmployee?.position || '-';
-  const empDept = currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01';
+  const empName = slip.fullName || slip.full_name || slip.name || currentEmployee?.full_name || currentEmployee?.fullName || currentEmployee?.name || '-';
+  const empRole = slip.position || currentEmployee?.position || currentEmployee?.role || 'พนักงาน';
+  const empDept = slip.department || currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01';
   const bankName = slip.bankName || 'ธนาคารกสิกรไทย';
-  const bankAcc = slip.bankAccountMasked || '***-*-*----';
+  const bankAcc = slip.bankAccount || slip.bankAccountMasked || '***-*-*----';
   const period = slip.period || '-';
   const payDate = slip.payDate || new Date().toLocaleDateString('th-TH');
   const otHoursText = (slip.otHours && slip.otHours > 0) ? `(${slip.otHours} ชม.)` : '';
@@ -6632,11 +6636,11 @@ function printPayslipDocument() {
   const compAddr = comp.address || '123/45 ถนนสายหลัก ต.ในเมือง อ.เมือง จ.นครสวรรค์ 60000';
   const compTax = comp.taxId || '0105550000000';
   const empId = slip.empId || (currentEmployee ? currentEmployee.empId : '-');
-  const empName = slip.name || (currentEmployee ? currentEmployee.name : '-');
-  const empRole = currentEmployee?.role || currentEmployee?.position || '-';
-  const empDept = currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01';
+  const empName = slip.fullName || slip.full_name || slip.name || currentEmployee?.full_name || currentEmployee?.fullName || currentEmployee?.name || '-';
+  const empRole = slip.position || currentEmployee?.position || currentEmployee?.role || 'พนักงาน';
+  const empDept = slip.department || currentEmployee?.department || currentEmployee?.branch_name || 'สาขา B01';
   const bankName = slip.bankName || 'ธนาคารกสิกรไทย';
-  const bankAcc = slip.bankAccountMasked || '***-*-*----';
+  const bankAcc = slip.bankAccount || slip.bankAccountMasked || '***-*-*----';
   const period = slip.period || '-';
   const payDate = slip.payDate || new Date().toLocaleDateString('th-TH');
   const otHoursText = (slip.otHours && slip.otHours > 0) ? `(${slip.otHours} ชม.)` : '';
