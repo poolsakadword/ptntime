@@ -588,8 +588,8 @@
           </div>
 
           <div class="max-w-xs mx-auto space-y-3">
-            <input type="password" id="payslipPinInput" maxlength="8" placeholder="••••" class="w-full text-center text-3xl tracking-widest font-mono p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
-            <p class="text-[11px] text-slate-400">ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์</p>
+            <input type="password" id="payslipPinInput" maxlength="15" placeholder="••••" class="w-full text-center text-3xl tracking-widest font-mono p-3 border border-slate-300 rounded-2xl bg-slate-50 focus:ring-2 focus:ring-sky-500 outline-none">
+            <p class="text-[11px] text-slate-400">ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์ (เต็มเบอร์ หรือ 4 ตัวท้าย)</p>
             <button type="button" onclick="verifyAndUnlockPayslip()" class="w-full py-3.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 active:scale-95 text-white font-bold rounded-2xl shadow-md text-sm transition">
               🔓 ปลดล็อกดูสลิปเงินเดือน
             </button>
@@ -1111,11 +1111,11 @@
         <!-- PIN Entry Section (Appears when employee is selected) -->
         <div id="pinEntrySection" class="hidden space-y-2 pt-1 border-t border-slate-100 flex-shrink-0 animate-fadeIn">
           <div class="flex items-center justify-between">
-            <label class="block text-xs font-bold text-slate-700">รหัสยืนยัน (เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทร)</label>
+            <label class="block text-xs font-bold text-slate-700">รหัสยืนยัน (เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์)</label>
             <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">🔒 ปลอดภัย</span>
           </div>
-          <input type="password" id="empPinInput" placeholder="••••" maxlength="8" class="w-full text-center text-2xl tracking-widest font-mono py-2.5 px-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-sky-500 outline-none bg-slate-50">
-          <p class="text-[11px] text-slate-400 text-center">ระบบจะผูกเครื่องของคุณไว้โดยอัตโนมัติ</p>
+          <input type="password" id="empPinInput" placeholder="••••" maxlength="15" class="w-full text-center text-2xl tracking-widest font-mono py-2.5 px-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-sky-500 outline-none bg-slate-50">
+          <p class="text-[11px] text-slate-400 text-center">ใช้ 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์ (เต็มเบอร์ หรือ 4 ตัวท้าย)</p>
         </div>
 
         <!-- Action Buttons -->

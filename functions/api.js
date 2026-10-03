@@ -1060,11 +1060,13 @@ async function handleAction(db, action, params) {
       const last4 = (emp.citizen_id || '').slice(-4);
       const fullCitizen = (emp.citizen_id || '').replace(/[^0-9]/g, '');
       const phone = (emp.phone || '').replace(/[^0-9]/g, '');
+      const phoneLast4 = phone.length >= 4 ? phone.slice(-4) : '';
 
       const matched =
         (cleanInput && cleanInput === last4) ||
         (cleanInput && cleanInput === fullCitizen) ||
         (cleanInput && cleanInput === phone) ||
+        (phoneLast4 && phoneLast4.length === 4 && cleanInput === phoneLast4) ||
         pinOrPhone === 'admin';
 
       if (!matched) {
@@ -2476,10 +2478,12 @@ async function handleAction(db, action, params) {
           const last4 = (empRow.citizen_id || '').slice(-4);
           const fullCitizen = (empRow.citizen_id || '').replace(/[^0-9]/g, '');
           const phone = (empRow.phone || '').replace(/[^0-9]/g, '');
+          const phoneLast4 = phone.length >= 4 ? phone.slice(-4) : '';
           const matched =
             (cleanPin && cleanPin === last4) ||
             (cleanPin && cleanPin === fullCitizen) ||
             (cleanPin && cleanPin === phone) ||
+            (phoneLast4 && phoneLast4.length === 4 && cleanPin === phoneLast4) ||
             pin === 'admin';
           if (!matched) {
             return { success: false, message: 'รหัส PIN ไม่ถูกต้อง (กรุณากรอกเลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์)' };
