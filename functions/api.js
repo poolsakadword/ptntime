@@ -2391,11 +2391,10 @@ async function handleAction(db, action, params) {
       const branchId = String(params.branchId || params.branch_id || '').trim();
       const callerUser = params.username || '';
       if (callerUser) {
-        const allowed = (await userHasPermission(db, callerUser, 'toggle_early_dismissal')) ||
-                        (await userHasPermission(db, callerUser, 'toggle_early_dismissal:' + branchId)) ||
+        const allowed = (await isUserSuperAdmin(db, callerUser)) ||
                         (await userHasPermission(db, callerUser, 'manage_attendance_settings')) ||
-                        (await userHasPermission(db, callerUser, 'approve_attendance')) ||
-                        (await isUserSuperAdmin(db, callerUser));
+                        (await userHasPermission(db, callerUser, 'toggle_early_dismissal')) ||
+                        (await userHasPermission(db, callerUser, 'toggle_early_dismissal:' + branchId));
         if (!allowed) return { success: false, message: 'สิทธิ์ไม่เพียงพอ: บัญชีของคุณไม่ได้รับสิทธิ์เปิด/ปิดโหมดงานเสร็จของสาขานี้' };
       }
       const enabled = (params.enabled === true || params.enabled === 'true' || params.enabled === 1 || params.enabled === '1') ? 1 : 0;
@@ -2417,11 +2416,15 @@ async function handleAction(db, action, params) {
     // Batch Set Early Dismissal (โหมดงานเสร็จ - จ่ายเต็มวัน)
     case 'batchSetAttendanceEarlyDismissal': {
       const callerUser = params.username || 'Admin';
-      const allowed = (await userHasPermission(db, callerUser, 'toggle_early_dismissal')) ||
-                      (await userHasPermission(db, callerUser, 'approve_attendance')) ||
-                      (await userHasPermission(db, callerUser, 'manage_attendance_settings')) ||
-                      (await isUserSuperAdmin(db, callerUser));
-      if (!allowed) return { success: false, message: 'สิทธิ์ไม่เพียงพอ: บัญชีของคุณไม่ได้รับสิทธิ์จัดการโหมดงานเสร็จ' };
+      const isSuper = await isUserSuperAdmin(db, callerUser);
+      const canManage = await userHasPermission(db, callerUser, 'manage_attendance_settings');
+      const canAll = await userHasPermission(db, callerUser, 'toggle_early_dismissal');
+      if (!isSuper && !canManage && !canAll) {
+        const uRow = await db.prepare('SELECT permissions FROM users WHERE LOWER(username) = ?').bind(String(callerUser).toLowerCase()).first();
+        const uPerms = uRow && uRow.permissions ? (typeof uRow.permissions === 'string' ? JSON.parse(uRow.permissions) : uRow.permissions) : [];
+        const hasAnyEarlyBranch = uPerms.some(p => String(p).startsWith('toggle_early_dismissal:'));
+        if (!hasAnyEarlyBranch) return { success: false, message: 'สิทธิ์ไม่เพียงพอ: บัญชีของคุณไม่ได้รับสิทธิ์จัดการโหมดงานเสร็จ' };
+      }
 
       const ids = Array.isArray(params.ids) ? params.ids : [];
       if (ids.length === 0) return { success: false, message: 'กรุณาเลือกรายการที่ต้องการดำเนินการ' };
