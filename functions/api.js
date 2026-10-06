@@ -2111,10 +2111,13 @@ async function handleAction(db, action, params) {
         ORDER BY start_date DESC
       `).bind(empId, startDateStr, endDateStr, startDateStr, endDateStr, startDateStr, endDateStr).all().catch(() => ({ results: [] }));
 
-      // 3. OT requests within cycle range
+      // 3. OT requests within cycle range (แสดงเฉพาะคำขอที่พนักงานเป็นผู้ยื่นคำขอเอง ไม่รวมรายการที่ระบบสร้างให้อัตโนมัติหรือ Admin ปรับปรุงเวลา)
       const ots = await db.prepare(`
         SELECT * FROM ot_requests 
         WHERE emp_id = ? AND date >= ? AND date <= ? 
+          AND (COALESCE(reason, '') NOT LIKE '%(Admin ปรับปรุงเวลา)%'
+           AND COALESCE(reason, '') NOT LIKE '%OT งานเสร็จประจำวัน%'
+           AND COALESCE(reason, '') NOT LIKE '%(HR ลงเวลาแทน)%')
         ORDER BY date DESC
       `).bind(empId, startDateStr, endDateStr).all().catch(() => ({ results: [] }));
 

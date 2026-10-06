@@ -4694,7 +4694,10 @@ async function loadMyRequests() {
     if (data.success) {
       let html = '';
       const leaves = data.leaves || [];
-      const ots = data.ots || [];
+      const ots = (data.ots || []).filter(ot => {
+        const r = String(ot.reason || '');
+        return !r.includes('(Admin ปรับปรุงเวลา)') && !r.includes('OT งานเสร็จประจำวัน') && !r.includes('(HR ลงเวลาแทน)');
+      });
       const advances = data.advances || [];
 
       // Check and fire realtime notification if any request status transitioned
