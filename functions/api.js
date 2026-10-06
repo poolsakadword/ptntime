@@ -38,6 +38,42 @@ function getMinutesDiff(tStr1, tStr2) {
   return timeToMinutes(tStr2) - timeToMinutes(tStr1);
 }
 
+function timeStringToMinutes(t) {
+  if (!t) return null;
+  const p = String(t).trim().split(':');
+  return p.length >= 2 ? (parseInt(p[0], 10) * 60 + parseInt(p[1], 10)) : null;
+}
+
+async function isUserSuperAdmin(db, username) {
+  if (!username) return false;
+  const u = String(username).trim().toLowerCase();
+  if (u === 'admin') return true;
+  const row = await db.prepare('SELECT role, permissions FROM users WHERE LOWER(username) = ?').bind(u).first();
+  if (!row) return false;
+  const r = String(row.role || '').toLowerCase();
+  if (r.includes('super') || r === 'admin / hr' || r === 'admin') return true;
+  try {
+    const perms = row.permissions ? JSON.parse(row.permissions) : [];
+    if (perms.includes('all') && (r.includes('admin') || u === 'admin')) return true;
+  } catch(e) {}
+  return false;
+}
+
+async function userHasPermission(db, username, requiredPerm) {
+  if (!username) return false;
+  const u = String(username).trim().toLowerCase();
+  if (u === 'admin') return true;
+  const row = await db.prepare('SELECT role, permissions FROM users WHERE LOWER(username) = ?').bind(u).first();
+  if (!row) return false;
+  const r = String(row.role || '').toLowerCase();
+  if (r.includes('super') || r === 'admin / hr' || r === 'admin') return true;
+  try {
+    const perms = row.permissions ? JSON.parse(row.permissions) : [];
+    if (perms.includes('all') || perms.includes(requiredPerm)) return true;
+  } catch(e) {}
+  return false;
+}
+
 function normalizeDateToIso(str) {
   if (!str) return '';
   const s = String(str).trim();
