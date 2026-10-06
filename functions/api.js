@@ -2352,15 +2352,16 @@ async function handleAction(db, action, params) {
 
     // Toggle Branch Early Dismissal Mode (โหมดงานเสร็จ - จ่ายเต็มวัน)
     case 'toggleBranchEarlyDismissal': {
+      const branchId = String(params.branchId || params.branch_id || '').trim();
       const callerUser = params.username || '';
       if (callerUser) {
         const allowed = (await userHasPermission(db, callerUser, 'toggle_early_dismissal')) ||
+                        (await userHasPermission(db, callerUser, 'toggle_early_dismissal:' + branchId)) ||
                         (await userHasPermission(db, callerUser, 'manage_attendance_settings')) ||
                         (await userHasPermission(db, callerUser, 'approve_attendance')) ||
                         (await isUserSuperAdmin(db, callerUser));
-        if (!allowed) return { success: false, message: 'สิทธิ์ไม่เพียงพอ: บัญชีของคุณไม่ได้รับสิทธิ์เปิด/ปิดโหมดงานเสร็จ' };
+        if (!allowed) return { success: false, message: 'สิทธิ์ไม่เพียงพอ: บัญชีของคุณไม่ได้รับสิทธิ์เปิด/ปิดโหมดงานเสร็จของสาขานี้' };
       }
-      const branchId = String(params.branchId || params.branch_id || '').trim();
       const enabled = (params.enabled === true || params.enabled === 'true' || params.enabled === 1 || params.enabled === '1') ? 1 : 0;
       if (!branchId) return { success: false, message: 'กรุณาระบุรหัสสาขา' };
 
