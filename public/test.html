@@ -132,9 +132,41 @@
     <!-- Quick Action Launch Button -->
     <button type="button" onclick="openTestCamera()" class="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-rose-50 text-rose-600 font-extrabold text-sm sm:text-base shadow-lg transition active:scale-[0.98] flex items-center justify-center gap-2">
       <span class="text-lg">✨</span>
-      <span>เปิดกล้องทดสอบเซลฟี่หน้าเนียน</span>
+      <span>เปิดกล้องทดสอบลายน้ำแบบใหม่ (แบบที่ 3 ⭐)</span>
       <span class="text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold ml-1">Bypass GPS</span>
     </button>
+  </div>
+
+  <!-- Top Controller Bar: Watermark Style Switcher (NEW ⭐) -->
+  <div class="w-full max-w-md bg-white rounded-3xl p-4 shadow-md border border-slate-200 mb-4 space-y-2.5">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🏷️</span>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">เลือกดูดีไซน์ "ลายน้ำ GPS บนรูป"</h3>
+          <p class="text-[11px] text-slate-500">ทดสอบถ่ายรูปเปรียบเทียบใน Preview</p>
+        </div>
+      </div>
+      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">Preview v2</span>
+    </div>
+
+    <!-- 3 Watermark Styles Switcher -->
+    <div class="grid grid-cols-3 gap-1.5 text-xs">
+      <button type="button" onclick="selectWatermarkStyle('style3')" id="btnTabWm3" class="active-toggle py-2 px-1 rounded-xl transition text-center font-bold shadow-xs">
+        3. แถบขาว ⭐<br><span class="text-[10px] font-normal text-emerald-600">(ไม่บังรูป 100%)</span>
+      </button>
+      <button type="button" onclick="selectWatermarkStyle('style1')" id="btnTabWm1" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        1. การ์ดลอย<br><span class="text-[10px] font-normal text-slate-500">(กระจกฝ้า)</span>
+      </button>
+      <button type="button" onclick="selectWatermarkStyle('styleOld')" id="btnTabWmOld" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        แบบเดิม<br><span class="text-[10px] font-normal text-rose-500">(แถบดำบังคาง)</span>
+      </button>
+    </div>
+
+    <div id="wmStyleDescBox" class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 flex items-start gap-1.5">
+      <span class="text-emerald-600 font-bold text-sm">⭐</span>
+      <div><strong>แบบที่ 3 (แนะนำ):</strong> รูปถ่ายอยู่ด้านบน 100% ลายน้ำอยู่บนแถบการ์ดขาวด้านล่าง ไม่บังคางหรือใบหน้าพนักงานเลยแม้แต่นิดเดียว!</div>
+    </div>
   </div>
 
   <!-- Top Controller Bar: Employee Card Design Switcher (NEW ⭐) -->
@@ -586,9 +618,28 @@
         </button>
       </div>
 
+      <!-- Watermark Instant Switcher in Result Modal -->
+      <div class="space-y-1">
+        <div class="flex items-center justify-between px-1 text-[11px] font-bold text-slate-600">
+          <span>สลับดูลายน้ำเปรียบเทียบ:</span>
+          <span id="txtResWmBadge" class="text-emerald-600 font-extrabold">แบบที่ 3: แถบขาว ⭐</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1 text-[11px] font-bold">
+          <button type="button" id="btnResWm3" onclick="switchResultWatermark('style3')" class="py-1.5 px-1 rounded-xl bg-emerald-600 text-white shadow-xs transition text-center">
+            แบบ 3 (แถบขาว) ⭐
+          </button>
+          <button type="button" id="btnResWm1" onclick="switchResultWatermark('style1')" class="py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center">
+            แบบ 1 (การ์ดลอย)
+          </button>
+          <button type="button" id="btnResWmOld" onclick="switchResultWatermark('styleOld')" class="py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center">
+            แบบเดิม (แถบดำ)
+          </button>
+        </div>
+      </div>
+
       <!-- Photo Display Area -->
-      <div class="relative w-full aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-slate-900">
-        <img id="imgResultPreview" src="" alt="ภาพถ่ายเซลฟี่" class="w-full h-full object-cover">
+      <div class="relative w-full aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-white">
+        <img id="imgResultPreview" src="" alt="ภาพถ่ายเซลฟี่" class="w-full h-full object-contain bg-slate-100">
         
         <!-- Badge on photo -->
         <div id="badgePhotoType" class="absolute top-2.5 left-2.5 px-3 py-1 rounded-full text-[11px] font-extrabold text-white bg-pink-600/90 backdrop-blur-md shadow-md border border-white/30 flex items-center gap-1">
@@ -598,22 +649,22 @@
       </div>
 
       <!-- Feature Tags Breakdown -->
-      <div class="p-3 bg-pink-50/80 border border-pink-200/80 rounded-2xl text-xs space-y-1.5">
-        <div class="font-bold text-pink-900 flex items-center gap-1 text-[11px]">
-          <span>🌸</span> <span>จุดเด่นของภาพนี้:</span>
+      <div id="resultFeatureBox" class="p-3 bg-emerald-50/90 border border-emerald-200/80 rounded-2xl text-xs space-y-1.5">
+        <div class="font-bold text-emerald-900 flex items-center gap-1 text-[11px]">
+          <span>🌟</span> <span>จุดเด่นของลายน้ำแบบที่ 3 (แนะนำ):</span>
         </div>
-        <ul class="text-[11px] text-pink-800 space-y-1">
+        <ul class="text-[11px] text-emerald-800 space-y-1">
           <li class="flex items-center gap-1.5">
             <span class="text-emerald-500 font-bold">✓</span>
-            <span>เกลี่ยแสงนุ่มนวล ลดริ้วรอยเส้นเล็ก รูขุมขน และความมัน</span>
+            <span><strong>ไม่บังใบหน้า 100%:</strong> รูปถ่ายอยู่ด้านบน แยกส่วนชัดเจน ไม่มีแถบดำทับคาง</span>
           </li>
           <li class="flex items-center gap-1.5">
             <span class="text-emerald-500 font-bold">✓</span>
-            <span>คงความคมชัดของดวงตา คิ้ว และรอยยิ้มอย่างเป็นธรรมชาติ</span>
+            <span><strong>การ์ดขาวล่างคมชัด:</strong> ข้อมูลเวลา พิกัด GPS สาขา และชื่อพนักงาน อ่านง่าย สบายตา</span>
           </li>
           <li class="flex items-center gap-1.5">
             <span class="text-emerald-500 font-bold">✓</span>
-            <span>แถบลายน้ำ วันที่ เวลา สาขา และพิกัดทดสอบ คมชัด 100%</span>
+            <span><strong>สัดส่วนลงตัว:</strong> บันทึกเก็บลงฐานข้อมูลขนาด 640x640 เท่าเดิม ไม่กระทบระบบหลังบ้าน</span>
           </li>
         </ul>
       </div>
@@ -811,6 +862,8 @@
   <script>
     let currentBtnStyle = 'style3';
     let currentEmpStyle = 'emp1';
+    let currentWatermarkStyle = 'style3';
+    let currentResultTab = 'beauty';
     let currentSimState = 'IN';
     let cameraStream = null;
     let currentFacing = 'user';
@@ -818,6 +871,10 @@
     let lastBeautyPhotoData = null;
     let lastRawPhotoData = null;
     let currentClockType = 'IN';
+
+    // Intermediate canvases for instant watermark switching without retaking photo
+    const savedBeautyCropCanvas = document.createElement('canvas');
+    const savedRawCropCanvas = document.createElement('canvas');
 
     // Current Test Employee Model
     let testCurrentEmp = {
@@ -1198,13 +1255,143 @@
       }
     }
 
+    // Helper: Rounded Rectangle for Canvas
+    function drawCanvasRoundRect(ctx, x, y, width, height, radius) {
+      if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, radius);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // 2.5 WATERMARK STYLE SELECTOR (MAIN PAGE & LIVE RESULT)
+    function selectWatermarkStyle(style) {
+      currentWatermarkStyle = style;
+      ['style3', 'style1', 'styleOld'].forEach(s => {
+        const btn = document.getElementById('btnTabWm' + s.charAt(0).toUpperCase() + s.slice(1));
+        if (!btn) return;
+        if (s === style) {
+          btn.className = 'active-toggle py-2 px-1 rounded-xl transition text-center font-bold shadow-xs';
+        } else {
+          btn.className = 'py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+        }
+      });
+
+      const descBox = document.getElementById('wmStyleDescBox');
+      if (descBox) {
+        if (style === 'style3') {
+          descBox.className = 'p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 flex items-start gap-1.5';
+          descBox.innerHTML = `<span class="text-emerald-600 font-bold text-sm">⭐</span>
+            <div><strong>แบบที่ 3 (แนะนำ):</strong> รูปถ่ายอยู่ด้านบน 100% ลายน้ำอยู่บนแถบการ์ดขาวด้านล่าง ไม่บังคางหรือใบหน้าพนักงานเลยแม้แต่นิดเดียว!</div>`;
+        } else if (style === 'style1') {
+          descBox.className = 'p-2.5 rounded-xl bg-sky-50 border border-sky-200 text-[11px] text-sky-900 flex items-start gap-1.5';
+          descBox.innerHTML = `<span class="text-sky-600 font-bold text-sm">✨</span>
+            <div><strong>แบบที่ 1 (การ์ดลอย):</strong> การ์ดกระจกฝ้าทรงโมเดิร์นลอยอยู่มุมล่างซ้าย ใบหน้าส่วนใหญ่เปิดโล่งชัดเจน</div>`;
+        } else {
+          descBox.className = 'p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-900 flex items-start gap-1.5';
+          descBox.innerHTML = `<span class="text-rose-600 font-bold text-sm">⚠️</span>
+            <div><strong>แบบเดิม (แถบดำ):</strong> มีแถบ Gradient สีดำความสูง 150px พาดทับด้านล่าง ซึ่งอาจบังบริเวณคางหรือคอของพนักงาน</div>`;
+        }
+      }
+    }
+
+    function switchResultWatermark(style) {
+      renderCapturedPhotos(style);
+    }
+
+    function updateResultWatermarkButtons(style) {
+      const badge = document.getElementById('txtResWmBadge');
+      const b3 = document.getElementById('btnResWm3');
+      const b1 = document.getElementById('btnResWm1');
+      const bOld = document.getElementById('btnResWmOld');
+      const featureBox = document.getElementById('resultFeatureBox');
+
+      if (b3) b3.className = (style === 'style3') ? 'py-1.5 px-1 rounded-xl bg-emerald-600 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+      if (b1) b1.className = (style === 'style1') ? 'py-1.5 px-1 rounded-xl bg-sky-600 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+      if (bOld) bOld.className = (style === 'styleOld') ? 'py-1.5 px-1 rounded-xl bg-slate-800 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+
+      if (badge) {
+        if (style === 'style3') badge.textContent = 'แบบที่ 3: แถบขาว ⭐';
+        else if (style === 'style1') badge.textContent = 'แบบที่ 1: การ์ดลอย ✨';
+        else badge.textContent = 'แบบเดิม: แถบดำ ⚠️';
+      }
+
+      if (featureBox) {
+        if (style === 'style3') {
+          featureBox.className = 'p-3 bg-emerald-50/90 border border-emerald-200/80 rounded-2xl text-xs space-y-1.5';
+          featureBox.innerHTML = `
+            <div class="font-bold text-emerald-900 flex items-center gap-1 text-[11px]">
+              <span>🌟</span> <span>จุดเด่นของลายน้ำแบบที่ 3 (แนะนำ):</span>
+            </div>
+            <ul class="text-[11px] text-emerald-800 space-y-1">
+              <li class="flex items-center gap-1.5">
+                <span class="text-emerald-500 font-bold">✓</span>
+                <span><strong>ไม่บังใบหน้า 100%:</strong> รูปถ่ายอยู่ด้านบน แยกส่วนชัดเจน ไม่มีแถบดำทับคาง</span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <span class="text-emerald-500 font-bold">✓</span>
+                <span><strong>การ์ดขาวล่างคมชัด:</strong> ข้อมูลเวลา พิกัด GPS สาขา และชื่อพนักงาน อ่านง่าย สบายตา</span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <span class="text-emerald-500 font-bold">✓</span>
+                <span><strong>สัดส่วนลงตัว:</strong> บันทึกเก็บลงฐานข้อมูลขนาด 640x640 เท่าเดิม ไม่กระทบระบบหลังบ้าน</span>
+              </li>
+            </ul>`;
+        } else if (style === 'style1') {
+          featureBox.className = 'p-3 bg-sky-50/90 border border-sky-200/80 rounded-2xl text-xs space-y-1.5';
+          featureBox.innerHTML = `
+            <div class="font-bold text-sky-900 flex items-center gap-1 text-[11px]">
+              <span>✨</span> <span>จุดเด่นของแบบที่ 1 (การ์ดลอย):</span>
+            </div>
+            <ul class="text-[11px] text-sky-800 space-y-1">
+              <li class="flex items-center gap-1.5">
+                <span class="text-sky-500 font-bold">✓</span>
+                <span><strong>การ์ดกระจกฝ้า:</strong> ดีไซน์โค้งมน หรูหราทันสมัย</span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <span class="text-sky-500 font-bold">✓</span>
+                <span><strong>รูปเต็มจอ:</strong> รูปถ่ายขนาด 1:1 เต็มเฟรม แต่การ์ดยังลอยบังมุมล่างซ้ายเล็กน้อย</span>
+              </li>
+            </ul>`;
+        } else {
+          featureBox.className = 'p-3 bg-rose-50/90 border border-rose-200/80 rounded-2xl text-xs space-y-1.5';
+          featureBox.innerHTML = `
+            <div class="font-bold text-rose-900 flex items-center gap-1 text-[11px]">
+              <span>⚠️</span> <span>ข้อสังเกตของแบบเดิม (แถบดำ):</span>
+            </div>
+            <ul class="text-[11px] text-rose-800 space-y-1">
+              <li class="flex items-center gap-1.5">
+                <span class="text-rose-500 font-bold">✕</span>
+                <span><strong>บังบริเวณคาง:</strong> มีแถบ Gradient สีดำพาดทับด้านล่างสูงถึง 150px</span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <span class="text-rose-500 font-bold">✕</span>
+                <span><strong>ดูทึบแสง:</strong> แถบสีเข้มบดบังรายละเอียดด้านล่างของรูปถ่าย</span>
+              </li>
+            </ul>`;
+        }
+      }
+    }
+
     // 3. CAPTURE & WATERMARK ENGINE
     function captureTestPhoto() {
       const video = document.getElementById('testVideoPreview');
-      const canvas = document.getElementById('testPhotoCanvas');
       const flash = document.getElementById('testCamFlash');
 
-      if (!video || !canvas) return;
+      if (!video) return;
 
       // Flash Effect & Vibrate
       flash.style.opacity = '0.85';
@@ -1212,9 +1399,10 @@
       if (navigator.vibrate) try { navigator.vibrate(50); } catch(e) {}
 
       const targetSize = 640;
-      canvas.width = targetSize;
-      canvas.height = targetSize;
-      const ctx = canvas.getContext('2d');
+      savedBeautyCropCanvas.width = targetSize;
+      savedBeautyCropCanvas.height = targetSize;
+      savedRawCropCanvas.width = targetSize;
+      savedRawCropCanvas.height = targetSize;
 
       const vw = video.videoWidth || 640;
       const vh = video.videoHeight || 480;
@@ -1222,127 +1410,284 @@
       const startX = (vw - cropSize) / 2;
       const startY = (vh - cropSize) / 2;
 
-      // ==========================================
-      // A. RENDER BEAUTY PHOTO (With Soft-Focus Glow)
-      // ==========================================
-      ctx.clearRect(0, 0, targetSize, targetSize);
-      ctx.save();
+      // A. CAPTURE BEAUTY LAYER (Radiant tone + Soft-Focus Glow)
+      const bCtx = savedBeautyCropCanvas.getContext('2d');
+      bCtx.clearRect(0, 0, targetSize, targetSize);
+      bCtx.save();
       if (currentFacing === 'user') {
-        ctx.translate(targetSize, 0);
-        ctx.scale(-1, 1);
+        bCtx.translate(targetSize, 0);
+        bCtx.scale(-1, 1);
       }
+      try { bCtx.filter = 'brightness(1.07) contrast(1.01) saturate(1.08)'; } catch(e) {}
+      bCtx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
 
-      // Pass 1: Crisp Base Layer with radiant tone enhancement
-      try { ctx.filter = 'brightness(1.07) contrast(1.01) saturate(1.08)'; } catch(e) {}
-      ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
-
-      // Pass 2: Automatic Dual-Pass Soft-Focus (ลดริ้วรอย รูขุมขน เกลี่ยผิวหน้าเนียนใสแบบธรรมชาติ)
       try {
-        ctx.save();
-        ctx.filter = 'blur(4px) brightness(1.10) contrast(0.94)';
-        ctx.globalAlpha = 0.35;
-        ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
-        ctx.restore();
+        bCtx.save();
+        bCtx.filter = 'blur(4px) brightness(1.10) contrast(0.94)';
+        bCtx.globalAlpha = 0.35;
+        bCtx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+        bCtx.restore();
       } catch(e) {}
+      bCtx.restore();
+      try { bCtx.filter = 'none'; } catch(e) {}
 
-      ctx.restore();
-      try { ctx.filter = 'none'; } catch(e) {}
-
-      // Draw Watermark
-      drawTestWatermark(ctx, targetSize, targetSize, currentClockType);
-      lastBeautyPhotoData = canvas.toDataURL('image/jpeg', 0.80);
-
-      // ==========================================
-      // B. RENDER RAW PHOTO (Without Beauty Filter)
-      // ==========================================
-      ctx.clearRect(0, 0, targetSize, targetSize);
-      ctx.save();
+      // B. CAPTURE RAW LAYER (Pure Camera Feed)
+      const rCtx = savedRawCropCanvas.getContext('2d');
+      rCtx.clearRect(0, 0, targetSize, targetSize);
+      rCtx.save();
       if (currentFacing === 'user') {
-        ctx.translate(targetSize, 0);
-        ctx.scale(-1, 1);
+        rCtx.translate(targetSize, 0);
+        rCtx.scale(-1, 1);
       }
-      try { ctx.filter = 'none'; } catch(e) {}
-      ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
-      ctx.restore();
+      try { rCtx.filter = 'none'; } catch(e) {}
+      rCtx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+      rCtx.restore();
 
-      // Draw Watermark on Raw photo as well
-      drawTestWatermark(ctx, targetSize, targetSize, currentClockType);
-      lastRawPhotoData = canvas.toDataURL('image/jpeg', 0.80);
+      // Render photos using current selected watermark style
+      renderCapturedPhotos(currentWatermarkStyle);
 
       // Close camera and open Result Modal
       closeTestCamera();
       showTestResultModal();
     }
 
-    function drawTestWatermark(ctx, width, height, clockType) {
-      const bannerH = 150;
-      const startY = height - bannerH;
+    function renderCapturedPhotos(style) {
+      currentWatermarkStyle = style;
+      const targetSize = 640;
+      const canvas = document.getElementById('testPhotoCanvas');
+      if (!canvas) return;
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
 
-      // Dark Gradient Background
-      const grad = ctx.createLinearGradient(0, startY - 24, 0, height);
-      grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      grad.addColorStop(0.25, 'rgba(15, 23, 42, 0.80)');
-      grad.addColorStop(1, 'rgba(15, 23, 42, 0.96)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, startY - 24, width, bannerH + 24);
+      const isStyle3 = (style === 'style3');
 
-      let badgeText = (clockType === 'OUT') ? 'ออกงาน (OUT)' : 'เข้างาน (IN)';
-      let badgeColor = (clockType === 'OUT') ? '#ef4444' : '#10b981';
+      // 1. RENDER BEAUTY PHOTO WITH WATERMARK
+      ctx.clearRect(0, 0, targetSize, targetSize);
+      if (isStyle3) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, targetSize, targetSize);
+        // Crop 640x520 from 640x640: starting from y=15 keeps head and chin perfectly in frame
+        ctx.drawImage(savedBeautyCropCanvas, 0, 15, 640, 520, 0, 0, 640, 520);
+      } else {
+        ctx.drawImage(savedBeautyCropCanvas, 0, 0, targetSize, targetSize);
+      }
+      drawTestWatermark(ctx, targetSize, targetSize, currentClockType, style);
+      lastBeautyPhotoData = canvas.toDataURL('image/jpeg', 0.82);
 
+      // 2. RENDER RAW PHOTO WITH WATERMARK
+      ctx.clearRect(0, 0, targetSize, targetSize);
+      if (isStyle3) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, targetSize, targetSize);
+        ctx.drawImage(savedRawCropCanvas, 0, 15, 640, 520, 0, 0, 640, 520);
+      } else {
+        ctx.drawImage(savedRawCropCanvas, 0, 0, targetSize, targetSize);
+      }
+      drawTestWatermark(ctx, targetSize, targetSize, currentClockType, style);
+      lastRawPhotoData = canvas.toDataURL('image/jpeg', 0.82);
+
+      // Update Result Modal preview image
+      const img = document.getElementById('imgResultPreview');
+      if (img) {
+        img.src = (currentResultTab === 'beauty') ? lastBeautyPhotoData : lastRawPhotoData;
+      }
+      updateResultWatermarkButtons(style);
+    }
+
+    function drawTestWatermark(ctx, width, height, clockType, style) {
+      style = style || currentWatermarkStyle || 'style3';
       const now = new Date();
       const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
       const dateStr = `${now.getDate()} ${thMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} น.`;
+      const isOut = (clockType === 'OUT');
+      const badgeText = isOut ? 'ออกงาน (OUT)' : 'เข้างาน (IN)';
+      const badgeColor = isOut ? '#ef4444' : '#10b981';
+      const fontSans = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
       ctx.save();
 
-      // Badge Pill
-      const fontSans = 'system-ui, -apple-system, sans-serif';
-      ctx.font = `bold 13px ${fontSans}`;
-      const badgeW = ctx.measureText(badgeText).width + 24;
-      const badgeX = 16;
-      const badgeY = startY + 8;
+      if (style === 'style3') {
+        // ==========================================
+        // STYLE 3: POLAROID / WHITE CARD STRIP (ไม่บังรูป 100%)
+        // ==========================================
+        const stripY = 520;
+        const stripH = 120;
 
-      ctx.fillStyle = badgeColor;
-      if (typeof ctx.roundRect === 'function') {
+        // Clean white background for the bottom strip
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, stripY, width, stripH);
+
+        // Divider border line
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.roundRect(badgeX, badgeY, badgeW, 24, 12);
-        ctx.fill();
+        ctx.moveTo(0, stripY);
+        ctx.lineTo(width, stripY);
+        ctx.stroke();
+
+        // 1. Row 1 (y: 532): Badge Pill & Date
+        const badgeX = 18;
+        const badgeY = stripY + 12;
+        ctx.font = `bold 12px ${fontSans}`;
+        const bText = `● ${badgeText} ${timeStr}`;
+        const bWidth = ctx.measureText(bText).width + 18;
+
+        ctx.fillStyle = badgeColor;
+        drawCanvasRoundRect(ctx, badgeX, badgeY, bWidth, 23, 11.5);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.fillText(bText, badgeX + 9, badgeY + 16);
+
+        // Date on right
+        ctx.font = `bold 12px ${fontSans}`;
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'right';
+        ctx.fillText(`📅 ${dateStr}`, width - 18, badgeY + 16);
+
+        // 2. Row 2 (y: 574): Employee & Branch
+        ctx.textAlign = 'left';
+        ctx.font = `bold 15px ${fontSans}`;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(`👤 ${testCurrentEmp.name} (#${testCurrentEmp.empId})`, 18, stripY + 56);
+
+        ctx.font = `12.5px ${fontSans}`;
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'right';
+        ctx.fillText(`🏢 ${testCurrentEmp.branch || 'สำนักงานใหญ่'}`, width - 18, stripY + 56);
+
+        // 3. Row 3 (y: 598): GPS & Verification
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 11.5px "SF Mono", Menlo, Consolas, monospace';
+        ctx.fillStyle = '#0284c7';
+        ctx.fillText('📍 GPS: 13.756331, 100.501765 (Bypass GPS)', 18, stripY + 80);
+
+        ctx.textAlign = 'right';
+        ctx.font = `bold 11px ${fontSans}`;
+        ctx.fillStyle = '#059669';
+        ctx.fillText('✓ PTN Time Verified', width - 18, stripY + 80);
+
+        // 4. Row 4 (y: 618): Subtext
+        ctx.textAlign = 'left';
+        ctx.font = `10px ${fontSans}`;
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('ระบบบันทึกเวลาทำงาน • ความแม่นยำสูง', 18, stripY + 102);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('โหมดทดสอบพรีวิว', width - 18, stripY + 102);
+
+      } else if (style === 'style1') {
+        // ==========================================
+        // STYLE 1: FLOATING GLASS CARD (การ์ดลอยล่างซ้าย)
+        // ==========================================
+        const cardX = 16;
+        const cardY = 482;
+        const cardW = 500;
+        const cardH = 142;
+        const cardR = 18;
+
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.40)';
+        ctx.shadowBlur = 16;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 6;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+        drawCanvasRoundRect(ctx, cardX, cardY, cardW, cardH, cardR);
+
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.lineWidth = 1.2;
+        if (typeof ctx.roundRect === 'function') {
+          ctx.beginPath();
+          ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
+          ctx.stroke();
+        }
+
+        const bX = cardX + 14;
+        const bY = cardY + 14;
+        ctx.font = `bold 11.5px ${fontSans}`;
+        const bText = badgeText;
+        const bW = ctx.measureText(bText).width + 16;
+        ctx.fillStyle = badgeColor;
+        drawCanvasRoundRect(ctx, bX, bY, bW, 21, 10.5);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.fillText(bText, bX + 8, bY + 15);
+
+        ctx.font = `bold 13px ${fontSans}`;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`🕒 ${timeStr}  •  ${dateStr}`, bX + bW + 10, bY + 15);
+
+        ctx.font = `bold 14.5px ${fontSans}`;
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText(`👤 ${testCurrentEmp.name} (#${testCurrentEmp.empId})`, cardX + 14, cardY + 60);
+
+        ctx.font = `12px ${fontSans}`;
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(`🏢 ${testCurrentEmp.branch || 'สำนักงานใหญ่'} (ระยะ 0 ม.)`, cardX + 14, cardY + 84);
+
+        ctx.font = 'bold 11px monospace';
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('📍 GPS: 13.756331, 100.501765', cardX + 14, cardY + 107);
+
+        ctx.font = `bold 10.5px ${fontSans}`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.fillText('PTN TIME VERIFIED', cardX + 14, cardY + 128);
+
       } else {
-        ctx.fillRect(badgeX, badgeY, badgeW, 24);
+        // ==========================================
+        // STYLE OLD: BLACK GRADIENT BANNER (แบบเดิม - แถบดำ 150px)
+        // ==========================================
+        const bannerH = 150;
+        const startY = height - bannerH;
+
+        const grad = ctx.createLinearGradient(0, startY - 24, 0, height);
+        grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        grad.addColorStop(0.25, 'rgba(15, 23, 42, 0.80)');
+        grad.addColorStop(1, 'rgba(15, 23, 42, 0.96)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, startY - 24, width, bannerH + 24);
+
+        ctx.font = `bold 13px ${fontSans}`;
+        const badgeW = ctx.measureText(badgeText).width + 24;
+        const badgeX = 16;
+        const badgeY = startY + 8;
+
+        ctx.fillStyle = badgeColor;
+        drawCanvasRoundRect(ctx, badgeX, badgeY, badgeW, 24, 12);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.fillText(badgeText, badgeX + 12, badgeY + 17);
+
+        ctx.font = `bold 13.5px ${fontSans}`;
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText(`📅 ${dateStr} • ${timeStr}`, badgeX + badgeW + 12, badgeY + 17);
+
+        ctx.font = `bold 17px ${fontSans}`;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`👤 ${testCurrentEmp.name} (โหมดทดสอบ)`, 18, startY + 58);
+
+        ctx.font = `13.5px ${fontSans}`;
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText('🏢 สาขา: สำนักงานใหญ่ (ห่าง 0 ม. • Bypass GPS)', 18, startY + 83);
+
+        ctx.font = 'bold 13px monospace';
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('📍 GPS: 13.756331, 100.501765 (ตำแหน่งจำลอง)', 18, startY + 107);
+
+        ctx.font = `11.5px ${fontSans}`;
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('✓ ทดสอบระบบกล้อง PTN Time Attendant', 18, startY + 130);
+
+        ctx.font = `bold 12px ${fontSans}`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.fillText('PTN TIME', width - 80, startY + 130);
       }
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(badgeText, badgeX + 12, badgeY + 17);
-
-      // Timestamp
-      ctx.font = `bold 13.5px ${fontSans}`;
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillText(`📅 ${dateStr} • ${timeStr}`, badgeX + badgeW + 12, badgeY + 17);
-
-      // Employee
-      ctx.font = `bold 17px ${fontSans}`;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText('👤 คุณพูลศักดิ์ (โหมดทดสอบ)', 18, startY + 58);
-
-      // Branch
-      ctx.font = `13.5px ${fontSans}`;
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillText('🏢 สาขา: สำนักงานใหญ่ (ห่าง 0 ม. • Bypass GPS)', 18, startY + 83);
-
-      // GPS
-      ctx.font = 'bold 13px monospace';
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillText('📍 GPS: 13.756331, 100.501765 (ตำแหน่งจำลอง)', 18, startY + 107);
-
-      // Brand
-      ctx.font = `11.5px ${fontSans}`;
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillText('✓ ทดสอบระบบกล้อง PTN Time Attendant', 18, startY + 130);
-
-      ctx.font = `bold 12px ${fontSans}`;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.fillText('PTN TIME', width - 80, startY + 130);
 
       ctx.restore();
     }
@@ -1352,6 +1697,7 @@
       const modal = document.getElementById('modalTestResult');
       modal.classList.remove('hidden');
       switchResultTab('beauty');
+      updateResultWatermarkButtons(currentWatermarkStyle);
     }
 
     function closeTestResultModal() {
@@ -1359,6 +1705,7 @@
     }
 
     function switchResultTab(tab) {
+      currentResultTab = tab;
       const img = document.getElementById('imgResultPreview');
       const tabB = document.getElementById('tabResBeauty');
       const tabR = document.getElementById('tabResRaw');
@@ -1366,17 +1713,17 @@
       const txt = document.getElementById('txtBadgePhotoType');
 
       if (tab === 'beauty') {
-        img.src = lastBeautyPhotoData || '';
-        tabB.className = 'py-2 rounded-xl bg-white text-pink-600 shadow-xs transition font-extrabold';
-        tabR.className = 'py-2 rounded-xl text-slate-600 hover:text-slate-900 transition font-medium';
-        badge.className = 'absolute top-2.5 left-2.5 px-3 py-1 rounded-full text-[11px] font-extrabold text-white bg-pink-600/90 backdrop-blur-md shadow-md border border-white/30 flex items-center gap-1';
-        txt.textContent = 'Auto Smooth Skin (ลดริ้วรอย)';
+        if (img) img.src = lastBeautyPhotoData || '';
+        if (tabB) tabB.className = 'py-2 rounded-xl bg-white text-pink-600 shadow-xs transition font-extrabold';
+        if (tabR) tabR.className = 'py-2 rounded-xl text-slate-600 hover:text-slate-900 transition font-medium';
+        if (badge) badge.className = 'absolute top-2.5 left-2.5 px-3 py-1 rounded-full text-[11px] font-extrabold text-white bg-pink-600/90 backdrop-blur-md shadow-md border border-white/30 flex items-center gap-1';
+        if (txt) txt.textContent = 'Auto Smooth Skin (ลดริ้วรอย)';
       } else {
-        img.src = lastRawPhotoData || '';
-        tabR.className = 'py-2 rounded-xl bg-white text-slate-900 shadow-xs transition font-extrabold';
-        tabB.className = 'py-2 rounded-xl text-slate-600 hover:text-slate-900 transition font-medium';
-        badge.className = 'absolute top-2.5 left-2.5 px-3 py-1 rounded-full text-[11px] font-extrabold text-white bg-slate-800/90 backdrop-blur-md shadow-md border border-white/30 flex items-center gap-1';
-        txt.textContent = 'กล้องสด (Raw)';
+        if (img) img.src = lastRawPhotoData || '';
+        if (tabR) tabR.className = 'py-2 rounded-xl bg-white text-slate-900 shadow-xs transition font-extrabold';
+        if (tabB) tabB.className = 'py-2 rounded-xl text-slate-600 hover:text-slate-900 transition font-medium';
+        if (badge) badge.className = 'absolute top-2.5 left-2.5 px-3 py-1 rounded-full text-[11px] font-extrabold text-white bg-slate-800/90 backdrop-blur-md shadow-md border border-white/30 flex items-center gap-1';
+        if (txt) txt.textContent = 'กล้องสด (Raw)';
       }
     }
 
@@ -1392,6 +1739,7 @@
     // Initial setup
     selectEmpCardStyle('emp3');
     selectBtnStyle('style3');
+    selectWatermarkStyle('style3');
     setSimState('IN');
     applyTestCustomAvatar();
   </script>
