@@ -150,16 +150,25 @@
       <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">Preview v2</span>
     </div>
 
-    <!-- 3 Watermark Styles Switcher -->
+    <!-- 6 Watermark Styles Switcher -->
     <div class="grid grid-cols-3 gap-1.5 text-xs">
-      <button type="button" onclick="selectWatermarkStyle('style3')" id="btnTabWm3" class="active-toggle py-2 px-1 rounded-xl transition text-center font-bold shadow-xs">
-        3. แถบขาว ⭐<br><span class="text-[10px] font-normal text-emerald-600">(ไม่บังรูป 100%)</span>
+      <button type="button" onclick="selectWatermarkStyle('style4')" id="btnTabWm4" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        แบบที่ 4<br><span class="text-[10px] font-normal text-slate-500">(แยกสีฟ้าขาว)</span>
+      </button>
+      <button type="button" onclick="selectWatermarkStyle('style5')" id="btnTabWm5" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        แบบที่ 5<br><span class="text-[10px] font-normal text-slate-500">(ธีมเข้ม)</span>
+      </button>
+      <button type="button" onclick="selectWatermarkStyle('style6')" id="btnTabWm6" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        แบบที่ 6<br><span class="text-[10px] font-normal text-slate-500">(แคปซูล)</span>
+      </button>
+      <button type="button" onclick="selectWatermarkStyle('style3')" id="btnTabWm3" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
+        แบบ 3<br><span class="text-[10px] font-normal text-slate-500">(แถบขาว)</span>
       </button>
       <button type="button" onclick="selectWatermarkStyle('style1')" id="btnTabWm1" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
-        1. การ์ดลอย<br><span class="text-[10px] font-normal text-slate-500">(กระจกฝ้า)</span>
+        แบบ 1<br><span class="text-[10px] font-normal text-slate-500">(การ์ดลอย)</span>
       </button>
       <button type="button" onclick="selectWatermarkStyle('styleOld')" id="btnTabWmOld" class="py-2 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium">
-        แบบเดิม<br><span class="text-[10px] font-normal text-rose-500">(แถบดำบังคาง)</span>
+        แบบเดิม<br><span class="text-[10px] font-normal text-rose-500">(แถบดำ)</span>
       </button>
     </div>
 
@@ -625,14 +634,23 @@
           <span id="txtResWmBadge" class="text-emerald-600 font-extrabold">แบบที่ 3: แถบขาว ⭐</span>
         </div>
         <div class="grid grid-cols-3 gap-1 text-[11px] font-bold">
-          <button type="button" id="btnResWm3" onclick="switchResultWatermark('style3')" class="py-1.5 px-1 rounded-xl bg-emerald-600 text-white shadow-xs transition text-center">
-            แบบ 3 (แถบขาว) ⭐
+          <button type="button" id="btnResWm4" onclick="switchResultWatermark('style4')" class="py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center">
+            แบบ 4 (แยกสี)
+          </button>
+          <button type="button" id="btnResWm5" onclick="switchResultWatermark('style5')" class="py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center">
+            แบบ 5 (ธีมเข้ม)
+          </button>
+          <button type="button" id="btnResWm6" onclick="switchResultWatermark('style6')" class="py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center">
+            แบบ 6 (แคปซูล)
+          </button>
+          <button type="button" id="btnResWm3" onclick="switchResultWatermark('style3')" class="py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center">
+            แบบ 3 (แถบขาว)
           </button>
           <button type="button" id="btnResWm1" onclick="switchResultWatermark('style1')" class="py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center">
-            แบบ 1 (การ์ดลอย)
+            แบบ 1 (ลอย)
           </button>
           <button type="button" id="btnResWmOld" onclick="switchResultWatermark('styleOld')" class="py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center">
-            แบบเดิม (แถบดำ)
+            แบบเดิม
           </button>
         </div>
       </div>
@@ -1299,7 +1317,7 @@
     // 2.5 WATERMARK STYLE SELECTOR (MAIN PAGE & LIVE RESULT)
     function selectWatermarkStyle(style) {
       currentWatermarkStyle = style;
-      ['style3', 'style1', 'styleOld'].forEach(s => {
+      ['style3', 'style4', 'style5', 'style6', 'style1', 'styleOld'].forEach(s => {
         const btn = document.getElementById('btnTabWm' + s.charAt(0).toUpperCase() + s.slice(1));
         if (!btn) return;
         if (s === style) {
@@ -1311,10 +1329,22 @@
 
       const descBox = document.getElementById('wmStyleDescBox');
       if (descBox) {
-        if (style === 'style3') {
+        if (style === 'style4') {
+          descBox.className = 'p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 flex items-start gap-1.5';
+          descBox.innerHTML = `<span class="text-blue-600 font-bold text-sm">⭐</span>
+            <div><strong>แบบที่ 4:</strong> Corporate Split แบ่งพื้นที่ข้อมูลชัดเจน ซ้าย (สีน้ำเงิน) บุคคลและเวลา ขวา (สีสว่าง) สถานที่ ไม่บังรูป 100%</div>`;
+        } else if (style === 'style5') {
+          descBox.className = 'p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-slate-200 flex items-start gap-1.5';
+          descBox.innerHTML = `<span class="text-sky-400 font-bold text-sm">✨</span>
+            <div><strong>แบบที่ 5:</strong> Dark Modern ธีมเข้ม ตัดกับข้อความสีสว่าง ดูพรีเมียมและอ่านง่ายแม้อยู่ในที่แสงจ้า ไม่บังรูป 100%</div>`;
+        } else if (style === 'style6') {
+          descBox.className = 'p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-[11px] text-indigo-900 flex items-start gap-1.5';
+          descBox.innerHTML = `<span class="text-indigo-600 font-bold text-sm">✨</span>
+            <div><strong>แบบที่ 6:</strong> Info Badges วางข้อมูลลงในกรอบแคปซูลสีขาวบนพื้นเทา ดูเป็นระเบียบสบายตา ไม่บังรูป 100%</div>`;
+        } else if (style === 'style3') {
           descBox.className = 'p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 flex items-start gap-1.5';
-          descBox.innerHTML = `<span class="text-emerald-600 font-bold text-sm">⭐</span>
-            <div><strong>แบบที่ 3 (แนะนำ):</strong> รูปถ่ายอยู่ด้านบน 100% ลายน้ำอยู่บนแถบการ์ดขาวด้านล่าง ไม่บังคางหรือใบหน้าพนักงานเลยแม้แต่นิดเดียว!</div>`;
+          descBox.innerHTML = `<span class="text-emerald-600 font-bold text-sm">✨</span>
+            <div><strong>แบบที่ 3:</strong> รูปถ่ายอยู่ด้านบน 100% ลายน้ำอยู่บนแถบการ์ดขาวด้านล่าง ไม่บังคางหรือใบหน้าพนักงานเลยแม้แต่นิดเดียว!</div>`;
         } else if (style === 'style1') {
           descBox.className = 'p-2.5 rounded-xl bg-sky-50 border border-sky-200 text-[11px] text-sky-900 flex items-start gap-1.5';
           descBox.innerHTML = `<span class="text-sky-600 font-bold text-sm">✨</span>
@@ -1322,7 +1352,7 @@
         } else {
           descBox.className = 'p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-900 flex items-start gap-1.5';
           descBox.innerHTML = `<span class="text-rose-600 font-bold text-sm">⚠️</span>
-            <div><strong>แบบเดิม (แถบดำ):</strong> มีแถบ Gradient สีดำความสูง 150px พาดทับด้านล่าง ซึ่งอาจบังบริเวณคางหรือคอของพนักงาน</div>`;
+            <div><strong>แบบเดิม (แถบดำ):</strong> มีแถบ Gradient สีดำพาดทับด้านล่าง ซึ่งอาจบังบริเวณคางหรือคอของพนักงาน</div>`;
         }
       }
     }
@@ -1338,12 +1368,22 @@
       const bOld = document.getElementById('btnResWmOld');
       const featureBox = document.getElementById('resultFeatureBox');
 
+      const b4 = document.getElementById('btnResWm4');
+      const b5 = document.getElementById('btnResWm5');
+      const b6 = document.getElementById('btnResWm6');
+
+      if (b4) b4.className = (style === 'style4') ? 'py-1.5 px-1 rounded-xl bg-blue-600 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+      if (b5) b5.className = (style === 'style5') ? 'py-1.5 px-1 rounded-xl bg-slate-800 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+      if (b6) b6.className = (style === 'style6') ? 'py-1.5 px-1 rounded-xl bg-indigo-600 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
       if (b3) b3.className = (style === 'style3') ? 'py-1.5 px-1 rounded-xl bg-emerald-600 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
       if (b1) b1.className = (style === 'style1') ? 'py-1.5 px-1 rounded-xl bg-sky-600 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
-      if (bOld) bOld.className = (style === 'styleOld') ? 'py-1.5 px-1 rounded-xl bg-slate-800 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
+      if (bOld) bOld.className = (style === 'styleOld') ? 'py-1.5 px-1 rounded-xl bg-rose-600 text-white shadow-xs transition text-center font-bold' : 'py-1.5 px-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition text-center font-medium';
 
       if (badge) {
-        if (style === 'style3') badge.textContent = 'แบบที่ 3: แถบขาว ⭐';
+        if (style === 'style4') badge.textContent = 'แบบที่ 4: แยกสีฟ้าขาว ⭐';
+        else if (style === 'style5') badge.textContent = 'แบบที่ 5: ธีมเข้ม ⭐';
+        else if (style === 'style6') badge.textContent = 'แบบที่ 6: แคปซูล ⭐';
+        else if (style === 'style3') badge.textContent = 'แบบที่ 3: แถบขาว ⭐';
         else if (style === 'style1') badge.textContent = 'แบบที่ 1: การ์ดลอย ✨';
         else badge.textContent = 'แบบเดิม: แถบดำ ⚠️';
       }
@@ -1479,7 +1519,7 @@
       canvas.height = targetSize;
       const ctx = canvas.getContext('2d');
 
-      const isStyle3 = (style === 'style3');
+      const isStyle3 = (style === 'style3' || style === 'style4' || style === 'style5' || style === 'style6');
 
       // 1. RENDER BEAUTY PHOTO WITH WATERMARK
       ctx.clearRect(0, 0, targetSize, targetSize);
@@ -1527,7 +1567,182 @@
 
       ctx.save();
 
-      if (style === 'style3') {
+      if (style === 'style4') {
+        const stripY = 520;
+        const stripH = 120;
+        const leftW = Math.floor(width * 0.55);
+        
+        ctx.fillStyle = '#1d4ed8'; // blue-700
+        ctx.fillRect(0, stripY, leftW, stripH);
+        
+        ctx.fillStyle = '#f3f4f6'; // gray-100
+        ctx.fillRect(leftW, stripY, width - leftW, stripH);
+        
+        // top border for right side
+        ctx.fillStyle = '#3b82f6'; // blue-500
+        ctx.fillRect(leftW, stripY, width - leftW, 4);
+        
+        // Left Content
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold 28px ${fontSans}`;
+        ctx.fillText(timeStr.replace(' น.', ''), 16, stripY + 40);
+        
+        ctx.fillStyle = '#dbeafe'; // blue-100
+        ctx.font = `18px ${fontSans}`;
+        ctx.fillText(dateStr, 16, stripY + 68);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold 18px ${fontSans}`;
+        ctx.fillText(`${testCurrentEmp.name} (รหัส ${testCurrentEmp.empId})`, 16, stripY + 98);
+        
+        // Right Content
+        ctx.fillStyle = '#1d4ed8'; // blue-700
+        ctx.font = `bold 18px ${fontSans}`;
+        ctx.fillText(`สาขา: ${testCurrentEmp.branch || 'สำนักงานใหญ่'}`, leftW + 16, stripY + 40);
+        
+        ctx.fillStyle = '#334155'; // slate-700
+        ctx.font = `bold 16px ${fontSans}`;
+        const locName = testCurrentEmp.locationName || 'อ.เมืองนครสวรรค์ จ.นครสวรรค์';
+        ctx.fillText(locName.substring(0, 25) + (locName.length>25?'...':''), leftW + 16, stripY + 68);
+        
+        ctx.fillStyle = '#64748b'; // slate-500
+        ctx.font = `bold 14px ${fontSans}`;
+        const gpsStr = testCurrentEmp.gpsCoords || '15.678515, 100.090373';
+        ctx.fillText(`GPS: ${gpsStr}`, leftW + 16, stripY + 98);
+
+      } else if (style === 'style5') {
+        const stripY = 520;
+        const stripH = 120;
+        
+        ctx.fillStyle = '#1e293b'; // slate-800
+        ctx.fillRect(0, stripY, width, stripH);
+        
+        ctx.fillStyle = '#38bdf8'; // sky-400
+        ctx.fillRect(0, stripY, width, 4);
+        
+        // Left
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = `bold 32px ${fontSans}`;
+        ctx.fillText(timeStr.replace(' น.', ''), 16, stripY + 50);
+        
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = `18px ${fontSans}`;
+        // Adjust date to right of time
+        const timeWidth = ctx.measureText(timeStr.replace(' น.', '')).width;
+        ctx.fillText(dateStr, 16 + timeWidth + 12, stripY + 48);
+        
+        ctx.fillStyle = '#f1f5f9';
+        ctx.font = `bold 18px ${fontSans}`;
+        ctx.fillText(`${testCurrentEmp.name} (รหัส ${testCurrentEmp.empId})`, 16, stripY + 90);
+        
+        // Right
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#2563eb'; // blue-600 bg approx
+        const badgeY = stripY + 20;
+        const branchTxt = `📍 สาขา: ${testCurrentEmp.branch || 'สำนักงานใหญ่'}`;
+        ctx.font = `bold 16px ${fontSans}`;
+        const brW = ctx.measureText(branchTxt).width;
+        ctx.fillStyle = 'rgba(37, 99, 235, 0.5)';
+        drawCanvasRoundRect(ctx, width - 16 - brW - 8, badgeY - 18, brW + 16, 26, 4);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(branchTxt, width - 20, badgeY);
+        
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = `16px ${fontSans}`;
+        const locName = testCurrentEmp.locationName || 'อ.เมืองนครสวรรค์ จ.นครสวรรค์';
+        ctx.fillText(locName.substring(0, 30) + (locName.length>30?'...':''), width - 16, stripY + 68);
+        
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = `bold 14px ${fontSans}`;
+        const gpsStr = testCurrentEmp.gpsCoords || '15.678515, 100.090373';
+        ctx.fillText(gpsStr, width - 16, stripY + 98);
+
+      } else if (style === 'style6') {
+        const stripY = 520;
+        const stripH = 120;
+        
+        ctx.fillStyle = '#e2e8f0'; // slate-200
+        ctx.fillRect(0, stripY, width, stripH);
+        
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(0, stripY, width, 1);
+        
+        // Setup rows
+        const row1Y = stripY + 12;
+        const row2Y = stripY + 65;
+        const cellH = 45;
+        
+        ctx.textAlign = 'left';
+        
+        // -- Row 1 --
+        // Box 1: Time & Date
+        const timeTxt = timeStr.replace(' น.', '');
+        ctx.font = `bold 22px ${fontSans}`;
+        const timeW = ctx.measureText(timeTxt).width;
+        ctx.font = `16px ${fontSans}`;
+        const dateW = ctx.measureText(dateStr).width;
+        const box1W = timeW + dateW + 40;
+        
+        ctx.fillStyle = '#ffffff';
+        drawCanvasRoundRect(ctx, 12, row1Y, box1W, cellH, 8);
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1; ctx.stroke();
+        
+        ctx.fillStyle = '#2563eb';
+        ctx.font = `bold 22px ${fontSans}`;
+        ctx.fillText(timeTxt, 24, row1Y + 30);
+        
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(24 + timeW + 10, row1Y + 8, 2, cellH - 16);
+        
+        ctx.fillStyle = '#64748b';
+        ctx.font = `16px ${fontSans}`;
+        ctx.fillText(dateStr, 24 + timeW + 20, row1Y + 28);
+        
+        // Box 2: Emp Name
+        const box2X = 12 + box1W + 8;
+        const box2W = width - box2X - 12;
+        ctx.fillStyle = '#ffffff';
+        drawCanvasRoundRect(ctx, box2X, row1Y, box2W, cellH, 8);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#1e293b';
+        ctx.font = `bold 18px ${fontSans}`;
+        ctx.fillText(`👤 ${testCurrentEmp.name} (${testCurrentEmp.empId})`, box2X + 12, row1Y + 29);
+        
+        // -- Row 2 --
+        // Box 3: Branch
+        const branchTxt = `🏢 สาขา: ${testCurrentEmp.branch || 'สนญ.'}`;
+        ctx.font = `bold 16px ${fontSans}`;
+        const box3W = ctx.measureText(branchTxt).width + 24;
+        
+        ctx.fillStyle = '#ffffff';
+        drawCanvasRoundRect(ctx, 12, row2Y, box3W, cellH, 8);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#1d4ed8';
+        ctx.fillText(branchTxt, 24, row2Y + 28);
+        
+        // Box 4: Loc & GPS
+        const box4X = 12 + box3W + 8;
+        const box4W = width - box4X - 12;
+        ctx.fillStyle = '#ffffff';
+        drawCanvasRoundRect(ctx, box4X, row2Y, box4W, cellH, 8);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#334155';
+        ctx.font = `bold 16px ${fontSans}`;
+        const locName = testCurrentEmp.locationName || 'อ.เมืองนครสวรรค์ จ.นครสวรรค์';
+        ctx.fillText(`📍 ${locName.substring(0, 20)}...`, box4X + 12, row2Y + 28);
+        
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = `bold 14px ${fontSans}`;
+        const gpsStr = testCurrentEmp.gpsCoords || '15.678515, 100.090373';
+        ctx.fillText(gpsStr, box4X + box4W - 12, row2Y + 27);
+
+      } else if (style === 'style3') {
         // ==========================================
         // STYLE 3: POLAROID / WHITE CARD STRIP (ไม่บังรูป 100%)
         // ==========================================
@@ -1756,7 +1971,7 @@
     // Initial setup
     selectEmpCardStyle('emp3');
     selectBtnStyle('style3');
-    selectWatermarkStyle('style3');
+    selectWatermarkStyle('style4');
     setSimState('IN');
     applyTestCustomAvatar();
   </script>
