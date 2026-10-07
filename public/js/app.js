@@ -1634,6 +1634,13 @@ function getCurrentLocation(silent = false, isManual = false) {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
+      
+      // Fetch location name dynamically
+      fetchLocationName(lat, lng).then(name => {
+        if (name && currentLocation) {
+          currentLocation.locationName = name;
+        }
+      });
 
       const targetBranch = getCurrentEmployeeTargetBranch();
       const targetLat = targetBranch.lat || appSettings.office_lat;
@@ -2525,109 +2532,85 @@ function drawCanvasRoundRect(ctx, x, y, width, height, radius) {
 }
 
 function drawAttendanceWatermark(ctx, width, height, clockType) {
-  const bannerH = 150;
-  const startY = height - bannerH;
+  const fontSans = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  
+  // Style 4: Corporate Split (Blue & Light Gray)
+  const stripY = 520;
+  const stripH = 120;
+  const leftW = Math.floor(width * 0.55);
+  
+  // Left side bg (Corporate Blue)
+  ctx.fillStyle = '#1d4ed8'; 
+  ctx.fillRect(0, stripY, leftW, stripH);
+  
+  // Right side bg (Light Gray)
+  ctx.fillStyle = '#f3f4f6'; 
+  ctx.fillRect(leftW, stripY, width - leftW, stripH);
+  
+  // Top border for right side
+  ctx.fillStyle = '#3b82f6'; 
+  ctx.fillRect(leftW, stripY, width - leftW, 4);
 
-  // 1. Dark Gradient Background from transparent to 95% opacity
-  const grad = ctx.createLinearGradient(0, startY - 24, 0, height);
-  grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  grad.addColorStop(0.25, 'rgba(15, 23, 42, 0.80)');
-  grad.addColorStop(1, 'rgba(15, 23, 42, 0.96)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, startY - 24, width, bannerH + 24);
-
-  // 2. Action Badge Info
-  let badgeText = 'เข้างาน (IN)';
-  let badgeColor = '#10b981'; // Emerald
-  if (clockType === 'OUT') {
-    badgeText = 'ออกงาน (OUT)';
-    badgeColor = '#ef4444'; // Rose
-  } else if (clockType === 'BREAK_OUT') {
-    badgeText = 'พักเบรก (BREAK OUT)';
-    badgeColor = '#f59e0b'; // Amber
-  } else if (clockType === 'BREAK_IN') {
-    badgeText = 'กลับเข้างาน (BREAK IN)';
-    badgeColor = '#06b6d4'; // Cyan
-  }
-
-  // 3. Date & Time String
+  // Time & Date
   const now = new Date();
   const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-  const day = now.getDate();
-  const mon = thMonths[now.getMonth()];
-  const yr = now.getFullYear() + 543;
-  const hr = String(now.getHours()).padStart(2, '0');
-  const min = String(now.getMinutes()).padStart(2, '0');
-  const sec = String(now.getSeconds()).padStart(2, '0');
-  const dateStr = `${day} ${mon} ${yr}`;
-  const timeStr = `${hr}:${min}:${sec} น.`;
+  const dateStr = `${now.getDate()} ${thMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-  // 4. Employee & Location Info
+  // Left Content (Time, Date, Employee)
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold 28px ${fontSans}`;
+  ctx.fillText(timeStr, 16, stripY + 40);
+  
+  ctx.fillStyle = '#dbeafe'; 
+  ctx.font = `18px ${fontSans}`;
+  ctx.fillText(dateStr, 16, stripY + 68);
+  
   const empName = currentEmployee ? (currentEmployee.full_name || currentEmployee.empId) : 'พนักงาน';
   const empId = currentEmployee ? currentEmployee.empId : '';
-  const empDisplay = empId ? `${empName} • ${empId}` : empName;
-
+  const empDisplay = empId ? `${empName} (รหัส ${empId})` : empName;
+  
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold 18px ${fontSans}`;
+  ctx.fillText(empDisplay, 16, stripY + 98);
+  
+  // Right Content (Branch, Location, GPS)
   const targetBranch = (typeof getCurrentEmployeeTargetBranch === 'function') ? getCurrentEmployeeTargetBranch() : null;
   const branchName = targetBranch ? (targetBranch.branch_name || targetBranch.branch_id || 'สำนักงานใหญ่') : 'สำนักงานใหญ่';
-
-  let distText = '';
-  if (currentDistanceMeters !== null && currentDistanceMeters !== undefined) {
-    distText = `ห่าง ${Math.round(currentDistanceMeters)} ม.`;
-  }
-  const branchDisplay = `🏢 สาขา: ${branchName}${distText ? ' (' + distText + ')' : ''}`;
-
-  let gpsDisplay = '📍 GPS: ไม่พบพิกัดดาวเทียม';
+  
+  let gpsDisplay = 'ไม่พบพิกัดดาวเทียม';
   if (currentLocation && currentLocation.lat && currentLocation.lng) {
-    gpsDisplay = `📍 GPS: ${Number(currentLocation.lat).toFixed(6)}, ${Number(currentLocation.lng).toFixed(6)}`;
+    gpsDisplay = `${Number(currentLocation.lat).toFixed(6)}, ${Number(currentLocation.lng).toFixed(6)}`;
   }
+  
+  const locName = (currentLocation && currentLocation.locationName) ? currentLocation.locationName : `ระบุไม่ได้`;
 
-  ctx.save();
-
-  // Draw Badge Pill
-  const fontSans = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-  ctx.font = `bold 13px ${fontSans}`;
-  const badgeTextWidth = ctx.measureText(badgeText).width;
-  const badgeW = badgeTextWidth + 24;
-  const badgeH = 24;
-  const badgeX = 16;
-  const badgeY = startY + 8;
-
+  ctx.fillStyle = '#1d4ed8'; 
+  ctx.font = `bold 18px ${fontSans}`;
+  ctx.fillText(`สาขา: ${branchName}`, leftW + 16, stripY + 40);
+  
+  ctx.fillStyle = '#334155'; 
+  ctx.font = `bold 16px ${fontSans}`;
+  ctx.fillText(locName.substring(0, 25) + (locName.length>25?'...':''), leftW + 16, stripY + 68);
+  
+  ctx.fillStyle = '#64748b'; 
+  ctx.font = `bold 14px ${fontSans}`;
+  ctx.fillText(`GPS: ${gpsDisplay}`, leftW + 16, stripY + 98);
+  
+  // Badge
+  let badgeText = 'IN';
+  let badgeColor = '#10b981';
+  if (clockType === 'OUT') { badgeText = 'OUT'; badgeColor = '#ef4444'; }
+  else if (clockType === 'BREAK_OUT') { badgeText = 'BREAK OUT'; badgeColor = '#f59e0b'; }
+  else if (clockType === 'BREAK_IN') { badgeText = 'BREAK IN'; badgeColor = '#06b6d4'; }
+  
   ctx.fillStyle = badgeColor;
-  drawCanvasRoundRect(ctx, badgeX, badgeY, badgeW, badgeH, 12);
-
+  ctx.fillRect(width - 45, stripY + 16, 45, 24);
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(badgeText, badgeX + 12, badgeY + 17);
-
-  // Timestamp next to badge
-  ctx.font = `bold 13.5px ${fontSans}`;
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillText(`📅 ${dateStr} • ${timeStr}`, badgeX + badgeW + 12, badgeY + 17);
-
-  // Line 2: Employee Name
-  ctx.font = `bold 17px ${fontSans}`;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(`👤 ${empDisplay}`, 18, startY + 58);
-
-  // Line 3: Branch & Distance
-  ctx.font = `13.5px ${fontSans}`;
-  ctx.fillStyle = '#cbd5e1';
-  ctx.fillText(branchDisplay, 18, startY + 83);
-
-  // Line 4: GPS Coordinates
-  ctx.font = 'bold 13px "Courier New", monospace';
-  ctx.fillStyle = '#38bdf8';
-  ctx.fillText(gpsDisplay, 18, startY + 107);
-
-  // Line 5: Verification text & Brand
-  ctx.font = `11.5px ${fontSans}`;
-  ctx.fillStyle = '#94a3b8';
-  ctx.fillText('✓ ยืนยันพิกัดผ่านระบบ PTN Time Attendant', 18, startY + 130);
-
-  ctx.font = `bold 12px ${fontSans}`;
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-  ctx.fillText('PTN TIME', width - 80, startY + 130);
-
-  ctx.restore();
+  ctx.font = `bold 13px ${fontSans}`;
+  ctx.textAlign = 'center';
+  ctx.fillText(badgeText, width - 22, stripY + 33);
 }
 
 async function triggerShutterCapture() {
@@ -2703,26 +2686,43 @@ async function triggerShutterCapture() {
     ctx.scale(-1, 1);
   }
 
-  // 🌟 Pass 1: Crisp Base Layer with radiant skin tone (สว่างใส คมชัด)
+  // Create offscreen canvas for beauty rendering
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = targetSize;
+  tmpCanvas.height = targetSize;
+  const tmpCtx = tmpCanvas.getContext('2d');
+  
+  tmpCtx.save();
+  if (currentCameraFacing === 'user') {
+    tmpCtx.translate(targetSize, 0);
+    tmpCtx.scale(-1, 1);
+  }
+
+  // 🌟 Pass 1: Crisp Base Layer with radiant skin tone
   try {
-    ctx.filter = 'brightness(1.07) contrast(1.01) saturate(1.08)';
+    tmpCtx.filter = 'brightness(1.07) contrast(1.01) saturate(1.08)';
   } catch(e) {}
-  ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+  tmpCtx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
 
-  // 🌟 Pass 2: Automatic Dual-Pass Soft-Focus (ลดริ้วรอย รูขุมขน เกลี่ยผิวหน้าเนียนใสเป็นธรรมชาติ)
-  // ผสานแสงนุ่มนวลลบเลือนริ้วรอยและความหมองคล้ำ โดยยังคงความคมชัดของดวงตา คิ้ว และรอยยิ้ม
+  // 🌟 Pass 2: Automatic Dual-Pass Soft-Focus
   try {
-    ctx.save();
-    ctx.filter = 'blur(4px) brightness(1.10) contrast(0.94)';
-    ctx.globalAlpha = 0.35;
-    ctx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
-    ctx.restore();
+    tmpCtx.save();
+    tmpCtx.filter = 'blur(4px) brightness(1.10) contrast(0.94)';
+    tmpCtx.globalAlpha = 0.35;
+    tmpCtx.drawImage(video, startX, startY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+    tmpCtx.restore();
   } catch(e) {}
 
-  ctx.restore();
-  try { ctx.filter = 'none'; } catch(e) {}
+  tmpCtx.restore();
 
-  // Overlay GPS Watermark (Style 1: Modern Gradient Banner)
+  // Clear main canvas (white background for watermark strip)
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, targetSize, targetSize);
+
+  // Draw beauty image to top 520px (cropping slightly to keep face centered)
+  ctx.drawImage(tmpCanvas, 0, 15, 640, 520, 0, 0, 640, 520);
+  
+  // Overlay GPS Watermark (Style 4: Corporate Split)
   drawAttendanceWatermark(ctx, targetSize, targetSize, activePendingClock ? activePendingClock.type : 'IN');
 
   // Smart HD Optimization: 0.78 JPEG Quality (~45-55KB, crisp details, smooth skin without artifacts)
@@ -7323,4 +7323,26 @@ async function checkBroadcastNotifications() {
   }
 }
 
+
+
+
+// ==========================================
+// REVERSE GEOCODING (Added for Location Name)
+// ==========================================
+async function fetchLocationName(lat, lng) {
+  try {
+    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=th`);
+    if (res.ok) {
+      const data = await res.json();
+      const loc = [];
+      if (data.locality) loc.push(data.locality);
+      if (data.city && data.city !== data.locality) loc.push(data.city);
+      if (data.principalSubdivision) loc.push(data.principalSubdivision);
+      if (loc.length > 0) return loc.join(' ');
+    }
+  } catch (e) {
+    console.error('Reverse Geocode Error:', e);
+  }
+  return null;
+}
 
