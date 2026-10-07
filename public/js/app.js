@@ -2680,12 +2680,6 @@ async function triggerShutterCapture() {
   const startX = (vw - cropSize) / 2;
   const startY = (vh - cropSize) / 2;
 
-  ctx.save();
-  if (currentCameraFacing === 'user') {
-    ctx.translate(targetSize, 0);
-    ctx.scale(-1, 1);
-  }
-
   // Create offscreen canvas for beauty rendering
   const tmpCanvas = document.createElement('canvas');
   tmpCanvas.width = targetSize;
@@ -2716,6 +2710,8 @@ async function triggerShutterCapture() {
   tmpCtx.restore();
 
   // Clear main canvas (white background for watermark strip)
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // ensure reset transform
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, targetSize, targetSize);
 
@@ -2724,6 +2720,7 @@ async function triggerShutterCapture() {
   
   // Overlay GPS Watermark (Style 4: Corporate Split)
   drawAttendanceWatermark(ctx, targetSize, targetSize, activePendingClock ? activePendingClock.type : 'IN');
+  ctx.restore();
 
   // Smart HD Optimization: 0.78 JPEG Quality (~45-55KB, crisp details, smooth skin without artifacts)
   const photoBase64 = canvas.toDataURL('image/jpeg', 0.78);
