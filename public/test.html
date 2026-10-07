@@ -882,8 +882,27 @@
       name: 'คุณพูลศักดิ์ ใจดี',
       dept: 'ฝ่ายบุคคล',
       branch: 'สำนักงานใหญ่ (PTN-HQ)',
+      locationName: 'อ.เมืองนครสวรรค์ จ.นครสวรรค์ (ห่าง 0 ม.)',
+      gpsCoords: '15.678515, 100.090373',
       isLocked: true
     };
+
+    // Auto-detect real location & place name if permission granted
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        testCurrentEmp.gpsCoords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        try {
+          const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=th`);
+          const d = await res.json();
+          const place = [d.locality, d.city || d.principalSubdivision].filter(Boolean).join(' ');
+          if (place) {
+            testCurrentEmp.locationName = `${place} (ตรวจพบจริง)`;
+          }
+        } catch(e) {}
+      }, () => {}, { timeout: 6000, enableHighAccuracy: true });
+    }
 
     function getCustomAvatarKey(empId) {
       return 'ptn_custom_avatar_' + (empId || testCurrentEmp.empId);
@@ -1557,26 +1576,24 @@
         ctx.textAlign = 'right';
         ctx.fillText(`🏢 ${testCurrentEmp.branch || 'สำนักงานใหญ่'}`, width - 18, stripY + 56);
 
-        // 3. Row 3 (y: 598): GPS & Verification
+        // 3. Row 3 (y: 597): Real Location Name (ชื่อสถานที่ / ที่อยู่จริง)
         ctx.textAlign = 'left';
-        ctx.font = 'bold 11.5px "SF Mono", Menlo, Consolas, monospace';
+        ctx.font = `bold 12px ${fontSans}`;
         ctx.fillStyle = '#0284c7';
-        ctx.fillText('📍 GPS: 13.756331, 100.501765 (Bypass GPS)', 18, stripY + 80);
+        const locName = testCurrentEmp.locationName || 'อ.เมืองนครสวรรค์ จ.นครสวรรค์';
+        ctx.fillText(`📍 สถานที่: ${locName}`, 18, stripY + 79);
+
+        // 4. Row 4 (y: 618): GPS Coordinates & Verification
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 11px "SF Mono", Menlo, Consolas, monospace';
+        ctx.fillStyle = '#64748b';
+        const gpsStr = testCurrentEmp.gpsCoords || '15.678515, 100.090373';
+        ctx.fillText(`🌐 GPS: ${gpsStr}`, 18, stripY + 101);
 
         ctx.textAlign = 'right';
         ctx.font = `bold 11px ${fontSans}`;
         ctx.fillStyle = '#059669';
-        ctx.fillText('✓ PTN Time Verified', width - 18, stripY + 80);
-
-        // 4. Row 4 (y: 618): Subtext
-        ctx.textAlign = 'left';
-        ctx.font = `10px ${fontSans}`;
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillText('ระบบบันทึกเวลาทำงาน • ความแม่นยำสูง', 18, stripY + 102);
-
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillText('โหมดทดสอบพรีวิว', width - 18, stripY + 102);
+        ctx.fillText('✓ PTN Time Verified', width - 18, stripY + 101);
 
       } else if (style === 'style1') {
         // ==========================================
