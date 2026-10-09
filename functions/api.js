@@ -2137,35 +2137,83 @@ async function handleAction(db, action, params) {
         ORDER BY date DESC
       `).bind(empId, startDateStr, endDateStr).all().catch(() => ({ results: [] }));
 
-      // 2. Leave requests overlapping cycle range
-      const leaves = await db.prepare(`
-        SELECT * FROM leave_requests 
-        WHERE emp_id = ? AND (
-          (start_date >= ? AND start_date <= ?) OR 
-          (end_date >= ? AND end_date <= ?) OR 
-          (start_date <= ? AND end_date >= ?)
-        )
-        ORDER BY start_date DESC
-      `).bind(empId, startDateStr, endDateStr, startDateStr, endDateStr, startDateStr, endDateStr).all().catch(() => ({ results: [] }));
+      // 2. Leave requests overlapping cycle range, plus pending or upcoming future leaves when viewing current/future period
+      const curMonth = today.substring(0, 7);
+      const isCurrentOrFuture = (month >= curMonth);
+
+      let leavesQuery;
+      if (isCurrentOrFuture) {
+        leavesQuery = db.prepare(`
+          SELECT * FROM leave_requests 
+          WHERE emp_id = ? AND (
+            (start_date >= ? AND start_date <= ?) OR 
+            (end_date >= ? AND end_date <= ?) OR 
+            (start_date <= ? AND end_date >= ?) OR
+            status = 'PENDING' OR
+            start_date >= ?
+          )
+          ORDER BY start_date DESC
+        `).bind(empId, startDateStr, endDateStr, startDateStr, endDateStr, startDateStr, endDateStr, today);
+      } else {
+        leavesQuery = db.prepare(`
+          SELECT * FROM leave_requests 
+          WHERE emp_id = ? AND (
+            (start_date >= ? AND start_date <= ?) OR 
+            (end_date >= ? AND end_date <= ?) OR 
+            (start_date <= ? AND end_date >= ?)
+          )
+          ORDER BY start_date DESC
+        `).bind(empId, startDateStr, endDateStr, startDateStr, endDateStr, startDateStr, endDateStr);
+      }
+      const leaves = await leavesQuery.all().catch(() => ({ results: [] }));
 
       // 3. OT requests within cycle range (แสดงเฉพาะคำขอที่พนักงานเป็นผู้ยื่นคำขอเอง ไม่รวมรายการที่ระบบสร้างให้อัตโนมัติหรือ Admin ปรับปรุงเวลา)
-      const ots = await db.prepare(`
-        SELECT * FROM ot_requests 
-        WHERE emp_id = ? AND date >= ? AND date <= ? 
-          AND (COALESCE(reason, '') NOT LIKE '%(Admin ปรับปรุงเวลา)%'
-           AND COALESCE(reason, '') NOT LIKE '%OT งานเสร็จประจำวัน%'
-           AND COALESCE(reason, '') NOT LIKE '%(HR ลงเวลาแทน)%')
-        ORDER BY date DESC
-      `).bind(empId, startDateStr, endDateStr).all().catch(() => ({ results: [] }));
+      let otsQuery;
+      if (isCurrentOrFuture) {
+        otsQuery = db.prepare(`
+          SELECT * FROM ot_requests 
+          WHERE emp_id = ? AND (
+            (date >= ? AND date <= ?) OR
+            status = 'PENDING' OR
+            date >= ?
+          )
+            AND (COALESCE(reason, '') NOT LIKE '%(Admin ปรับปรุงเวลา)%'
+             AND COALESCE(reason, '') NOT LIKE '%OT งานเสร็จประจำวัน%'
+             AND COALESCE(reason, '') NOT LIKE '%(HR ลงเวลาแทน)%')
+          ORDER BY date DESC
+        `).bind(empId, startDateStr, endDateStr, today);
+      } else {
+        otsQuery = db.prepare(`
+          SELECT * FROM ot_requests 
+          WHERE emp_id = ? AND date >= ? AND date <= ? 
+            AND (COALESCE(reason, '') NOT LIKE '%(Admin ปรับปรุงเวลา)%'
+             AND COALESCE(reason, '') NOT LIKE '%OT งานเสร็จประจำวัน%'
+             AND COALESCE(reason, '') NOT LIKE '%(HR ลงเวลาแทน)%')
+          ORDER BY date DESC
+        `).bind(empId, startDateStr, endDateStr);
+      }
+      const ots = await otsQuery.all().catch(() => ({ results: [] }));
 
-      // 4. Advance requests within cycle range (or matching period)
-      const advances = await db.prepare(`
-        SELECT * FROM advance_requests 
-        WHERE emp_id = ? AND (
-          (request_date >= ? AND request_date <= ?) OR period = ?
-        )
-        ORDER BY request_date DESC
-      `).bind(empId, startDateStr, endDateStr, month).all().catch(() => ({ results: [] }));
+      // 4. Advance requests within cycle range (or matching period), plus pending
+      let advancesQuery;
+      if (isCurrentOrFuture) {
+        advancesQuery = db.prepare(`
+          SELECT * FROM advance_requests 
+          WHERE emp_id = ? AND (
+            (request_date >= ? AND request_date <= ?) OR period = ? OR status = 'PENDING'
+          )
+          ORDER BY request_date DESC
+        `).bind(empId, startDateStr, endDateStr, month);
+      } else {
+        advancesQuery = db.prepare(`
+          SELECT * FROM advance_requests 
+          WHERE emp_id = ? AND (
+            (request_date >= ? AND request_date <= ?) OR period = ?
+          )
+          ORDER BY request_date DESC
+        `).bind(empId, startDateStr, endDateStr, month);
+      }
+      const advances = await advancesQuery.all().catch(() => ({ results: [] }));
 
       let totalWorkDays = 0;
       let totalLateMinutes = 0;
@@ -2194,8 +2242,8 @@ async function handleAction(db, action, params) {
           totalLateMinutes,
           totalWorkHours: Math.round(totalWorkHours * 10) / 10,
           totalOtHours: Math.round(totalOtHours * 10) / 10,
-          totalLeaves: (leaves.results || []).filter(lv => lv.status === 'APPROVED').length,
-          totalAdvances: (advances.results || []).filter(ad => ad.status === 'APPROVED').reduce((sum, a) => sum + (a.amount || 0), 0)
+          totalLeaves: (leaves.results || []).filter(lv => lv.status === 'APPROVED' && (lv.start_date <= endDateStr && lv.end_date >= startDateStr)).length,
+          totalAdvances: (advances.results || []).filter(ad => ad.status === 'APPROVED' && ((ad.request_date >= startDateStr && ad.request_date <= endDateStr) || ad.period === month)).reduce((sum, a) => sum + (a.amount || 0), 0)
         },
         logs: logs.results || [],
         holidays: holidays.results || [],

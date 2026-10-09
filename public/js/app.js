@@ -4731,6 +4731,8 @@ async function loadMyRequests() {
       leaves.forEach(lv => {
         const badgeColor = lv.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (lv.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-900 border-amber-200');
         const badgeText = lv.status === 'APPROVED' ? '✓ อนุมัติแล้ว' : (lv.status === 'REJECTED' ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
+        const isFuture = data.endDate && (lv.start_date > data.endDate);
+        const futureBadge = isFuture ? '<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">ลางานล่วงหน้า</span>' : '';
         const cancelBtn = lv.status === 'PENDING' ? `
           <button onclick="cancelMyRequest('leave', ${lv.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-1 transition">
             <i class="fa-solid fa-trash-can text-[11px]"></i> ยกเลิกคำขอ
@@ -4739,7 +4741,10 @@ async function loadMyRequests() {
         html += `
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
-              <span class="font-extrabold text-slate-800 text-sm">🏖️ ขอลางาน: ${LEAVE_TYPE_LABELS[lv.leave_type] || lv.leave_type}</span>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-extrabold text-slate-800 text-sm">🏖️ ขอลางาน: ${LEAVE_TYPE_LABELS[lv.leave_type] || lv.leave_type}</span>
+                ${futureBadge}
+              </div>
               <div class="flex items-center gap-1.5">
                 <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
                 ${cancelBtn}
@@ -4754,6 +4759,8 @@ async function loadMyRequests() {
       ots.forEach(ot => {
         const badgeColor = ot.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (ot.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-100 text-amber-900 border-amber-200');
         const badgeText = ot.status === 'APPROVED' ? '✓ อนุมัติแล้ว' : (ot.status === 'REJECTED' ? '✕ ไม่อนุมัติ' : '⏳ รออนุมัติ');
+        const isFutureOt = data.endDate && ((ot.date || ot.ot_date) > data.endDate);
+        const futureOtBadge = isFutureOt ? '<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">ล่วงหน้า</span>' : '';
         const cancelBtn = ot.status === 'PENDING' ? `
           <button onclick="cancelMyRequest('ot', ${ot.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-1 transition">
             <i class="fa-solid fa-trash-can text-[11px]"></i> ยกเลิกคำขอ
@@ -4762,13 +4769,16 @@ async function loadMyRequests() {
         html += `
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between">
-              <span class="font-extrabold text-slate-800 text-sm">⏱️ ขอทำ OT (${ot.ot_type}x)</span>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-extrabold text-slate-800 text-sm">⏱️ ขอทำ OT (${ot.ot_type}x)</span>
+                ${futureOtBadge}
+              </div>
               <div class="flex items-center gap-1.5">
                 <span class="px-2.5 py-1 rounded-xl text-xs font-bold border ${badgeColor}">${badgeText}</span>
                 ${cancelBtn}
               </div>
             </div>
-            <div class="text-slate-600 text-xs font-medium">วันที่: ${formatDateThaiBE(ot.date)} — ขอ: ${ot.planned_hours} ชม. (จริง: ${ot.actual_hours || 0} ชม.)</div>
+            <div class="text-slate-600 text-xs font-medium">วันที่: ${formatDateThaiBE(ot.date || ot.ot_date)} — ขอ: ${ot.planned_hours} ชม. (จริง: ${ot.actual_hours || 0} ชม.)</div>
             ${ot.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${ot.reason}</div>` : ''}
           </div>
         `;
@@ -6027,21 +6037,30 @@ function checkRequestStatusChanges(leaves = [], ots = [], advances = []) {
 
   const newStatuses = {};
 
+  // Helper: Only trigger alerts for updates that occurred recently (within 24 hours)
+  const isRecentUpdate = (item) => {
+    const timeStr = item.approved_at || item.updated_at || item.created_at;
+    if (!timeStr) return false;
+    const ts = new Date(String(timeStr).replace(' ', 'T')).getTime();
+    if (isNaN(ts)) return false;
+    return (Date.now() - ts) < (24 * 3600 * 1000);
+  };
+
   // Check OT
   ots.forEach(ot => {
     const id = 'ot_' + ot.id;
     newStatuses[id] = ot.status;
-    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && ot.status !== 'PENDING') {
+    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && ot.status !== 'PENDING' && isRecentUpdate(ot)) {
       if (ot.status === 'APPROVED') {
         sendPushOrLocalNotification(
           '✅ คำขอ OT ได้รับการอนุมัติแล้ว',
-          `คำขอ OT วันที่ ${ot.ot_date} (${ot.ot_hours} ชม.) ได้รับการอนุมัติเข้างวดแล้ว`,
+          `คำขอ OT วันที่ ${ot.date || ot.ot_date} (${ot.planned_hours || ot.ot_hours} ชม.) ได้รับการอนุมัติเข้างวดแล้ว`,
           'ot_approved'
         );
       } else if (ot.status === 'REJECTED') {
         sendPushOrLocalNotification(
           '❌ คำขอ OT ไม่ได้รับการอนุมัติ',
-          `คำขอ OT วันที่ ${ot.ot_date} ถูกปฏิเสธ`,
+          `คำขอ OT วันที่ ${ot.date || ot.ot_date} ถูกปฏิเสธ`,
           'ot_rejected'
         );
       }
@@ -6052,7 +6071,7 @@ function checkRequestStatusChanges(leaves = [], ots = [], advances = []) {
   leaves.forEach(lv => {
     const id = 'lv_' + lv.id;
     newStatuses[id] = lv.status;
-    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && lv.status !== 'PENDING') {
+    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && lv.status !== 'PENDING' && isRecentUpdate(lv)) {
       if (lv.status === 'APPROVED') {
         sendPushOrLocalNotification(
           '✅ คำขอลางานได้รับการอนุมัติแล้ว',
@@ -6073,7 +6092,7 @@ function checkRequestStatusChanges(leaves = [], ots = [], advances = []) {
   advances.forEach(ad => {
     const id = 'ad_' + ad.id;
     newStatuses[id] = ad.status;
-    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && ad.status !== 'PENDING') {
+    if (prevStatuses[id] && prevStatuses[id] === 'PENDING' && ad.status !== 'PENDING' && isRecentUpdate(ad)) {
       if (ad.status === 'APPROVED') {
         sendPushOrLocalNotification(
           '💵 คำขอเบิกเงินล่วงหน้าอนุมัติแล้ว',
