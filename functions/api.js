@@ -2267,7 +2267,7 @@ async function handleAction(db, action, params) {
       `).bind(date).all().catch(() => ({ results: [] }));
 
       const pendingLeaves = await db.prepare(`
-        SELECT l.*, e.full_name, e.department 
+        SELECT l.*, e.full_name, e.nickname, e.department 
         FROM leave_requests l
         LEFT JOIN employees e ON l.emp_id = e.emp_id
         WHERE l.status = 'PENDING'
@@ -2275,7 +2275,7 @@ async function handleAction(db, action, params) {
       `).all().catch(() => ({ results: [] }));
 
       const pendingOts = await db.prepare(`
-        SELECT o.*, e.full_name, e.department 
+        SELECT o.*, e.full_name, e.nickname, e.department 
         FROM ot_requests o
         LEFT JOIN employees e ON o.emp_id = e.emp_id
         WHERE o.status = 'PENDING'
@@ -2283,7 +2283,7 @@ async function handleAction(db, action, params) {
       `).all().catch(() => ({ results: [] }));
 
       const pendingAdvances = await db.prepare(`
-        SELECT a.*, e.full_name, e.department 
+        SELECT a.*, e.full_name, e.nickname, e.department 
         FROM advance_requests a
         LEFT JOIN employees e ON a.emp_id = e.emp_id
         WHERE a.status = 'PENDING'
