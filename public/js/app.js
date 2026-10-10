@@ -4036,6 +4036,13 @@ async function loadEmployeeHistory() {
       const logs = data.logs || [];
       const logDates = new Set(logs.map(l => l.date));
 
+      let todayStr = '';
+      try {
+        todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+      } catch (e) {
+        todayStr = new Date(Date.now() + 7 * 3600 * 1000).toISOString().substring(0, 10);
+      }
+
       // Build leave map by date and collect standalone leaves (days without punch)
       const leaveMap = {}; // dateStr -> array of { leave, rawLeaveIndex }
       const standaloneLeaveDates = new Map(); // dateStr -> { leave, rawLeaveIndex }
@@ -4176,12 +4183,17 @@ async function loadEmployeeHistory() {
           const idx = item.rawIndex;
           const isLate = (l.late_minutes || 0) > 0;
           const isBranchEarly = (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
+          const isMissingClockOut = Boolean(
+            l.clock_in && 
+            (!l.clock_out || String(l.clock_out).trim() === '' || l.clock_out === '--' || l.status === 'INCOMPLETE') && 
+            (l.date < todayStr)
+          );
           const hOnLog = holidayMap[l.date];
           const leavesOnDate = leaveMap[l.date] || [];
           const primaryLeaveItem = leavesOnDate.length > 0 ? leavesOnDate[0].leave : null;
 
           html += `
-            <div onclick="openHistoryDetailModal(${idx})" class="bg-white p-3.5 sm:p-4 rounded-2xl border ${hOnLog ? 'border-purple-300 bg-purple-50/20' : (primaryLeaveItem ? 'border-sky-300 bg-sky-50/20' : 'border-slate-200')} hover:border-sky-300 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center justify-between group">
+            <div onclick="openHistoryDetailModal(${idx})" class="bg-white p-3.5 sm:p-4 rounded-2xl border ${isMissingClockOut ? 'border-rose-300 bg-rose-50/20' : (hOnLog ? 'border-purple-300 bg-purple-50/20' : (primaryLeaveItem ? 'border-sky-300 bg-sky-50/20' : 'border-slate-200'))} hover:border-sky-300 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center justify-between group">
               <div class="flex items-center space-x-3">
                 <div class="flex items-center -space-x-2 flex-shrink-0">
                   ${l.in_photo_url ? `
@@ -4208,19 +4220,22 @@ async function loadEmployeeHistory() {
                   </div>
                   <div class="flex items-center space-x-2 text-xs sm:text-sm text-slate-600">
                     <span>เข้า: <b class="text-emerald-700 font-bold">${l.clock_in || '--'}</b></span>
-                    <span>ออก: <b class="text-rose-700 font-bold">${l.clock_out || '--'}</b></span>
+                    <span>ออก: <b class="${isMissingClockOut ? 'text-rose-600 font-extrabold' : 'text-rose-700 font-bold'}">${l.clock_out || (isMissingClockOut ? 'ไม่ลงเวลา' : '--')}</b></span>
                     <span>(ปกติ ${l.work_hours || 0} ชม. ${l.ot_hours > 0 ? '+ OT ' + l.ot_hours + ' ชม.' : ''})</span>
                   </div>
                 </div>
               </div>
               <div class="text-right flex-shrink-0 pl-2">
-                ${hOnLog
-                  ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-900 border border-purple-300 shadow-sm">⭐ ทำงานวันหยุด</span>`
-                  : isBranchEarly
-                    ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">✨ งานเสร็จ (เต็มวัน)</span>`
-                    : isLate 
-                      ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-sm">สาย ${l.late_minutes} น.</span>`
-                      : `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">ปกติ</span>`
+                ${isMissingClockOut
+                  ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-rose-100 text-rose-800 border border-rose-300 shadow-sm">🔴 ขาดลงเวลาออก</span>`
+                  : (hOnLog
+                    ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-900 border border-purple-300 shadow-sm">⭐ ทำงานวันหยุด</span>`
+                    : isBranchEarly
+                      ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">✨ งานเสร็จ (เต็มวัน)</span>`
+                      : isLate 
+                        ? `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-sm">สาย ${l.late_minutes} น.</span>`
+                        : `<span class="px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">ปกติ</span>`
+                  )
                 }
                 <div class="text-[11px] sm:text-xs text-slate-400 mt-1 flex items-center justify-end gap-1 font-medium group-hover:text-sky-600 transition">
                   <span>แตะดู</span> <i class="fa-solid fa-chevron-right text-[9px]"></i>
@@ -4245,12 +4260,27 @@ function openHistoryDetailModal(idx) {
   var l = logs[idx];
   if (!l) return;
 
+  var todayStr = '';
+  try {
+    todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+  } catch (e) {
+    todayStr = new Date(Date.now() + 7 * 3600 * 1000).toISOString().substring(0, 10);
+  }
+
   var isBranchEarly = (l.remark && l.remark.includes('งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน'));
   var isLate = (l.late_minutes || 0) > 0;
+  var isMissingClockOut = Boolean(
+    l.clock_in && 
+    (!l.clock_out || String(l.clock_out).trim() === '' || l.clock_out === '--' || l.status === 'INCOMPLETE') && 
+    (l.date < todayStr)
+  );
 
   var badgeEl = document.getElementById('hModalBadge');
   if (badgeEl) {
-    if (isBranchEarly) {
+    if (isMissingClockOut) {
+      badgeEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-rose-100 text-rose-800 border border-rose-300';
+      badgeEl.textContent = '🔴 ขาดลงเวลาออกงาน (ไม่สแกนออก)';
+    } else if (isBranchEarly) {
       badgeEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm font-extrabold bg-purple-100 text-purple-800 border border-purple-300';
       badgeEl.textContent = '✨ งานเสร็จ (จ่ายเต็มวัน)';
     } else if (isLate) {
@@ -4325,13 +4355,14 @@ function openHistoryDetailModal(idx) {
   var pOutTime = document.getElementById('hModalPhotoOutTime');
   var pOutBadge = document.getElementById('hModalPhotoOutBadge');
   if (pOutTime) pOutTime.textContent = l.clock_out ? l.clock_out.substring(0, 5) : '--:--';
-  if (pOutBadge) pOutBadge.textContent = isBranchEarly ? '④ งานเสร็จ' : '④ เลิกงาน';
+  if (pOutBadge) pOutBadge.textContent = isBranchEarly ? '④ งานเสร็จ' : (isMissingClockOut ? '④ ขาดสแกนออก' : '④ เลิกงาน');
   if (pOutCont) {
     if (l.out_photo_url) {
       pOutCont.innerHTML = '<img src="' + l.out_photo_url + '" class="w-full h-full object-cover group-hover:scale-105 transition" alt="รูปออกงาน">';
       pOutCont.onclick = function() { previewCertPhoto(l.out_photo_url, 'รูปถ่ายเซลฟี่ตอนออกงาน ' + formatDateThaiBE(l.date) + ' (' + (l.clock_out || '') + ')'); };
     } else {
-      pOutCont.innerHTML = '<span class="text-[11px] text-slate-400 font-medium">' + (l.clock_out ? 'ไม่มีรูป' : 'ยังไม่ลงเวลา') + '</span>';
+      var photoText = l.clock_out ? 'ไม่มีรูป' : (isMissingClockOut ? 'ขาดลงเวลาออก' : 'ยังไม่ลงเวลา');
+      pOutCont.innerHTML = '<span class="text-[11px] ' + (isMissingClockOut ? 'text-rose-600 font-bold' : 'text-slate-400 font-medium') + '">' + photoText + '</span>';
       pOutCont.onclick = null;
     }
   }
@@ -4355,7 +4386,13 @@ function openHistoryDetailModal(idx) {
 
   var clockOutEl = document.getElementById('hModalClockOut');
   if (clockOutEl) {
-    clockOutEl.innerHTML = l.clock_out ? (l.clock_out + (isBranchEarly ? ' <span class="text-xs sm:text-sm font-bold text-purple-700">(งานเสร็จก่อนเวลา)</span>' : '')) : '<span class="text-slate-400 font-normal">ยังไม่ได้ลงเวลาออก</span>';
+    if (l.clock_out) {
+      clockOutEl.innerHTML = l.clock_out + (isBranchEarly ? ' <span class="text-xs sm:text-sm font-bold text-purple-700">(งานเสร็จก่อนเวลา)</span>' : '');
+    } else if (isMissingClockOut) {
+      clockOutEl.innerHTML = '<span class="text-rose-600 font-bold">ไม่ได้ลงเวลาออกงาน (ขาดสแกนออก)</span>';
+    } else {
+      clockOutEl.innerHTML = '<span class="text-slate-400 font-normal">ยังไม่ได้ลงเวลาออก</span>';
+    }
   }
 
   var hoursEl = document.getElementById('hModalHours');
@@ -4388,7 +4425,12 @@ function openHistoryDetailModal(idx) {
   var wageTitle = document.getElementById('hModalWageTitle');
   var wageDesc = document.getElementById('hModalWageDesc');
   if (wageBox && wageTitle && wageDesc) {
-    if (isBranchEarly) {
+    if (isMissingClockOut) {
+      wageBox.className = 'border rounded-2xl p-3.5 space-y-1.5 bg-gradient-to-r from-rose-50 to-red-50 border-rose-200 text-rose-900';
+      wageTitle.innerHTML = '🔴 การคิดค่าจ้างของวันนี้: ขาดลงเวลาออกงาน';
+      var lateNote = isLate ? (' (มาสาย ' + l.late_minutes + ' นาที)') : '';
+      wageDesc.innerHTML = 'พบการลงเวลาเข้างาน' + lateNote + ' แต่ไม่มีบันทึกเวลาเลิกงาน ระบบจึงไม่สามารถคำนวณชั่วโมงทำงานได้ กรุณาติดต่อหัวหน้างานหรือฝ่ายบุคคลเพื่อตรวจสอบ/แก้ไขเวลาให้ถูกต้อง';
+    } else if (isBranchEarly) {
       wageBox.className = 'border rounded-2xl p-3.5 space-y-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-900';
       wageTitle.innerHTML = '✨ การคิดค่าจ้างของวันนี้: ได้รับค่าแรงเต็มวัน 100%';
       wageDesc.innerHTML = 'ระบบยกเว้นการหักเงินชั่วโมงขาดให้อัตโนมัติ เนื่องจากสาขาเปิด <strong>โหมดงานเสร็จ-เลิกงานก่อน</strong>';
