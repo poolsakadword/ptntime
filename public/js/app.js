@@ -323,6 +323,26 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Set default month for history
   const today = new Date().toISOString().substring(0, 10);
+
+  // Setup Direct Login Enter key bindings
+  const loginEmpInput = document.getElementById('directLoginEmpId');
+  const loginPinInput = document.getElementById('directLoginPin');
+  if (loginEmpInput) {
+    loginEmpInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (loginPinInput) loginPinInput.focus();
+      }
+    });
+  }
+  if (loginPinInput) {
+    loginPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmEmployeeLogin();
+      }
+    });
+  }
   const curMonth = today.substring(0, 7);
   const histPicker = document.getElementById('historyMonthPicker');
   if (histPicker) histPicker.value = curMonth;
@@ -362,7 +382,8 @@ function initLiveClock() {
 // ==============================================================================
 async function loadInitialData() {
   try {
-    const res = await fetch(API_URL + '?action=getInitialData');
+    const empParam = (currentEmployee && currentEmployee.empId) ? ('&empId=' + encodeURIComponent(currentEmployee.empId)) : '';
+    const res = await fetch(API_URL + '?action=getInitialData' + empParam);
     const data = await res.json();
     if (data.success) {
       if (data.settings) {
@@ -902,13 +923,16 @@ async function restoreSavedEmployee() {
             isDeviceLocked = false;
           }
 
+          if (data.employee) {
+            currentEmployee = { ...currentEmployee, ...data.employee };
+          }
           if (data.branchId) {
             currentEmployee.branchId = data.branchId;
             currentEmployee.allowAllBranches = data.allowAllBranches;
-            try {
-              localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
-            } catch(e) {}
           }
+          try {
+            localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
+          } catch(e) {}
         }
       } catch(err) {
         // Offline or fallback, retain lock
@@ -1439,30 +1463,24 @@ function handleHeaderEmployeeCardClick() {
 }
 
 function openEmployeePickerModal() {
-  document.getElementById('modalEmployeePicker')?.classList.remove('hidden');
+  const modal = document.getElementById('modalEmployeePicker');
+  if (modal) modal.classList.remove('hidden');
 
-  // Pre-select current employee if available
-  if (currentEmployee && currentEmployee.empId) {
-    selectedPickerEmpId = currentEmployee.empId;
+  const empInput = document.getElementById('directLoginEmpId');
+  const pinInput = document.getElementById('directLoginPin');
+  if (empInput) {
+    if (currentEmployee && currentEmployee.empId) {
+      empInput.value = currentEmployee.empId;
+      if (pinInput) {
+        pinInput.value = '';
+        setTimeout(() => pinInput.focus(), 200);
+      }
+    } else {
+      empInput.value = '';
+      if (pinInput) pinInput.value = '';
+      setTimeout(() => empInput.focus(), 200);
+    }
   }
-
-  // Clear search on open
-  const searchInput = document.getElementById('empSearchInput');
-  if (searchInput) {
-    searchInput.value = '';
-    document.getElementById('btnClearEmpSearch')?.classList.add('hidden');
-  }
-
-  renderEmployeeCards('');
-
-  if (selectedPickerEmpId) {
-    selectEmployeeCard(selectedPickerEmpId);
-  } else {
-    resetSelectedEmployee();
-  }
-
-  // Sync latest employees from D1 in real-time
-  loadInitialData();
 }
 
 function closeEmployeePickerModal() {
@@ -1471,35 +1489,55 @@ function closeEmployeePickerModal() {
 
 function onSelectEmployeeDropdown(val) {
   if (val) {
-    selectEmployeeCard(val);
-  } else {
-    resetSelectedEmployee();
+    const empInput = document.getElementById('directLoginEmpId');
+    if (empInput) empInput.value = val;
   }
 }
 
 async function confirmEmployeeLogin() {
-  const sel = document.getElementById('empSelectDropdown');
-  const pinInput = document.getElementById('empPinInput');
-  const empId = sel?.value || selectedPickerEmpId;
+  const empInput = document.getElementById('directLoginEmpId') || document.getElementById('empSelectDropdown');
+  const pinInput = document.getElementById('directLoginPin') || document.getElementById('empPinInput');
+  const rawEmpId = (empInput ? empInput.value : '').trim();
+  const empId = rawEmpId.toUpperCase();
   const pin = pinInput ? pinInput.value.trim() : '';
   const deviceId = getOrCreateDeviceId();
 
   if (!empId) {
-    Swal.fire('กรุณาเลือกพนักงาน', '', 'warning');
+    Swal.fire({
+      icon: 'warning',
+      title: 'กรุณากรอกรหัสพนักงาน',
+      text: 'ระบุรหัสพนักงานของท่าน (เช่น EMP001 หรือ EMP042) หรือเบอร์โทรศัพท์ที่แจ้งไว้'
+    });
+    if (empInput) empInput.focus();
     return;
   }
 
   if (!pin) {
-    Swal.fire('กรุณากรอกรหัสยืนยันตัวตน', 'ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์', 'warning');
+    Swal.fire({
+      icon: 'warning',
+      title: 'กรุณากรอกรหัสยืนยันตัวตน',
+      text: 'ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์'
+    });
+    if (pinInput) pinInput.focus();
     return;
   }
 
   if (pin === '1234') {
-    Swal.fire('รหัสไม่ถูกต้อง', 'รหัส 1234 ถูกยกเลิกแล้ว กรุณากรอกเลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์', 'error');
+    Swal.fire({
+      icon: 'error',
+      title: 'รหัส 1234 ถูกยกเลิกแล้ว',
+      text: 'กรุณากรอกเลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์ของท่าน'
+    });
+    if (pinInput) pinInput.focus();
     return;
   }
 
-  Swal.fire({ title: 'กำลังยืนยันตัวตน...', didOpen: () => Swal.showLoading() });
+  Swal.fire({ 
+    title: 'กำลังยืนยันตัวตน...', 
+    text: 'กำลังตรวจสอบข้อมูลและผูกอุปกรณ์',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading() 
+  });
 
   try {
     // 1. Employee Login verification
@@ -1514,7 +1552,11 @@ async function confirmEmployeeLogin() {
     });
     const data = await res.json();
     if (!data.success) {
-      Swal.fire('เข้าใช้งานไม่สำเร็จ', data.message || 'รหัสยืนยันไม่ถูกต้อง', 'error');
+      Swal.fire({
+        icon: 'error',
+        title: 'เข้าใช้งานไม่สำเร็จ',
+        text: data.message || 'รหัสพนักงานหรือรหัสยืนยันไม่ถูกต้อง'
+      });
       return;
     }
 
@@ -1524,7 +1566,7 @@ async function confirmEmployeeLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'bindDevice',
-        empId,
+        empId: data.employee.empId,
         deviceId,
         deviceName: navigator.userAgent.indexOf('iPhone') !== -1 ? 'iPhone' : (navigator.userAgent.indexOf('Android') !== -1 ? 'Android' : 'Web Browser')
       })
@@ -1558,26 +1600,20 @@ async function confirmEmployeeLogin() {
     // Recalculate GPS location for this employee's branch
     getCurrentLocation(true, false);
 
+    const nickStr = currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '';
     Swal.fire({
       icon: 'success',
       title: `ผูกอุปกรณ์สำเร็จ!`,
-      text: `${currentEmployee.fullName} (${currentEmployee.empId}) ระบบได้ล็อกเครื่องนี้ไว้กับคุณเรียบร้อยแล้ว`,
-      timer: 2000,
+      text: `ยินดีต้อนรับคุณ ${currentEmployee.fullName}${nickStr} [${currentEmployee.empId}] ระบบได้ล็อกเครื่องนี้ไว้กับคุณเรียบร้อยแล้ว`,
+      timer: 2400,
       showConfirmButton: false
     });
   } catch(e) {
-    const found = employeeList.find(x => x.empId === empId);
-    if (found) {
-      currentEmployee = found;
-      isDeviceLocked = true;
-      localStorage.setItem('ptn_time_emp', JSON.stringify(currentEmployee));
-      updateHeaderEmployeeView();
-      closeEmployeePickerModal();
-      loadTodayStatus();
-      loadAdvanceEligibility();
-      getCurrentLocation(true, false);
-      syncWebPushSubscriptionWithEmployee(currentEmployee.empId);
-    }
+    Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
+      text: e.message || 'กรุณาลองใหม่อีกครั้ง'
+    });
   }
 }
 

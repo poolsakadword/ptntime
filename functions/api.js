@@ -866,44 +866,38 @@ async function handleAction(db, action, params) {
 
   switch (action) {
     case 'getInitialData': {
-      let empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => null);
-      if (!empRows) {
-        await db.prepare("ALTER TABLE employees ADD COLUMN is_ot_eligible TEXT DEFAULT 'true'").run().catch(() => {});
-        await db.prepare("ALTER TABLE employees ADD COLUMN birth_date TEXT").run().catch(() => {});
-        empRows = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, citizen_id, status, photo_url, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE status != 'Resigned' ORDER BY emp_id ASC").all().catch(() => ({ results: [] }));
-      }
-      const branchRows = await db.prepare("SELECT * FROM branches ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
-      const deviceRows = await db.prepare('SELECT emp_id, device_id, device_name, bound_at FROM employee_devices').all().catch(() => ({ results: [] }));
-      const deviceMap = {};
-      for (const d of deviceRows.results || []) {
-        deviceMap[d.emp_id] = {
-          deviceId: d.device_id,
-          deviceName: d.device_name,
-          boundAt: d.bound_at,
-          updatedAt: d.bound_at
-        };
+      const targetEmpId = params.empId ? String(params.empId).trim() : '';
+      let employees = [];
+
+      if (targetEmpId) {
+        const empRow = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, status, photo_url, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE UPPER(emp_id) = UPPER(?) AND status != 'Resigned'").bind(targetEmpId).first().catch(() => null);
+        if (empRow) {
+          const devRow = await db.prepare('SELECT emp_id, device_id, device_name, bound_at FROM employee_devices WHERE UPPER(emp_id) = UPPER(?)').bind(targetEmpId).first().catch(() => null);
+          employees = [{
+            empId: empRow.emp_id,
+            fullName: empRow.full_name || '',
+            nickname: empRow.nickname || '',
+            photoUrl: empRow.photo_url || '',
+            department: empRow.department || '-',
+            position: empRow.position || '-',
+            phone: empRow.phone || '',
+            branchId: empRow.branch_id || 'B01',
+            allowAllBranches: (empRow.allow_all_branches === 'true' || empRow.allow_all_branches === true),
+            isOtEligible: !(empRow.is_ot_eligible === 'false' || empRow.is_ot_eligible === false),
+            status: empRow.status || 'Active',
+            birthDate: empRow.birth_date || '',
+            boundDevice: devRow ? {
+              deviceId: devRow.device_id,
+              deviceName: devRow.device_name,
+              boundAt: devRow.bound_at,
+              updatedAt: devRow.bound_at
+            } : null
+          }];
+        }
       }
 
-      const employees = (empRows.results || []).map(e => ({
-        empId: e.emp_id,
-        fullName: e.full_name || '',
-        nickname: e.nickname || '',
-        photoUrl: e.photo_url || '',
-        department: e.department || '-',
-        position: e.position || '-',
-        phone: e.phone || '',
-        branchId: e.branch_id || 'B01',
-        allowAllBranches: (e.allow_all_branches === 'true' || e.allow_all_branches === true),
-        isOtEligible: !(e.is_ot_eligible === 'false' || e.is_ot_eligible === false),
-        status: e.status || 'Active',
-        birthDate: e.birth_date || '',
-        last4Citizen: (e.citizen_id || '').slice(-4),
-        boundDevice: deviceMap[e.emp_id] || null
-      })).sort((a, b) => {
-        const numA = parseInt(String(a.empId).replace(/[^0-9]/g, ''), 10) || 0;
-        const numB = parseInt(String(b.empId).replace(/[^0-9]/g, ''), 10) || 0;
-        return numA - numB;
-      });
+      const branchRows = await db.prepare("SELECT * FROM branches ORDER BY branch_id ASC").all().catch(() => ({ results: [] }));
+      const deviceRows = targetEmpId ? (await db.prepare('SELECT emp_id, device_id, device_name, bound_at FROM employee_devices WHERE UPPER(emp_id) = UPPER(?)').bind(targetEmpId).all().catch(() => ({ results: [] }))) : { results: [] };
 
       const dynamicToken = await getDynamicQrToken(0);
       const secondsLeft = 20 - (Math.floor(Date.now() / 1000) % 20);
@@ -1076,13 +1070,20 @@ async function handleAction(db, action, params) {
 
     // 3. Employee Login / Quick Auth
     case 'employeeLogin': {
-      const empId = String(params.empId || '').trim();
+      const rawInput = String(params.empId || '').trim();
       const pinOrPhone = String(params.pin || params.phone || '').trim();
 
-      if (!empId) return { success: false, message: 'กรุณากรอกรหัสพนักงาน' };
+      if (!rawInput) return { success: false, message: 'กรุณากรอกรหัสพนักงาน หรือเบอร์โทรศัพท์' };
 
-      const emp = await db.prepare('SELECT * FROM employees WHERE emp_id = ?').bind(empId).first();
-      if (!emp) return { success: false, message: 'ไม่พบรหัสพนักงานนี้ในระบบ' };
+      let emp = await db.prepare('SELECT * FROM employees WHERE UPPER(emp_id) = UPPER(?)').bind(rawInput).first();
+      if (!emp) {
+        // Fallback: check if user typed phone number in employee ID input
+        const cleanPhone = rawInput.replace(/[^0-9]/g, '');
+        if (cleanPhone.length >= 9) {
+          emp = await db.prepare('SELECT * FROM employees WHERE REPLACE(REPLACE(phone, "-", ""), " ", "") = ?').bind(cleanPhone).first();
+        }
+      }
+      if (!emp) return { success: false, message: 'ไม่พบรหัสพนักงานหรือเบอร์โทรศัพท์นี้ในระบบ' };
       if (emp.status === 'Resigned') return { success: false, message: 'พนักงานรหัสนี้พ้นสภาพการเป็นพนักงานแล้ว (ลาออก)' };
 
       if (!pinOrPhone) {
@@ -1122,6 +1123,7 @@ async function handleAction(db, action, params) {
           phone: emp.phone,
           branchId: emp.branch_id || 'B01',
           allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true),
+          isOtEligible: !(emp.is_ot_eligible === 'false' || emp.is_ot_eligible === false),
           birthDate: emp.birth_date || ''
         }
       };
@@ -1192,16 +1194,31 @@ async function handleAction(db, action, params) {
       const { empId, deviceId } = params;
       if (!empId) return { success: false, message: 'ระบุ empId' };
 
-      const emp = await db.prepare('SELECT status, branch_id, allow_all_branches FROM employees WHERE emp_id = ?').bind(empId).first();
+      const emp = await db.prepare('SELECT emp_id, full_name, nickname, department, position, phone, photo_url, status, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE UPPER(emp_id) = UPPER(?)').bind(empId).first();
       if (!emp || emp.status === 'Resigned') {
         return { success: true, isBound: false, isResigned: true, message: 'พนักงานพ้นสภาพการเป็นพนักงานแล้ว' };
       }
 
-      const bound = await db.prepare('SELECT * FROM employee_devices WHERE emp_id = ?').bind(empId).first();
+      const empData = {
+        empId: emp.emp_id,
+        fullName: emp.full_name,
+        nickname: emp.nickname || '',
+        photoUrl: emp.photo_url || '',
+        department: emp.department || '-',
+        position: emp.position || '-',
+        phone: emp.phone || '',
+        branchId: emp.branch_id || 'B01',
+        allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true),
+        isOtEligible: !(emp.is_ot_eligible === 'false' || emp.is_ot_eligible === false),
+        birthDate: emp.birth_date || ''
+      };
+
+      const bound = await db.prepare('SELECT * FROM employee_devices WHERE UPPER(emp_id) = UPPER(?)').bind(empId).first();
       if (!bound) {
         return {
           success: true,
           isBound: false,
+          employee: empData,
           branchId: emp.branch_id || 'B01',
           allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true)
         };
@@ -1215,6 +1232,7 @@ async function handleAction(db, action, params) {
         boundAt: bound.bound_at,
         deviceName: bound.device_name,
         deviceId: bound.device_id,
+        employee: empData,
         branchId: emp.branch_id || 'B01',
         allowAllBranches: (emp.allow_all_branches === 'true' || emp.allow_all_branches === true)
       };

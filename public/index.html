@@ -1060,76 +1060,84 @@
       </div>
     </div>
 
-    <!-- EMPLOYEE PICKER MODAL (Upgraded: Searchable & Interactive Card List) -->
+    <!-- EMPLOYEE LOGIN & DEVICE BINDING MODAL (Direct Secure Login - PDPA Compliant) -->
     <div id="modalEmployeePicker" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 md:p-4 hidden backdrop-blur-sm">
-      <div class="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-5 md:p-6 shadow-2xl space-y-3.5 max-h-[92vh] flex flex-col">
+      <div class="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-5 md:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col">
         <!-- Modal Header -->
         <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-shrink-0">
-          <div class="flex items-center gap-2">
-            <span class="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg">👤</span>
+          <div class="flex items-center gap-2.5">
+            <span class="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center text-xl shadow-inner">📱</span>
             <div>
-              <h3 class="text-base md:text-lg font-black text-slate-800">เลือกรหัสพนักงาน</h3>
-              <p class="text-[11px] text-slate-500">แตะเลือกชื่อของคุณ หรือพิมพ์ค้นหา</p>
+              <h3 class="text-base md:text-lg font-black text-slate-800">เข้าใช้งาน PTN Time</h3>
+              <p class="text-[11px] text-slate-500">ระบุรหัสพนักงานเพื่อเริ่มใช้งานบนอุปกรณ์นี้</p>
             </div>
           </div>
-          <button onclick="closeEmployeePickerModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">&times;</button>
-        </div>
-        
-        <!-- Search Input -->
-        <div class="relative flex-shrink-0">
-          <input type="text" id="empSearchInput" placeholder="🔍 ค้นหาชื่อเล่น, ชื่อ-สกุล, หรือรหัส..." oninput="filterEmployeePicker(this.value)" class="w-full pl-9 pr-9 py-2.5 text-xs md:text-sm border border-slate-300 rounded-2xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none font-medium">
-          <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔎</span>
-          <button type="button" onclick="clearEmployeeSearch()" id="btnClearEmpSearch" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center">&times;</button>
+          <button type="button" onclick="closeEmployeePickerModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">&times;</button>
         </div>
 
-        <!-- Hidden Synchronized Select for backward compatibility -->
-        <select id="empSelectDropdown" onchange="onSelectEmployeeDropdown(this.value)" class="hidden">
-          <option value="">-- กรุณาเลือกพนักงาน --</option>
-        </select>
+        <!-- Privacy & PDPA Protection Badge -->
+        <div class="p-3 bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-100 rounded-2xl flex items-start gap-2.5 flex-shrink-0">
+          <span class="text-sky-600 text-base mt-0.5">🛡️</span>
+          <div class="text-[11.5px] text-slate-600 leading-relaxed">
+            <span class="font-bold text-sky-900">คุ้มครองข้อมูลส่วนบุคคล (PDPA):</span>
+            <p class="text-slate-500 mt-0.5">ระบบจะไม่แสดงรายชื่อเพื่อนร่วมงาน กรุณาระบุรหัสพนักงานและรหัสยืนยันตัวตนของท่าน</p>
+          </div>
+        </div>
 
-        <!-- Selected Employee Preview Banner -->
-        <div id="selectedEmpBanner" class="hidden p-2.5 bg-sky-50 border border-sky-200 rounded-2xl flex items-center justify-between flex-shrink-0 animate-fadeIn">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <span id="selectedEmpAvatar" class="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">✓</span>
-            <div class="min-w-0">
-              <div id="selectedEmpName" class="text-xs md:text-sm font-bold text-slate-800 truncate">นาย...</div>
-              <div id="selectedEmpDept" class="text-[11px] text-sky-700 truncate">แผนก...</div>
+        <!-- Direct Login Form -->
+        <div class="space-y-3.5 flex-1">
+          <!-- 1. Employee ID / Phone -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+              <span>รหัสพนักงาน (EMP...) หรือเบอร์โทร *</span>
+              <span class="text-[10.5px] font-normal text-sky-600">เช่น EMP001, EMP042</span>
+            </label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🪪</span>
+              <input type="text" id="directLoginEmpId" placeholder="เช่น EMP001 หรือ 0812345678" autocomplete="username" autocapitalize="characters" class="w-full pl-10 pr-4 py-3 text-sm md:text-base border border-slate-300 rounded-2xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-400 uppercase tracking-wide">
             </div>
           </div>
-          <button type="button" onclick="resetSelectedEmployee()" class="text-[11px] text-sky-600 hover:text-sky-800 font-bold ml-2 underline flex-shrink-0">เปลี่ยน</button>
-        </div>
 
-        <!-- Interactive Scrollable Employee Cards List -->
-        <div id="empCardsScrollArea" class="flex-1 overflow-y-auto space-y-1.5 pr-1 min-h-[160px] max-h-[260px] md:max-h-[300px]">
-          <!-- Loaded dynamically by renderEmployeeCards() -->
-          <div class="py-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-            <span class="animate-spin text-xl">⏳</span>
-            <span>กำลังโหลดรายชื่อพนักงาน...</span>
+          <!-- 2. PIN / Identity Code -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+              <span>รหัสยืนยันตัวตน (PIN) *</span>
+              <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">🔒 ปลอดภัย</span>
+            </label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔑</span>
+              <input type="password" id="directLoginPin" placeholder="4 ตัวท้ายบัตรประชาชน หรือเบอร์โทร" maxlength="15" autocomplete="current-password" class="w-full pl-10 pr-4 py-3 text-sm md:text-base border border-slate-300 rounded-2xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-400 tracking-wider">
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 pl-1">ใช้เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์ที่แจ้งไว้กับบริษัท</p>
           </div>
         </div>
 
-        <!-- PIN Entry Section (Appears when employee is selected) -->
-        <div id="pinEntrySection" class="hidden space-y-2 pt-1 border-t border-slate-100 flex-shrink-0 animate-fadeIn">
-          <div class="flex items-center justify-between">
-            <label class="block text-xs font-bold text-slate-700">รหัสยืนยัน (เลข 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์)</label>
-            <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">🔒 ปลอดภัย</span>
-          </div>
-          <input type="password" id="empPinInput" placeholder="••••" maxlength="15" class="w-full text-center text-2xl tracking-widest font-mono py-2.5 px-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-sky-500 outline-none bg-slate-50">
-          <p class="text-[11px] text-slate-400 text-center">ใช้ 4 ตัวท้ายบัตรประชาชน หรือเบอร์โทรศัพท์ (เต็มเบอร์ หรือ 4 ตัวท้าย)</p>
+        <!-- Hidden elements for backward compatibility -->
+        <select id="empSelectDropdown" class="hidden"><option value="">-- กรุณาเลือกพนักงาน --</option></select>
+        <input type="hidden" id="empSearchInput">
+        <input type="hidden" id="empPinInput">
+        <div id="selectedEmpBanner" class="hidden"></div>
+        <div id="empCardsScrollArea" class="hidden"></div>
+        <div id="pinEntrySection" class="hidden"></div>
+
+        <!-- Action Button -->
+        <div class="space-y-2 pt-2 border-t border-slate-100 flex-shrink-0">
+          <button type="button" onclick="confirmEmployeeLogin()" class="w-full py-3.5 text-sm md:text-base font-black rounded-2xl bg-sky-600 hover:bg-sky-700 text-white shadow-lg shadow-sky-600/25 active:scale-95 transition flex items-center justify-center gap-2">
+            <span>เข้าสู่ระบบ & ผูกอุปกรณ์นี้</span>
+            <span class="text-lg">➔</span>
+          </button>
+          <button type="button" onclick="closeEmployeePickerModal()" class="w-full py-2.5 text-xs font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 active:scale-95 transition">
+            ยกเลิก
+          </button>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex space-x-2.5 pt-1 flex-shrink-0">
-          <button type="button" onclick="closeEmployeePickerModal()" class="flex-1 py-3 text-xs md:text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95 transition">ยกเลิก</button>
-          <button type="button" onclick="confirmEmployeeLogin()" class="flex-1 py-3 text-xs md:text-sm font-black rounded-2xl bg-sky-600 hover:bg-sky-700 text-white shadow-md active:scale-95 transition">ยืนยัน</button>
-        </div>
-
-        <!-- Guide Link -->
-        <div class="text-center pt-0.5 flex-shrink-0">
+        <!-- Guide & Help Links -->
+        <div class="text-center pt-1 flex-shrink-0 space-y-1">
           <a href="/guide.html" class="inline-flex items-center gap-1 text-[11px] text-sky-700 hover:text-sky-900 font-medium">
             <span>📖</span>
             <span>คู่มือวิธีติดตั้งแอปลงมือถือ (iOS & Android)</span>
           </a>
+          <p class="text-[10px] text-slate-400">หากจำรหัสพนักงานไม่ได้หรือต้องการย้ายเครื่อง กรุณาติดต่อหัวหน้างาน</p>
         </div>
       </div>
     </div>
@@ -1778,6 +1786,6 @@
   </div>
 
   <!-- Main JavaScript -->
-  <script src="js/app.js?v=11.2"></script>
+  <script src="js/app.js?v=11.3"></script>
 </body>
 </html>
