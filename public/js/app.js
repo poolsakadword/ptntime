@@ -6803,6 +6803,443 @@ async function savePayslipAsImage() {
   }
 }
 
+// ==============================================================================
+// SAVE TIME CARD AS IMAGE (PNG) USING HTML2CANVAS
+// ==============================================================================
+async function downloadEmployeeTimeCardImage() {
+  if (!currentEmployee) {
+    Swal.fire('กรุณาเข้าสู่ระบบ', 'กรุณาระบุตัวตนพนักงานก่อนดาวน์โหลดบัตรตอก', 'warning');
+    return;
+  }
+
+  const month = document.getElementById('historyMonthPicker')?.value || new Date().toISOString().substring(0, 7);
+
+  Swal.fire({
+    title: 'กำลังสร้างรูปภาพบัตรตอก...',
+    html: '<div class="text-xs text-slate-500 mt-2">กำลังรวบรวมข้อมูลเวลาทำงานและประมวลผลเป็นรูปภาพความละเอียดสูง</div>',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  let wrapper = null;
+
+  try {
+    // 1. Fetch employee history data for selected month
+    const res = await fetch(`${API_URL}?action=getEmployeeHistory&empId=${encodeURIComponent(currentEmployee.empId)}&month=${encodeURIComponent(month)}`);
+    const data = await res.json();
+    if (!data || !data.success) {
+      throw new Error((data && data.message) || 'ไม่สามารถดึงข้อมูลประวัติการลงเวลาได้');
+    }
+
+    const startDate = data.startDate || `${month}-01`;
+    const endDate = data.endDate || `${month}-31`;
+    const logs = data.logs || [];
+    const rawLeaves = data.leaves || [];
+    const holidays = data.holidays || window.companyHolidays || [];
+    const stats = data.stats || {};
+
+    const comp = window.lastCompanyInfo || {};
+    const compName = comp.name || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด';
+    const compTax = comp.taxId || '0605556001337';
+
+    const empId = currentEmployee.empId || '-';
+    const empFullName = (currentEmployee.fullName || currentEmployee.full_name || currentEmployee.name || empId) +
+      (currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '');
+    const empPos = (currentEmployee.position || currentEmployee.role || 'พนักงาน') +
+      (currentEmployee.department ? ` / ${currentEmployee.department}` : '');
+    const empBranch = currentEmployee.branch_name || currentEmployee.branchId || 'สำนักงานใหญ่';
+
+    // Build holiday map
+    const holidayMap = {};
+    holidays.forEach(h => {
+      if (h && h.date) holidayMap[h.date] = h;
+    });
+
+    // Build approved leave map
+    const leaveMap = {};
+    rawLeaves.filter(lv => lv && lv.status === 'APPROVED').forEach(lv => {
+      let s = lv.start_date;
+      let e = lv.end_date || lv.start_date;
+      if (s > e) { const tmp = s; s = e; e = tmp; }
+      let cur = new Date(s + 'T00:00:00Z');
+      const stop = new Date(e + 'T00:00:00Z');
+      while (cur <= stop) {
+        const ds = cur.toISOString().substring(0, 10);
+        if (!leaveMap[ds]) leaveMap[ds] = [];
+        leaveMap[ds].push(lv);
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    });
+
+    // Build logs map
+    const logsMap = {};
+    logs.forEach(l => {
+      if (l && l.date) logsMap[l.date] = l;
+    });
+
+    // Generate all dates in period
+    const dateList = [];
+    let curDate = new Date(startDate + 'T00:00:00Z');
+    const endDateObj = new Date(endDate + 'T00:00:00Z');
+    while (curDate <= endDateObj) {
+      dateList.push(curDate.toISOString().substring(0, 10));
+      curDate.setUTCDate(curDate.getUTCDate() + 1);
+    }
+
+    const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+    let daysWorked = 0;
+    let totalWorkHours = 0;
+    let totalOtHours = 0;
+    let lateCount = 0;
+    let totalLateMinutes = 0;
+    let holidayCount = 0;
+    let leaveDaysCount = 0;
+
+    let rowsHtml = '';
+    dateList.forEach((dStr, idx) => {
+      const dObj = new Date(dStr + 'T00:00:00');
+      const dayIdx = dObj.getDay();
+      const dayName = isNaN(dayIdx) ? '' : thaiDays[dayIdx];
+      const isSunday = dayIdx === 0;
+
+      const parts = dStr.split('-');
+      const beYear = parseInt(parts[0], 10) + 543;
+      const dateDisplay = `${parts[2]}/${parts[1]}/${beYear}`;
+
+      const hInfo = holidayMap[dStr];
+      const isHoliday = !!hInfo;
+      const holidayName = isHoliday ? (hInfo.holiday_name || hInfo.name || 'วันหยุดบริษัท') : '';
+      const holidayTypeLabel = isHoliday ? (hInfo.holiday_type === 'SPECIAL' ? 'วันหยุดพิเศษ' : 'วันหยุดประเพณี') : '';
+      if (isHoliday) holidayCount++;
+
+      const l = logsMap[dStr];
+      const leavesOnDate = leaveMap[dStr] || [];
+      const hasApprovedLeave = leavesOnDate.length > 0;
+      if (hasApprovedLeave && !l) leaveDaysCount++;
+
+      if (l) {
+        if (l.clock_in) daysWorked++;
+        const wH = Number(l.work_hours) || 0;
+        totalWorkHours += wH;
+        const otH = Number(l.ot_hours) || 0;
+        totalOtHours += otH;
+        const lateM = Number(l.late_minutes) || 0;
+        if (lateM > 0) {
+          lateCount++;
+          totalLateMinutes += lateM;
+        }
+
+        const in1 = l.clock_in ? l.clock_in.substring(0, 5) : '-';
+        const out1 = l.break_out ? l.break_out.substring(0, 5) : '-';
+        const in2 = l.break_in ? l.break_in.substring(0, 5) : '-';
+        const out2 = l.clock_out ? l.clock_out.substring(0, 5) : '-';
+
+        const otStart = (otH > 0 && l.ot_start) ? l.ot_start.substring(0, 5) : (otH > 0 ? 'OT' : '-');
+        const otEnd = (otH > 0 && l.ot_end) ? l.ot_end.substring(0, 5) : (otH > 0 ? `${otH} ชม.` : '-');
+
+        const notes = [];
+        if (isHoliday) notes.push(`⭐ ทำงานวันหยุด (${holidayName})`);
+        if (hasApprovedLeave) {
+          const lv = leavesOnDate[0];
+          const lvLabel = (typeof LEAVE_TYPE_LABELS !== 'undefined' && LEAVE_TYPE_LABELS[lv.leave_type]) || lv.leave_type || 'ลา';
+          notes.push(`🏖️ ${lvLabel}`);
+        }
+        if (otH > 0) notes.push(`OT ${otH} ชม.`);
+        if (lateM > 0) notes.push(`สาย ${lateM} น.`);
+        if (l.is_full_pay === 1 || l.is_full_pay === '1' || (l.remark && l.remark.includes('จ่ายเต็มวัน'))) notes.push('จ่ายเต็มวัน');
+        if (l.status === 'GEOFENCE_FAIL') notes.push('นอกพิกัด');
+        if (l.remark && !notes.some(n => l.remark.includes(n))) notes.push(l.remark);
+
+        const lateCellStyle = lateM > 0 ? 'color:#b91c1c;font-weight:700;background:#fee2e2;' : 'color:#64748b;';
+        const in1Color = lateM > 0 ? '#dc2626' : '#1d4ed8';
+        const rowBg = isHoliday ? 'background:#fef3c7;' : (isSunday ? 'background:#fff1f2;' : (idx % 2 === 1 ? 'background:#faf5ea;' : ''));
+
+        rowsHtml += `
+          <tr style="height:21px; ${rowBg}">
+            <td style="font-size:10px;">${idx + 1}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px;">${dateDisplay}</td>
+            <td style="font-size:10px; ${isSunday ? 'color:#b91c1c;font-weight:700;' : (isHoliday ? 'color:#b45309;font-weight:700;' : '')}">${dayName}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; color:${in1Color}">${in1}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#475569">${out1}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#475569">${in2}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; color:#991b1b">${out2}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#78350f">${otStart}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#78350f">${otEnd}</td>
+            <td style="font-size:10.5px; font-weight:700;">${wH > 0 ? wH.toFixed(1) : '-'}</td>
+            <td style="font-size:10px; ${lateCellStyle}">${lateM > 0 ? lateM : '-'}</td>
+            <td style="text-align:left; padding-left:6px; font-size:9.5px; color:${isHoliday ? '#b45309;font-weight:700;' : '#78350f;'}">${notes.join(', ') || 'ปกติ'}</td>
+          </tr>
+        `;
+      } else {
+        if (isHoliday) {
+          rowsHtml += `
+            <tr style="height:21px; background:#fef3c7; border-left:3px solid #f59e0b;">
+              <td style="font-size:10px;">${idx + 1}</td>
+              <td style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; color:#92400e;">${dateDisplay}</td>
+              <td style="font-size:10px; color:#b45309; font-weight:700;">${dayName}</td>
+              <td colspan="6" style="color:#b45309; font-weight:700; letter-spacing:0.5px; font-size:9.5px; text-align:center;">
+                ⭐ วันหยุด: ${holidayName} ${holidayTypeLabel ? `(${holidayTypeLabel})` : ''}
+              </td>
+              <td style="font-size:10px;">-</td>
+              <td style="font-size:10px;">-</td>
+              <td style="text-align:left; padding-left:6px; color:#b45309; font-weight:700; font-size:9.5px;">${holidayTypeLabel || 'วันหยุดบริษัท'}</td>
+            </tr>
+          `;
+        } else if (hasApprovedLeave) {
+          const lv = leavesOnDate[0];
+          const lvLabel = (typeof LEAVE_TYPE_LABELS !== 'undefined' && LEAVE_TYPE_LABELS[lv.leave_type]) || lv.leave_type || 'ลา';
+          const slot = lv.time_slot === 'MORNING' ? ' (ครึ่งวันเช้า)' : (lv.time_slot === 'AFTERNOON' ? ' (ครึ่งวันบ่าย)' : '');
+          rowsHtml += `
+            <tr style="height:21px; background:#e0f2fe; border-left:3px solid #0284c7;">
+              <td style="font-size:10px;">${idx + 1}</td>
+              <td style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; color:#0369a1;">${dateDisplay}</td>
+              <td style="font-size:10px; color:#0369a1; font-weight:700;">${dayName}</td>
+              <td colspan="6" style="color:#0369a1; font-weight:700; font-size:9.5px; text-align:center;">
+                🏖️ ลาที่ได้รับอนุมัติ: ${lvLabel}${slot} ${lv.reason ? `(${lv.reason})` : ''}
+              </td>
+              <td style="font-size:10px;">-</td>
+              <td style="font-size:10px;">-</td>
+              <td style="text-align:left; padding-left:6px; color:#0369a1; font-weight:700; font-size:9.5px;">อนุมัติการลา</td>
+            </tr>
+          `;
+        } else if (isSunday) {
+          rowsHtml += `
+            <tr style="height:21px; background:#fee2e2;">
+              <td style="font-size:10px;">${idx + 1}</td>
+              <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#991b1b;">${dateDisplay}</td>
+              <td style="font-size:10px; color:#b91c1c; font-weight:700;">${dayName}</td>
+              <td colspan="6" style="color:#991b1b; font-weight:700; letter-spacing:1px; font-size:9.5px; text-align:center;">
+                -- วันหยุดประจำสัปดาห์ (WEEKLY OFF) --
+              </td>
+              <td style="font-size:10px;">-</td>
+              <td style="font-size:10px;">-</td>
+              <td style="text-align:left; padding-left:6px; color:#991b1b; font-size:9.5px;">วันหยุด</td>
+            </tr>
+          `;
+        } else {
+          rowsHtml += `
+            <tr style="height:21px; ${idx % 2 === 1 ? 'background:#faf5ea;' : ''}">
+              <td style="font-size:10px;">${idx + 1}</td>
+              <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px;">${dateDisplay}</td>
+              <td style="font-size:10px;">${dayName}</td>
+              <td colspan="6" style="color:#94a3b8; font-size:9.5px; text-align:center;">-</td>
+              <td style="font-size:10px;">-</td>
+              <td style="font-size:10px;">-</td>
+              <td style="text-align:left; padding-left:6px; color:#94a3b8; font-size:9.5px;">-</td>
+            </tr>
+          `;
+        }
+      }
+    });
+
+    const now = new Date();
+    const thaiMonthList = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const printTimeStr = `${now.getDate()} ${thaiMonthList[now.getMonth()]} ${now.getFullYear() + 543} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} น.`;
+    const periodText = `${startDate} ถึง ${endDate}`;
+
+    // 2. Offscreen container
+    wrapper = document.createElement('div');
+    wrapper.style.position = 'fixed';
+    wrapper.style.left = '-9999px';
+    wrapper.style.top = '0';
+    wrapper.style.width = '790px';
+    wrapper.style.zIndex = '-9999';
+    wrapper.style.backgroundColor = '#faf8f0';
+    wrapper.style.fontFamily = "'Prompt', 'Sarabun', sans-serif";
+    wrapper.style.color = '#0f172a';
+    wrapper.style.padding = '14px 18px';
+    wrapper.style.boxSizing = 'border-box';
+    wrapper.style.border = '2.5px solid #78350f';
+
+    wrapper.innerHTML = `
+      <!-- Header -->
+      <div style="border-bottom: 2px solid #78350f; padding-bottom: 6px; margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 44px; height: 44px; border-radius: 8px; background: #78350f; color: #fef08a; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; border: 1.5px solid #92400e; flex-shrink:0;">PTN</div>
+            <div>
+              <div style="font-size: 14.5px; font-weight: 800; color: #451a03; text-transform: uppercase;">${compName}</div>
+              <div style="font-size: 10px; color: #78350f;">PTN PHARMA CENTER CO., LTD. &bull; เลขประจำตัวผู้เสียภาษี: ${compTax}</div>
+              <div style="font-size: 12px; font-weight: 700; color: #78350f; margin-top: 1px;">บัตรบันทึกเวลาทำงาน (TIME CARD) &bull; ประจำงวดตัดวิก</div>
+            </div>
+          </div>
+          <div style="text-align: right; border: 1px solid #92400e; background: #fefce8; border-radius: 6px; padding: 4px 10px; font-size: 11px; color: #451a03;">
+            <div style="font-weight: 800; color: #78350f; font-size: 12px;">รอบงวด: ${periodText}</div>
+            <div style="font-size: 9.5px; color: #92400e; margin-top: 2px;">พนักงาน: ${empId}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Employee Info Banner -->
+      <div style="display: grid; grid-template-columns: 1.2fr 2fr 2fr 1.8fr; gap: 6px; margin-bottom: 8px; background: #fef3c7; border: 1px solid #d97706; padding: 5px 8px; border-radius: 4px; font-size: 11px; color: #451a03;">
+        <div><span style="font-size: 9.5px; color: #92400e; display: block; font-weight: 600;">รหัสพนักงาน:</span><span style="font-family:'JetBrains Mono',monospace; font-weight: 800; font-size: 12.5px;">${empId}</span></div>
+        <div><span style="font-size: 9.5px; color: #92400e; display: block; font-weight: 600;">ชื่อ - นามสกุล:</span><span style="font-weight: 800; font-size: 12px;">${empFullName}</span></div>
+        <div><span style="font-size: 9.5px; color: #92400e; display: block; font-weight: 600;">ตำแหน่ง / แผนก:</span><span style="font-weight: 700; font-size: 11px;">${empPos}</span></div>
+        <div><span style="font-size: 9.5px; color: #92400e; display: block; font-weight: 600;">สาขาประจำ:</span><span style="font-weight: 700; font-size: 11px;">${empBranch}</span></div>
+      </div>
+
+      <!-- Table -->
+      <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 10.5px; border: 1.5px solid #92400e;">
+        <thead>
+          <tr style="background: #f5eedb; color: #78350f;">
+            <th rowspan="2" style="width: 26px; border: 1px solid #d97706; padding: 3px 2px;">ลำดับ</th>
+            <th rowspan="2" style="width: 70px; border: 1px solid #d97706; padding: 3px 2px;">วันที่</th>
+            <th rowspan="2" style="width: 44px; border: 1px solid #d97706; padding: 3px 2px;">วัน</th>
+            <th colspan="2" style="background: #fef3c7; border: 1px solid #d97706; padding: 2px;">กะเช้า (MORNING)</th>
+            <th colspan="2" style="background: #fef3c7; border: 1px solid #d97706; padding: 2px;">กะบ่าย (AFTERNOON)</th>
+            <th colspan="2" style="background: #fef3c7; border: 1px solid #d97706; padding: 2px;">ล่วงเวลา (OT)</th>
+            <th rowspan="2" style="width: 46px; border: 1px solid #d97706; padding: 3px 2px;">รวม ชม.</th>
+            <th rowspan="2" style="width: 42px; border: 1px solid #d97706; padding: 3px 2px;">สาย (น.)</th>
+            <th rowspan="2" style="border: 1px solid #d97706; padding: 3px 4px;">หมายเหตุ / ตราประทับ</th>
+          </tr>
+          <tr style="background: #f5eedb;">
+            <th style="width: 42px; color: #1e3a8a; border: 1px solid #d97706; padding: 2px; font-size: 10px;">เข้า 1</th>
+            <th style="width: 42px; color: #475569; border: 1px solid #d97706; padding: 2px; font-size: 10px;">ออก 1</th>
+            <th style="width: 42px; color: #475569; border: 1px solid #d97706; padding: 2px; font-size: 10px;">เข้า 2</th>
+            <th style="width: 42px; color: #991b1b; border: 1px solid #d97706; padding: 2px; font-size: 10px;">ออก 2</th>
+            <th style="width: 42px; color: #78350f; border: 1px solid #d97706; padding: 2px; font-size: 10px;">เริ่ม</th>
+            <th style="width: 42px; color: #78350f; border: 1px solid #d97706; padding: 2px; font-size: 10px;">สิ้นสุด</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+
+      <!-- Summary 5 Box -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 6px; border: 1.5px solid #92400e; background: #fefce8; padding: 6px; text-align: center; font-size: 11px;">
+        <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">วันทำงานจริง</div><div style="font-size: 13px; font-weight: 800; color: #166534;">${daysWorked} วัน</div></div>
+        <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">ชม. งานปกติ</div><div style="font-size: 13px; font-weight: 800; color: #1e40af;">${totalWorkHours.toFixed(1)} ชม.</div></div>
+        <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">รวมล่วงเวลา (OT)</div><div style="font-size: 13px; font-weight: 800; color: #78350f;">${totalOtHours.toFixed(1)} ชม.</div></div>
+        <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">มาสายรวม</div><div style="font-size: 13px; font-weight: 800; color: #b91c1c;">${lateCount} ครั้ง (${totalLateMinutes} น.)</div></div>
+        <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">วันหยุด / ลา</div><div style="font-size: 13px; font-weight: 800; color: #b45309;">${holidayCount + leaveDaysCount} วัน</div></div>
+      </div>
+
+      <!-- Signatures -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 14px; text-align: center; font-size: 11px; color: #451a03;">
+        <div>
+          <div style="border-bottom: 1px dotted #92400e; width: 80%; margin: 24px auto 4px;"></div>
+          <div style="font-weight: 700;">ลายมือชื่อพนักงาน</div>
+          <div style="font-size: 10px; color: #78350f;">( ${empFullName || '..............................'} )</div>
+          <div style="font-size: 9.5px; color: #92400e;">วันที่ ...../...../..........</div>
+        </div>
+        <div>
+          <div style="border-bottom: 1px dotted #92400e; width: 80%; margin: 24px auto 4px;"></div>
+          <div style="font-weight: 700;">ผู้ตรวจสอบ (หัวหน้างาน)</div>
+          <div style="font-size: 10px; color: #78350f;">( .................................................... )</div>
+          <div style="font-size: 9.5px; color: #92400e;">วันที่ ...../...../..........</div>
+        </div>
+        <div>
+          <div style="border-bottom: 1px dotted #92400e; width: 80%; margin: 24px auto 4px;"></div>
+          <div style="font-weight: 700;">ผู้อนุมัติ (ผู้จัดการ / HR)</div>
+          <div style="font-size: 10px; color: #78350f;">( .................................................... )</div>
+          <div style="font-size: 9.5px; color: #92400e;">วันที่ ...../...../..........</div>
+        </div>
+      </div>
+
+      <!-- Footer Micro Text -->
+      <div style="margin-top: 12px; display: flex; justify-content: space-between; font-size: 9px; color: #92400e; border-top: 1px solid #d97706; padding-top: 3px;">
+        <span>PTN Time System &bull; Electronic Time Card Sheet</span>
+        <span>สร้างเมื่อ: ${printTimeStr}</span>
+      </div>
+    `;
+
+    document.body.appendChild(wrapper);
+
+    if (typeof html2canvas !== 'function') {
+      throw new Error('ไม่พบไลบรารี html2canvas ในระบบ');
+    }
+
+    const canvas = await html2canvas(wrapper, {
+      scale: 2, // High resolution (retina crisp)
+      useCORS: true,
+      backgroundColor: '#faf8f0'
+    });
+
+    const imageUri = canvas.toDataURL('image/png');
+    const filename = `TimeCard_${empId}_${startDate}_to_${endDate}.png`;
+
+    // Direct auto-download
+    const downloadLink = document.createElement('a');
+    downloadLink.href = imageUri;
+    downloadLink.download = filename;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+    // Prepare share if supported
+    let canShare = false;
+    let fileObj = null;
+    try {
+      if (canvas.toBlob && window.File && navigator.canShare) {
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        if (blob) {
+          fileObj = new File([blob], filename, { type: 'image/png' });
+          canShare = navigator.canShare({ files: [fileObj] });
+        }
+      }
+    } catch (e) {
+      canShare = false;
+    }
+
+    // Show completion modal with preview and options
+    Swal.fire({
+      icon: 'success',
+      title: 'สร้างรูปภาพบัตรตอกสำเร็จ!',
+      html: `
+        <div class="space-y-3 text-left">
+          <p class="text-xs text-slate-600 text-center">ดาวน์โหลดไฟล์ <strong>${filename}</strong> แล้ว</p>
+          <div class="border border-amber-300 rounded-xl overflow-hidden shadow-inner max-h-[38vh] overflow-y-auto bg-[#faf8f0] p-1">
+            <img src="${imageUri}" class="w-full rounded shadow-sm" alt="Time Card Preview" />
+          </div>
+          <div class="space-y-1.5 pt-1">
+            <a href="${imageUri}" download="${filename}" class="w-full py-2.5 px-3 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition block text-center">
+              <i class="fa-solid fa-download"></i> ดาวน์โหลดรูปภาพอีกครั้ง
+            </a>
+            ${canShare ? `
+              <button type="button" id="btnShareTimeCard" class="w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition">
+                <i class="fa-solid fa-share-nodes"></i> แชร์รูปภาพ (ส่งต่อเข้า LINE / บันทึกลงอัลบั้ม)
+              </button>
+            ` : ''}
+          </div>
+          <p class="text-[11px] text-slate-400 text-center">💡 หากรูปไม่บันทึกอัตโนมัติ ให้แตะที่รูปค้างไว้ แล้วเลือก 'บันทึกรูปภาพ' ลงเครื่อง</p>
+        </div>
+      `,
+      showConfirmButton: true,
+      confirmButtonText: 'ปิดหน้าต่าง',
+      confirmButtonColor: '#78350f',
+      didOpen: () => {
+        if (canShare && fileObj) {
+          const shareBtn = document.getElementById('btnShareTimeCard');
+          if (shareBtn) {
+            shareBtn.addEventListener('click', async () => {
+              try {
+                await navigator.share({
+                  files: [fileObj],
+                  title: `บัตรตอกลงเวลา ${empId}`,
+                  text: `บัตรตอกลงเวลาประจำงวด ${periodText} (${empFullName})`
+                });
+              } catch (err) {
+                if (err.name !== 'AbortError') {
+                  console.warn('Share error:', err);
+                }
+              }
+            });
+          }
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('Time Card Image generation error:', err);
+    Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถสร้างรูปภาพบัตรตอกได้', 'error');
+  } finally {
+    if (wrapper && wrapper.parentNode) {
+      document.body.removeChild(wrapper);
+    }
+  }
+}
+
 function printPayslipDocument() {
   if (!currentPayslipData) {
     Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูลสลิปสำหรับพิมพ์', 'warning');
