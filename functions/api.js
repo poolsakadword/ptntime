@@ -2240,9 +2240,11 @@ async function handleAction(db, action, params) {
 
       for (const l of logs.results || []) {
         if (l.clock_in) totalWorkDays++;
-        totalLateMinutes += (l.late_minutes || 0);
-        totalWorkHours += (l.work_hours || 0);
-        totalOtHours += (l.ot_hours || 0);
+        const morningLate = Number(l.late_minutes) || 0;
+        const overbreak = Number(l.overbreak_minutes) || 0;
+        totalLateMinutes += (morningLate + overbreak);
+        totalWorkHours += (Number(l.work_hours) || 0);
+        totalOtHours += (Number(l.ot_hours) || 0);
       }
 
       const holidays = await db.prepare(`
@@ -2309,7 +2311,7 @@ async function handleAction(db, action, params) {
       `).all().catch(() => ({ results: [] }));
 
       const clockedInCount = (logsToday.results || []).filter(l => l.clock_in).length;
-      const lateCount = (logsToday.results || []).filter(l => l.late_minutes > 0).length;
+      const lateCount = (logsToday.results || []).filter(l => (Number(l.late_minutes || 0) > 0 || Number(l.overbreak_minutes || 0) > 0)).length;
 
       return {
         success: true,
@@ -2588,9 +2590,10 @@ async function handleAction(db, action, params) {
           WHERE emp_id = ? AND start_date >= ? AND end_date <= ? AND leave_type IN ('BUSINESS', 'WITHOUT_PAY') AND status = 'APPROVED'
         `).bind(emp.emp_id, startDateStr, endDateStr).first();
 
-        // 5. Late minutes
+        // 5. Late minutes (including morning late and afternoon overbreak)
         const lateRow = await db.prepare(`
-          SELECT SUM(late_minutes) as total_late_min, COUNT(CASE WHEN late_minutes > 0 THEN 1 END) as late_days
+          SELECT SUM(COALESCE(late_minutes, 0) + COALESCE(overbreak_minutes, 0)) as total_late_min,
+                 SUM(CASE WHEN COALESCE(late_minutes, 0) > 0 THEN 1 ELSE 0 END + CASE WHEN COALESCE(overbreak_minutes, 0) > 0 THEN 1 ELSE 0 END) as late_days
           FROM time_logs
           WHERE emp_id = ? AND date >= ? AND date <= ?
         `).bind(emp.emp_id, startDateStr, endDateStr).first();
