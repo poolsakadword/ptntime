@@ -2238,10 +2238,13 @@ async function handleAction(db, action, params) {
       let totalWorkHours = 0;
       let totalOtHours = 0;
 
+      const overbreakSetting = await db.prepare('SELECT value FROM settings WHERE key = "CountOverbreakAsLate"').first().catch(() => null);
+      const countOverbreakAsLate = overbreakSetting ? (overbreakSetting.value !== 'false' && overbreakSetting.value !== '0') : true;
+
       for (const l of logs.results || []) {
         if (l.clock_in) totalWorkDays++;
         const morningLate = Number(l.late_minutes) || 0;
-        const overbreak = Number(l.overbreak_minutes) || 0;
+        const overbreak = countOverbreakAsLate ? (Number(l.overbreak_minutes) || 0) : 0;
         totalLateMinutes += (morningLate + overbreak);
         totalWorkHours += (Number(l.work_hours) || 0);
         totalOtHours += (Number(l.ot_hours) || 0);
@@ -2310,8 +2313,11 @@ async function handleAction(db, action, params) {
         ORDER BY a.created_at DESC
       `).all().catch(() => ({ results: [] }));
 
+      const overbreakSettingDash = await db.prepare('SELECT value FROM settings WHERE key = "CountOverbreakAsLate"').first().catch(() => null);
+      const countOverbreakDash = overbreakSettingDash ? (overbreakSettingDash.value !== 'false' && overbreakSettingDash.value !== '0') : true;
+
       const clockedInCount = (logsToday.results || []).filter(l => l.clock_in).length;
-      const lateCount = (logsToday.results || []).filter(l => (Number(l.late_minutes || 0) > 0 || Number(l.overbreak_minutes || 0) > 0)).length;
+      const lateCount = (logsToday.results || []).filter(l => (Number(l.late_minutes || 0) > 0 || (countOverbreakDash && Number(l.overbreak_minutes || 0) > 0))).length;
 
       return {
         success: true,
@@ -2561,6 +2567,9 @@ async function handleAction(db, action, params) {
       const empRows = await db.prepare('SELECT emp_id, full_name, department FROM employees ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
       const syncList = [];
 
+      const overbreakSettingSync = await db.prepare('SELECT value FROM settings WHERE key = "CountOverbreakAsLate"').first().catch(() => null);
+      const countOverbreakSync = overbreakSettingSync ? (overbreakSettingSync.value !== 'false' && overbreakSettingSync.value !== '0') : true;
+
       for (const emp of empRows.results || []) {
         // 1. OT hours in cycle
         const otRow = await db.prepare(`
@@ -2590,13 +2599,20 @@ async function handleAction(db, action, params) {
           WHERE emp_id = ? AND start_date >= ? AND end_date <= ? AND leave_type IN ('BUSINESS', 'WITHOUT_PAY') AND status = 'APPROVED'
         `).bind(emp.emp_id, startDateStr, endDateStr).first();
 
-        // 5. Late minutes (including morning late and afternoon overbreak)
-        const lateRow = await db.prepare(`
-          SELECT SUM(COALESCE(late_minutes, 0) + COALESCE(overbreak_minutes, 0)) as total_late_min,
-                 SUM(CASE WHEN COALESCE(late_minutes, 0) > 0 THEN 1 ELSE 0 END + CASE WHEN COALESCE(overbreak_minutes, 0) > 0 THEN 1 ELSE 0 END) as late_days
-          FROM time_logs
-          WHERE emp_id = ? AND date >= ? AND date <= ?
-        `).bind(emp.emp_id, startDateStr, endDateStr).first();
+        // 5. Late minutes (including morning late and afternoon overbreak if enabled)
+        const lateRow = countOverbreakSync
+          ? await db.prepare(`
+              SELECT SUM(COALESCE(late_minutes, 0) + COALESCE(overbreak_minutes, 0)) as total_late_min,
+                     SUM(CASE WHEN COALESCE(late_minutes, 0) > 0 THEN 1 ELSE 0 END + CASE WHEN COALESCE(overbreak_minutes, 0) > 0 THEN 1 ELSE 0 END) as late_days
+              FROM time_logs
+              WHERE emp_id = ? AND date >= ? AND date <= ?
+            `).bind(emp.emp_id, startDateStr, endDateStr).first()
+          : await db.prepare(`
+              SELECT SUM(COALESCE(late_minutes, 0)) as total_late_min,
+                     SUM(CASE WHEN COALESCE(late_minutes, 0) > 0 THEN 1 ELSE 0 END) as late_days
+              FROM time_logs
+              WHERE emp_id = ? AND date >= ? AND date <= ?
+            `).bind(emp.emp_id, startDateStr, endDateStr).first();
 
         // 6. Approved Advances (advance_deduct)
         const advanceRow = await db.prepare(`
