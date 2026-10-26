@@ -2564,13 +2564,20 @@ async function handleAction(db, action, params) {
       // End: 25th of current month
       const endDateStr = `${pYear}-${String(pMonth).padStart(2, '0')}-25`;
 
-      const empRows = await db.prepare('SELECT emp_id, full_name, department FROM employees ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
+      const empRows = await db.prepare('SELECT emp_id, full_name, department, status, resign_date FROM employees ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
       const syncList = [];
 
       const overbreakSettingSync = await db.prepare('SELECT value FROM settings WHERE key = "CountOverbreakAsLate"').first().catch(() => null);
       const countOverbreakSync = overbreakSettingSync ? (overbreakSettingSync.value !== 'false' && overbreakSettingSync.value !== '0') : true;
 
       for (const emp of empRows.results || []) {
+        if (emp.status === 'Resigned') {
+          const rDate = emp.resign_date ? String(emp.resign_date).trim().substring(0, 10) : '';
+          const hasLogs = await db.prepare('SELECT 1 FROM time_logs WHERE emp_id = ? AND date >= ? AND date <= ? LIMIT 1').bind(emp.emp_id, startDateStr, endDateStr).first().catch(() => null);
+          if (rDate && rDate < startDateStr && !hasLogs) {
+            continue;
+          }
+        }
         // 1. OT hours in cycle
         const otRow = await db.prepare(`
           SELECT SUM(CASE WHEN actual_hours > 0 THEN actual_hours ELSE planned_hours END) as total_ot
