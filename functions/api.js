@@ -2128,10 +2128,20 @@ async function handleAction(db, action, params) {
     // 12. History for Employee (Cut-off period 26th previous month to 25th current month)
     case 'getEmployeeHistory': {
       const empId = params.empId;
-      const month = params.month || today.substring(0, 7);
+      const cutoffDay = Number(settings.cutoff_day) || 25;
+
+      // Auto-advance cutoff period if today > cutoff day
+      let defaultMonth = today.substring(0, 7);
+      const curDay = parseInt(today.substring(8, 10), 10);
+      if (cutoffDay < 30 && curDay > cutoffDay) {
+        let m = parseInt(today.substring(5, 7), 10) + 1;
+        let y = parseInt(today.substring(0, 4), 10);
+        if (m > 12) { m = 1; y += 1; }
+        defaultMonth = `${y}-${String(m).padStart(2, '0')}`;
+      }
+      const month = params.month || defaultMonth;
 
       // Determine cycle date range (26th of previous month to 25th of current month)
-      const cutoffDay = Number(settings.cutoff_day) || 25;
       const [pYear, pMonth] = month.split('-').map(Number);
       let startDateStr, endDateStr;
 
@@ -2252,8 +2262,9 @@ async function handleAction(db, action, params) {
 
       const holidays = await db.prepare(`
         SELECT * FROM company_holidays 
+        WHERE date BETWEEN ? AND ?
         ORDER BY date ASC
-      `).all().catch(() => ({ results: [] }));
+      `).bind(startDateStr, endDateStr).all().catch(() => ({ results: [] }));
 
       return {
         success: true,

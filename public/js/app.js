@@ -54,6 +54,23 @@ function minutesToTime(totalMins) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+function getActiveCutoffPeriodString() {
+  const bkk = new Date(Date.now() + 7 * 3600 * 1000);
+  let curY = bkk.getUTCFullYear();
+  let curM = bkk.getUTCMonth() + 1; // 1-12
+  const curD = bkk.getUTCDate();
+  const cutDay = Number(appSettings?.cutoff_day) || 25;
+
+  if (cutDay < 30 && curD > cutDay) {
+    curM += 1;
+    if (curM > 12) {
+      curM = 1;
+      curY += 1;
+    }
+  }
+  return `${curY}-${String(curM).padStart(2, '0')}`;
+}
+
 function formatDateThaiBE(dateStr) {
   if (!dateStr || dateStr === '-') return '-';
   const s = String(dateStr).trim();
@@ -343,7 +360,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
-  const curMonth = today.substring(0, 7);
+  const curMonth = getActiveCutoffPeriodString();
   const histPicker = document.getElementById('historyMonthPicker');
   if (histPicker) histPicker.value = curMonth;
 
@@ -4015,7 +4032,7 @@ async function submitAdvanceRequest() {
 // ==============================================================================
 async function loadEmployeeHistory() {
   if (!currentEmployee) return;
-  const month = document.getElementById('historyMonthPicker')?.value || new Date().toISOString().substring(0, 7);
+  const month = document.getElementById('historyMonthPicker')?.value || getActiveCutoffPeriodString();
   const container = document.getElementById('historyListContainer');
   if (container) container.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">กำลังโหลดข้อมูลประวัติ...</div>';
 
@@ -4028,9 +4045,14 @@ async function loadEmployeeHistory() {
       document.getElementById('statOtHours').textContent = data.stats.totalOtHours;
       document.getElementById('statAdvance').textContent = data.stats.totalAdvances || 0;
 
-      // Cycle range from API (e.g. 2026-09-26 to 2026-10-25)
+      // Cycle range from API (e.g. 2026-10-26 to 2026-11-25)
       const startDate = data.startDate || `${month}-01`;
       const endDate = data.endDate || `${month}-31`;
+
+      const histCutoff = document.getElementById('historyCutoffLabel');
+      if (histCutoff) {
+        histCutoff.textContent = `รอบตัดวิก: ${formatDateThaiBE(startDate)} ถึง ${formatDateThaiBE(endDate)}`;
+      }
 
       // Process company holidays for this period
       const holidays = data.holidays || window.companyHolidays || [];
@@ -6812,7 +6834,7 @@ async function downloadEmployeeTimeCardImage() {
     return;
   }
 
-  const month = document.getElementById('historyMonthPicker')?.value || new Date().toISOString().substring(0, 7);
+  const month = document.getElementById('historyMonthPicker')?.value || getActiveCutoffPeriodString();
 
   Swal.fire({
     title: 'กำลังสร้างรูปภาพบัตรตอก...',
