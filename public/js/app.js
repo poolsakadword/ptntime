@@ -6367,10 +6367,39 @@ async function loadEmployeePayslips(period = null, pin = null) {
       pinGate?.classList.add('hidden');
       detailContainer?.classList.remove('hidden');
 
-      // Populate Period Dropdown
+      // Populate Period Dropdown (sorted newest period first)
       if (periodSelect && data.periods && data.periods.length > 0) {
+        const thaiMonths = [
+          'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+          'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+        ];
+        const getPeriodSortKey = (periodStr) => {
+          if (!periodStr) return 0;
+          const s = String(periodStr).trim();
+          const ymMatch = s.match(/^(\d{4})-(\d{1,2})/);
+          if (ymMatch) {
+            let y = parseInt(ymMatch[1], 10);
+            const m = parseInt(ymMatch[2], 10);
+            if (y < 2400) y += 543;
+            return y * 100 + m;
+          }
+          let monthIdx = 0;
+          for (let i = 0; i < thaiMonths.length; i++) {
+            if (s.includes(thaiMonths[i])) {
+              monthIdx = i + 1;
+              break;
+            }
+          }
+          const yearMatch = s.match(/(\d{4})/);
+          let year = yearMatch ? parseInt(yearMatch[1], 10) : 0;
+          if (year > 0 && year < 2400) year += 543;
+          if (year > 0 && monthIdx > 0) return year * 100 + monthIdx;
+          return 0;
+        };
+        const sortedPeriods = [...data.periods].sort((a, b) => getPeriodSortKey(b) - getPeriodSortKey(a));
+
         periodSelect.innerHTML = '';
-        data.periods.forEach(p => {
+        sortedPeriods.forEach(p => {
           const opt = document.createElement('option');
           opt.value = p;
           opt.textContent = `งวด ${p}`;

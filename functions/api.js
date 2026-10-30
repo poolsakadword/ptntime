@@ -2726,10 +2726,37 @@ async function handleAction(db, action, params) {
         FROM payroll_calcs p
         LEFT JOIN employees e ON p.emp_id = e.emp_id
         WHERE p.emp_id = ?
-        ORDER BY p.period DESC
       `).bind(empId).all().catch(() => ({ results: [] }));
 
-      const allCalcs = calcsQuery.results || [];
+      const thaiMonths = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+      ];
+      const getPeriodSortKey = (periodStr) => {
+        if (!periodStr) return 0;
+        const s = String(periodStr).trim();
+        const ymMatch = s.match(/^(\d{4})-(\d{1,2})/);
+        if (ymMatch) {
+          let y = parseInt(ymMatch[1], 10);
+          const m = parseInt(ymMatch[2], 10);
+          if (y < 2400) y += 543;
+          return y * 100 + m;
+        }
+        let monthIdx = 0;
+        for (let i = 0; i < thaiMonths.length; i++) {
+          if (s.includes(thaiMonths[i])) {
+            monthIdx = i + 1;
+            break;
+          }
+        }
+        const yearMatch = s.match(/(\d{4})/);
+        let year = yearMatch ? parseInt(yearMatch[1], 10) : 0;
+        if (year > 0 && year < 2400) year += 543;
+        if (year > 0 && monthIdx > 0) return year * 100 + monthIdx;
+        return 0;
+      };
+
+      const allCalcs = (calcsQuery.results || []).sort((a, b) => getPeriodSortKey(b.period) - getPeriodSortKey(a.period));
       if (allCalcs.length === 0) {
         return {
           success: true,
