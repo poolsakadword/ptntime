@@ -2070,18 +2070,21 @@ async function handleAction(db, action, params) {
       if (settings.enable_leave_requests !== 'true') {
         return { success: false, message: 'ระบบขอลางานปิดให้บริการชั่วคราว' };
       }
-      const { empId, leaveType, startDate, endDate, daysCount, reason, medicalCertUrl } = params;
+      const { empId, leaveType, startDate, endDate, daysCount, timeSlot, time_slot, reason, medicalCertUrl } = params;
       if (!empId || !leaveType || !startDate || !endDate) {
         return { success: false, message: 'กรุณากรอกข้อมูลการลาให้ครบถ้วน' };
       }
 
       const cleanStart = normalizeDateToIso(startDate);
       const cleanEnd = normalizeDateToIso(endDate);
+      const numDays = Number(daysCount) || 1.0;
+      const rawSlot = timeSlot || time_slot;
+      const finalSlot = rawSlot ? String(rawSlot).toUpperCase() : (numDays === 0.5 ? 'MORNING' : 'FULL');
 
       await db.prepare(`
-        INSERT INTO leave_requests (emp_id, leave_type, start_date, end_date, days_count, reason, medical_cert_url, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')
-      `).bind(empId, leaveType, cleanStart, cleanEnd, Number(daysCount) || 1.0, reason || '', medicalCertUrl || null).run();
+        INSERT INTO leave_requests (emp_id, leave_type, start_date, end_date, days_count, time_slot, reason, medical_cert_url, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
+      `).bind(empId, leaveType, cleanStart, cleanEnd, numDays, finalSlot, reason || '', medicalCertUrl || null).run();
 
       sendPushToAdmins(db, {
         title: '📋 คำขอยื่นใบลาใหม่',

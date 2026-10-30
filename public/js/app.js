@@ -4663,6 +4663,18 @@ function switchSubTab(sub) {
   applyFeatureToggles();
 }
 
+function toggleLeaveTimeSlot() {
+  const countEl = document.getElementById('leaveDaysCount');
+  const slotCont = document.getElementById('leaveTimeSlotContainer');
+  if (!countEl || !slotCont) return;
+  const val = parseFloat(countEl.value);
+  if (val === 0.5) {
+    slotCont.classList.remove('hidden');
+  } else {
+    slotCont.classList.add('hidden');
+  }
+}
+
 async function submitLeaveRequest() {
   if (!currentEmployee) {
     openEmployeePickerModal();
@@ -4673,6 +4685,9 @@ async function submitLeaveRequest() {
   const startDate = document.getElementById('leaveStartDate').value;
   const endDate = document.getElementById('leaveEndDate').value;
   const daysCount = document.getElementById('leaveDaysCount').value;
+  const timeSlot = (parseFloat(daysCount) === 0.5 && document.getElementById('leaveTimeSlot'))
+    ? document.getElementById('leaveTimeSlot').value
+    : 'FULL';
   const reason = document.getElementById('leaveReason').value.trim();
   const fileInput = document.getElementById('leaveCertFile');
 
@@ -4699,6 +4714,7 @@ async function submitLeaveRequest() {
         startDate: normalizeDateToIso(startDate),
         endDate: normalizeDateToIso(endDate),
         daysCount,
+        timeSlot,
         reason,
         medicalCertUrl: certDataUrl
       })
