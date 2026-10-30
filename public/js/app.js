@@ -6515,7 +6515,7 @@ function renderPayslipVoucher(slip, companyInfo) {
   if (lateEl) lateEl.textContent = fmt(slip.lateDeduct);
 
   const leaveDedEl = document.getElementById('slipLeaveDedDisplay');
-  if (leaveDedEl) leaveDedEl.textContent = fmt(slip.leaveDeduct);
+  if (leaveDedEl) leaveDedEl.textContent = fmt(slip.leaveDeduct !== undefined ? slip.leaveDeduct : slip.leaveDeduction);
 
   const otherDedEl = document.getElementById('slipOtherDisplay');
   if (otherDedEl) otherDedEl.textContent = fmt(slip.otherDeduct);
@@ -6573,7 +6573,7 @@ function renderPayslipVoucher(slip, companyInfo) {
     setText('prnPf', fmt(slip.pf));
     setText('prnAdvance', fmt(slip.advanceDeduct));
     setText('prnLate', fmt(slip.lateDeduct));
-    setText('prnLeaveDed', fmt(slip.leaveDeduct));
+    setText('prnLeaveDed', fmt(slip.leaveDeduct !== undefined ? slip.leaveDeduct : slip.leaveDeduction));
     setText('prnOtherDed', fmt(slip.otherDeduct));
     setText('prnTotalDeduct', fmt(slip.totalDeductions));
 
@@ -6777,7 +6777,7 @@ async function savePayslipAsImage() {
               <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">กองทุนสำรองเลี้ยงชีพ (PF)</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.pf)}</td></tr>
               <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักเงินเบิกล่วงหน้า (Advance)</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.advanceDeduct)}</td></tr>
               <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักมาสาย / ออกก่อนเวลา</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.lateDeduct)}</td></tr>
-              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักลากิจ / ขาดงาน</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.leaveDeduct)}</td></tr>
+              <tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักลากิจ / ขาดงาน</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.leaveDeduct !== undefined ? slip.leaveDeduct : slip.leaveDeduction)}</td></tr>
               ${slip.otherDeduct > 0 ? `<tr><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; color:#334155;">หักอื่นๆ</td><td style="padding:4px 8px; font-size:11.5px; border-bottom:1px solid #f1f5f9; text-align:right; font-family:monospace; font-weight:600; color:#0f172a;">${fmt(slip.otherDeduct)}</td></tr>` : ''}
             </table>
           </td>
@@ -7619,7 +7619,7 @@ function printPayslipDocument() {
               <tr><td>กองทุนสำรองเลี้ยงชีพ (PF)</td><td class="num">${fmt(slip.pf)}</td></tr>
               <tr><td>หักเงินเบิกล่วงหน้า (Advance)</td><td class="num">${fmt(slip.advanceDeduct)}</td></tr>
               <tr><td>หักมาสาย / ออกก่อนเวลา</td><td class="num">${fmt(slip.lateDeduct)}</td></tr>
-              <tr><td>หักลากิจ / ขาดงาน</td><td class="num">${fmt(slip.leaveDeduct)}</td></tr>
+              <tr><td>หักลากิจ / ขาดงาน</td><td class="num">${fmt(slip.leaveDeduct !== undefined ? slip.leaveDeduct : slip.leaveDeduction)}</td></tr>
               ${slip.otherDeduct > 0 ? `<tr><td>หักอื่นๆ</td><td class="num">${fmt(slip.otherDeduct)}</td></tr>` : ''}
             </table>
           </td>

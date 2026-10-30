@@ -2840,6 +2840,7 @@ async function handleAction(db, action, params) {
         totalEarnings: (Number(targetCalc.base_salary) || 0) + (Number(targetCalc.ot_pay) || 0) + (Number(targetCalc.allowance) || 0) + (Number(targetCalc.bonus) || 0),
         
         // Deductions
+        leaveDeduct: Number(targetCalc.leave_deduction) || 0,
         leaveDeduction: Number(targetCalc.leave_deduction) || 0,
         sso: Number(targetCalc.sso) || 0,
         pf: Number(targetCalc.pf) || 0,
