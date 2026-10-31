@@ -6938,6 +6938,18 @@ async function downloadEmployeeTimeCardImage() {
       }
     });
 
+    // Build approved advance map
+    const rawAdvances = data.advances || [];
+    const advanceMap = {};
+    let totalAdvancesAmount = 0;
+    const approvedAdvances = rawAdvances.filter(ad => ad && String(ad.status || '').toUpperCase() === 'APPROVED');
+    approvedAdvances.forEach(ad => {
+      const d = String(ad.request_date || '').trim().substring(0, 10);
+      if (!advanceMap[d]) advanceMap[d] = [];
+      advanceMap[d].push(ad);
+      totalAdvancesAmount += (Number(ad.amount) || 0);
+    });
+
     // Build logs map
     const logsMap = {};
     logs.forEach(l => {
@@ -6982,6 +6994,8 @@ async function downloadEmployeeTimeCardImage() {
       const l = logsMap[dStr];
       const leavesOnDate = leaveMap[dStr] || [];
       const hasApprovedLeave = leavesOnDate.length > 0;
+      const advancesOnDate = advanceMap[dStr] || [];
+      const hasAdvances = advancesOnDate.length > 0;
       if (hasApprovedLeave && !l) leaveDaysCount++;
 
       if (l) {
@@ -7011,6 +7025,12 @@ async function downloadEmployeeTimeCardImage() {
           const lvLabel = (typeof LEAVE_TYPE_LABELS !== 'undefined' && LEAVE_TYPE_LABELS[lv.leave_type]) || lv.leave_type || 'ลา';
           notes.push(`🏖️ ${lvLabel}`);
         }
+        if (hasAdvances) {
+          advancesOnDate.forEach(ad => {
+            const amt = Number(ad.amount) || 0;
+            notes.push(`💵 เบิกเงิน ${amt.toLocaleString()} บ.`);
+          });
+        }
         if (otH > 0) notes.push(`OT ${otH} ชม.`);
         if (lateM > 0) notes.push(`สาย ${lateM} น.`);
         if (l.is_full_pay === 1 || l.is_full_pay === '1' || (l.remark && l.remark.includes('จ่ายเต็มวัน'))) notes.push('จ่ายเต็มวัน');
@@ -7019,13 +7039,13 @@ async function downloadEmployeeTimeCardImage() {
 
         const lateCellStyle = lateM > 0 ? 'color:#b91c1c;font-weight:700;background:#fee2e2;' : 'color:#64748b;';
         const in1Color = lateM > 0 ? '#dc2626' : '#1d4ed8';
-        const rowBg = isHoliday ? 'background:#fef3c7;' : (isSunday ? 'background:#fff1f2;' : (idx % 2 === 1 ? 'background:#faf5ea;' : ''));
+        const rowBg = isHoliday ? 'background:#fef3c7;' : (hasApprovedLeave ? 'background:#e0f2fe;' : (hasAdvances ? 'background:#fef9c3;border-left:3px solid #eab308;' : (isSunday ? 'background:#fff1f2;' : (idx % 2 === 1 ? 'background:#faf5ea;' : ''))));
 
         rowsHtml += `
           <tr style="height:21px; ${rowBg}">
             <td style="font-size:10px;">${idx + 1}</td>
             <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px;">${dateDisplay}</td>
-            <td style="font-size:10px; ${isSunday ? 'color:#b91c1c;font-weight:700;' : (isHoliday ? 'color:#b45309;font-weight:700;' : '')}">${dayName}</td>
+            <td style="font-size:10px; ${isSunday ? 'color:#b91c1c;font-weight:700;' : (isHoliday ? 'color:#b45309;font-weight:700;' : (hasAdvances ? 'color:#854d0e;font-weight:700;' : ''))}">${dayName}</td>
             <td style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; color:${in1Color}">${in1}</td>
             <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#475569">${out1}</td>
             <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#475569">${in2}</td>
@@ -7034,7 +7054,7 @@ async function downloadEmployeeTimeCardImage() {
             <td style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#78350f">${otEnd}</td>
             <td style="font-size:10.5px; font-weight:700;">${wH > 0 ? wH.toFixed(1) : '-'}</td>
             <td style="font-size:10px; ${lateCellStyle}">${lateM > 0 ? lateM : '-'}</td>
-            <td style="text-align:left; padding-left:6px; font-size:9.5px; color:${isHoliday ? '#b45309;font-weight:700;' : '#78350f;'}">${notes.join(', ') || 'ปกติ'}</td>
+            <td style="text-align:left; padding-left:6px; font-size:9.5px; color:${isHoliday ? '#b45309;font-weight:700;' : (hasAdvances ? '#854d0e;font-weight:700;' : '#78350f;')}">${notes.join(', ') || 'ปกติ'}</td>
           </tr>
         `;
       } else {
@@ -7056,17 +7076,37 @@ async function downloadEmployeeTimeCardImage() {
           const lv = leavesOnDate[0];
           const lvLabel = (typeof LEAVE_TYPE_LABELS !== 'undefined' && LEAVE_TYPE_LABELS[lv.leave_type]) || lv.leave_type || 'ลา';
           const slot = lv.time_slot === 'MORNING' ? ' (ครึ่งวันเช้า)' : (lv.time_slot === 'AFTERNOON' ? ' (ครึ่งวันบ่าย)' : '');
+          let leaveNote = `🏖️ ลาที่ได้รับอนุมัติ: ${lvLabel}${slot} ${lv.reason ? `(${lv.reason})` : ''}`;
+          if (hasAdvances) {
+            const advT = advancesOnDate.map(ad => `💵 เบิกเงิน ${(Number(ad.amount) || 0).toLocaleString()} บ.`).join(', ');
+            leaveNote += ` • ${advT}`;
+          }
           rowsHtml += `
             <tr style="height:21px; background:#e0f2fe; border-left:3px solid #0284c7;">
               <td style="font-size:10px;">${idx + 1}</td>
               <td style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; color:#0369a1;">${dateDisplay}</td>
               <td style="font-size:10px; color:#0369a1; font-weight:700;">${dayName}</td>
               <td colspan="6" style="color:#0369a1; font-weight:700; font-size:9.5px; text-align:center;">
-                🏖️ ลาที่ได้รับอนุมัติ: ${lvLabel}${slot} ${lv.reason ? `(${lv.reason})` : ''}
+                ${leaveNote}
               </td>
               <td style="font-size:10px;">-</td>
               <td style="font-size:10px;">-</td>
               <td style="text-align:left; padding-left:6px; color:#0369a1; font-weight:700; font-size:9.5px;">อนุมัติการลา</td>
+            </tr>
+          `;
+        } else if (hasAdvances) {
+          const advText = advancesOnDate.map(ad => `💵 เบิกเงินล่วงหน้า ${(Number(ad.amount) || 0).toLocaleString()} บ. (อนุมัติแล้ว)`).join(', ');
+          rowsHtml += `
+            <tr style="height:21px; background:#fef9c3; border-left:3px solid #eab308;">
+              <td style="font-size:10px;">${idx + 1}</td>
+              <td style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; color:#854d0e;">${dateDisplay}</td>
+              <td style="font-size:10px; color:#854d0e; font-weight:700;">${dayName}</td>
+              <td colspan="6" style="color:#854d0e; font-weight:700; font-size:9.5px; text-align:center;">
+                ${advText}
+              </td>
+              <td style="font-size:10px;">-</td>
+              <td style="font-size:10px;">-</td>
+              <td style="text-align:left; padding-left:6px; color:#854d0e; font-weight:700; font-size:9.5px;">เบิกเงินล่วงหน้า</td>
             </tr>
           `;
         } else if (isSunday) {
@@ -7157,7 +7197,7 @@ async function downloadEmployeeTimeCardImage() {
             <th colspan="2" style="background: #fef3c7; border: 1px solid #d97706; padding: 2px;">ล่วงเวลา (OT)</th>
             <th rowspan="2" style="width: 46px; border: 1px solid #d97706; padding: 3px 2px;">รวม ชม.</th>
             <th rowspan="2" style="width: 42px; border: 1px solid #d97706; padding: 3px 2px;">สาย (น.)</th>
-            <th rowspan="2" style="border: 1px solid #d97706; padding: 3px 4px;">หมายเหตุ / ตราประทับ</th>
+            <th rowspan="2" style="border: 1px solid #d97706; padding: 3px 4px;">หมายเหตุ / การลา / รายการเงินเบิก</th>
           </tr>
           <tr style="background: #f5eedb;">
             <th style="width: 42px; color: #1e3a8a; border: 1px solid #d97706; padding: 2px; font-size: 10px;">เข้า 1</th>
@@ -7182,6 +7222,31 @@ async function downloadEmployeeTimeCardImage() {
         <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">วันหยุด / ลา</div><div style="font-size: 13px; font-weight: 800; color: #b45309;">${holidayCount + leaveDaysCount} วัน</div></div>
       </div>
 
+      <!-- Advance Payment Summary Banner -->
+      ${totalAdvancesAmount > 0 ? `
+      <div style="margin-top: 6px; border: 1.5px solid #eab308; background: #fffbeb; border-radius: 4px; padding: 5px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: #eab308; color: #713f12; width: 22px; height: 22px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px;">฿</span>
+          <div>
+            <strong style="color: #854d0e; font-size: 11.5px;">รายการเบิกเงินล่วงหน้างวดนี้ (Advance Payment):</strong>
+            <span style="color: #713f12; margin-left: 6px;">
+              ${approvedAdvances.map(ad => {
+                const d = String(ad.request_date || '').substring(0, 10);
+                const p = d.split('-');
+                const thD = p.length === 3 ? `${p[2]}/${p[1]}/${parseInt(p[0], 10) + 543}` : d;
+                return `${thD ? `วันที่ ${thD} ` : ''}${(Number(ad.amount) || 0).toLocaleString()}฿`;
+              }).join(', ')}
+            </span>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 10px; color: #854d0e;">ยอดเบิกรวม:</span>
+          <strong style="font-family:'JetBrains Mono',monospace; font-size: 13.5px; color: #b45309; margin-left: 4px;">฿ ${totalAdvancesAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
+          <span style="font-size: 9px; color: #a16207; display: block;">(หักในสลิปเงินเดือนงวดนี้)</span>
+        </div>
+      </div>
+      ` : ''}
+
       <!-- Signatures -->
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 14px; text-align: center; font-size: 11px; color: #451a03;">
         <div>
@@ -7189,6 +7254,7 @@ async function downloadEmployeeTimeCardImage() {
           <div style="font-weight: 700;">ลายมือชื่อพนักงาน</div>
           <div style="font-size: 10px; color: #78350f;">( ${empFullName || '..............................'} )</div>
           <div style="font-size: 9.5px; color: #92400e;">วันที่ ...../...../..........</div>
+          ${totalAdvancesAmount > 0 ? `<div style="font-size: 8.5px; color: #b45309; margin-top: 2px;">*รับทราบเวลาทำงานและยอดหักเบิกเงิน ${totalAdvancesAmount.toLocaleString()}฿*</div>` : ''}
         </div>
         <div>
           <div style="border-bottom: 1px dotted #92400e; width: 80%; margin: 24px auto 4px;"></div>
