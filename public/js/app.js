@@ -6973,6 +6973,7 @@ async function downloadEmployeeTimeCardImage() {
     let totalLateMinutes = 0;
     let holidayCount = 0;
     let leaveDaysCount = 0;
+    let absentDaysCount = 0;
 
     let rowsHtml = '';
     dateList.forEach((dStr, idx) => {
@@ -7124,17 +7125,41 @@ async function downloadEmployeeTimeCardImage() {
             </tr>
           `;
         } else {
-          rowsHtml += `
-            <tr style="height:21px; ${idx % 2 === 1 ? 'background:#faf5ea;' : ''}">
-              <td style="font-size:10px;">${idx + 1}</td>
-              <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px;">${dateDisplay}</td>
-              <td style="font-size:10px;">${dayName}</td>
-              <td colspan="6" style="color:#94a3b8; font-size:9.5px; text-align:center;">-</td>
-              <td style="font-size:10px;">-</td>
-              <td style="font-size:10px;">-</td>
-              <td style="text-align:left; padding-left:6px; color:#94a3b8; font-size:9.5px;">-</td>
-            </tr>
-          `;
+          const nowBkk = new Date(Date.now() + 7 * 3600 * 1000);
+          const todayIso = nowBkk.toISOString().substring(0, 10);
+          const joinD = emp ? String(emp.joinDate || emp.join_date || '').substring(0, 10) : '';
+          const resignD = emp ? String(emp.resignDate || emp.resign_date || '').substring(0, 10) : '';
+          const isBeforeJoin = joinD && dStr < joinD;
+          const isAfterResign = resignD && dStr > resignD;
+
+          if (dStr < todayIso && !isBeforeJoin && !isAfterResign) {
+            absentDaysCount++;
+            rowsHtml += `
+              <tr style="height:21px; background:#fef2f2; border-left:3px solid #ef4444;">
+                <td style="font-size:10px;">${idx + 1}</td>
+                <td style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:10.5px; color:#dc2626;">${dateDisplay}</td>
+                <td style="font-size:10px; color:#b91c1c; font-weight:700;">${dayName}</td>
+                <td colspan="6" style="color:#dc2626; font-weight:700; letter-spacing:0.5px; font-size:9.5px; text-align:center;">
+                  🔴 ขาดงาน (ไม่มีบันทึกเวลาทำงาน)
+                </td>
+                <td style="font-size:10px; color:#dc2626; font-weight:700;">-</td>
+                <td style="font-size:10px; color:#dc2626; font-weight:700;">-</td>
+                <td style="text-align:left; padding-left:6px; color:#dc2626; font-weight:700; font-size:9.5px;">🔴 ขาดงาน</td>
+              </tr>
+            `;
+          } else {
+            rowsHtml += `
+              <tr style="height:21px; ${idx % 2 === 1 ? 'background:#faf5ea;' : ''}">
+                <td style="font-size:10px;">${idx + 1}</td>
+                <td style="font-family:'JetBrains Mono',monospace; font-size:10.5px;">${dateDisplay}</td>
+                <td style="font-size:10px;">${dayName}</td>
+                <td colspan="6" style="color:#94a3b8; font-size:9.5px; text-align:center;">-</td>
+                <td style="font-size:10px;">-</td>
+                <td style="font-size:10px;">-</td>
+                <td style="text-align:left; padding-left:6px; color:#94a3b8; font-size:9.5px;">-</td>
+              </tr>
+            `;
+          }
         }
       }
     });
@@ -7213,13 +7238,14 @@ async function downloadEmployeeTimeCardImage() {
         </tbody>
       </table>
 
-      <!-- Summary 5 Box -->
-      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 6px; border: 1.5px solid #92400e; background: #fefce8; padding: 6px; text-align: center; font-size: 11px;">
+      <!-- Summary 6 Box -->
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 6px; border: 1.5px solid #92400e; background: #fefce8; padding: 6px; text-align: center; font-size: 11px;">
         <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">วันทำงานจริง</div><div style="font-size: 13px; font-weight: 800; color: #166534;">${daysWorked} วัน</div></div>
+        <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">วันลาที่อนุมัติ</div><div style="font-size: 13px; font-weight: 800; color: #6d28d9;">${leaveDaysCount} วัน</div></div>
+        <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">ขาดงาน</div><div style="font-size: 13px; font-weight: 800; color: ${absentDaysCount > 0 ? '#dc2626' : '#64748b'};">${absentDaysCount} วัน</div></div>
         <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">ชม. งานปกติ</div><div style="font-size: 13px; font-weight: 800; color: #1e40af;">${totalWorkHours.toFixed(1)} ชม.</div></div>
         <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">รวมล่วงเวลา (OT)</div><div style="font-size: 13px; font-weight: 800; color: #78350f;">${totalOtHours.toFixed(1)} ชม.</div></div>
         <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">มาสายรวม</div><div style="font-size: 13px; font-weight: 800; color: #b91c1c;">${lateCount} ครั้ง (${totalLateMinutes} น.)</div></div>
-        <div><div style="font-size: 9.5px; color: #92400e; font-weight: 700;">วันหยุด / ลา</div><div style="font-size: 13px; font-weight: 800; color: #b45309;">${holidayCount + leaveDaysCount} วัน</div></div>
       </div>
 
       <!-- Advance Payment Summary Banner -->
