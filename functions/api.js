@@ -119,7 +119,8 @@ export async function onRequest(context) {
       retryable: isBusy,
       message: isBusy 
         ? 'ระบบฐานข้อมูลกำลังประมวลผลพร้อมกัน กรุณารอสักครู่ (ระบบกำลังลองบันทึกใหม่อัตโนมัติ)' 
-        : ('Server Error: ' + err.message)
+        : ('Server Error: ' + err.message),
+      stack: err.stack
     }), {
       status: isBusy ? 503 : 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
