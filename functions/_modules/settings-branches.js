@@ -1,6 +1,7 @@
 /**
  * Settings & Branch Controls Handlers Module
  */
+import { timeStringToMinutes } from './db.js';
 import { isUserSuperAdmin, userHasPermission } from './security.js';
 
 export const settingsBranchesHandlers = {

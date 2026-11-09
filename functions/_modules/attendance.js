@@ -1,7 +1,7 @@
 /**
  * Attendance & Time Tracking Handlers Module
  */
-import { calculateDistanceMeters, timeToMinutes, getMinutesDiff, getEmployeeBranchConfig } from './db.js';
+import { calculateDistanceMeters, timeToMinutes, minutesToTime, getMinutesDiff, getEmployeeBranchConfig } from './db.js';
 import { verifyQrToken, validateTimeWindow } from './security.js';
 import { sendPushToAdmins } from './notifications.js';
 

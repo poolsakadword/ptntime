@@ -24,6 +24,12 @@ export function timeToMinutes(tStr) {
   return (parts[0] || 0) * 60 + (parts[1] || 0);
 }
 
+export function minutesToTime(totalMins) {
+  const h = Math.floor(totalMins / 60) % 24;
+  const m = Math.floor(totalMins % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 export function getMinutesDiff(tStr1, tStr2) {
   return timeToMinutes(tStr2) - timeToMinutes(tStr1);
 }

@@ -2,6 +2,7 @@
  * Payroll Sync & Initial Data Handlers Module
  */
 import { normalizeDateToIso } from './db.js';
+import { getDynamicQrToken } from './security.js';
 
 export const payrollSyncHandlers = {
   getInitialData: async (db, params, context) => {
