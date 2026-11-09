@@ -653,12 +653,15 @@ async function downloadEmployeeTimeCardImage() {
     const compName = comp.name || 'บริษัท พีทีเอ็น ฟาร์มาเซ็นเตอร์ จำกัด';
     const compTax = comp.taxId || '0605556001337';
 
-    const empId = currentEmployee.empId || '-';
-    const empFullName = (currentEmployee.fullName || currentEmployee.full_name || currentEmployee.name || empId) +
-      (currentEmployee.nickname ? ` (${currentEmployee.nickname})` : '');
-    const empPos = (currentEmployee.position || currentEmployee.role || 'พนักงาน') +
-      (currentEmployee.department ? ` / ${currentEmployee.department}` : '');
-    const empBranch = currentEmployee.branch_name || currentEmployee.branchId || 'สำนักงานใหญ่';
+    const emp = (employeeList && Array.isArray(employeeList)) 
+      ? (employeeList.find(e => e.empId === currentEmployee.empId) || currentEmployee)
+      : currentEmployee;
+    const empId = emp.empId || currentEmployee.empId || '-';
+    const empFullName = (emp.fullName || emp.full_name || emp.name || currentEmployee.fullName || empId) +
+      (emp.nickname || currentEmployee.nickname ? ` (${emp.nickname || currentEmployee.nickname})` : '');
+    const empPos = (emp.position || emp.role || currentEmployee.position || 'พนักงาน') +
+      (emp.department || currentEmployee.department ? ` / ${emp.department || currentEmployee.department}` : '');
+    const empBranch = emp.branch_name || emp.branchId || currentEmployee.branch_name || currentEmployee.branchId || 'สำนักงานใหญ่';
 
     // Build holiday map
     const holidayMap = {};
@@ -871,7 +874,7 @@ async function downloadEmployeeTimeCardImage() {
         } else {
           const nowBkk = new Date(Date.now() + 7 * 3600 * 1000);
           const todayIso = nowBkk.toISOString().substring(0, 10);
-          const joinD = emp ? String(emp.joinDate || emp.join_date || '').substring(0, 10) : '';
+          const joinD = emp ? String(emp.joinDate || emp.join_date || emp.startDate || emp.start_date || '').substring(0, 10) : '';
           const resignD = emp ? String(emp.resignDate || emp.resign_date || '').substring(0, 10) : '';
           const isBeforeJoin = joinD && dStr < joinD;
           const isAfterResign = resignD && dStr > resignD;
