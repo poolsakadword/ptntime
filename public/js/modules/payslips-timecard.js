@@ -1595,6 +1595,8 @@ async function openPayslipIncidentBreakdownModal() {
         OTHER: '📝 อื่นๆ'
       };
 
+      window.slipIncidentPhotosCache = items.map(it => it.evidence_photo_url || '');
+
       contentEl.innerHTML = items.map((it, idx) => {
         const catText = categoryMap[it.category] || it.category || 'อื่นๆ';
         const instText = it.total_installments > 1 ? `งวดที่ ${it.installment_no}/${it.total_installments}` : 'หักงวดเดียว';
@@ -1616,10 +1618,11 @@ async function openPayslipIncidentBreakdownModal() {
               </div>
             ` : ''}
             ${it.evidence_photo_url ? `
-              <div class="pt-1">
-                <a href="${it.evidence_photo_url}" target="_blank" class="text-[11px] text-sky-600 hover:underline font-bold flex items-center gap-1">
-                  <span>📷</span> ดูรูปถ่ายหลักฐาน
-                </a>
+              <div class="pt-2 border-t border-slate-200 flex items-center gap-2.5">
+                <img src="${it.evidence_photo_url}" onclick="openSlipIncidentPhotoLightbox(${idx})" class="w-12 h-12 object-cover rounded-xl border border-slate-300 cursor-pointer shrink-0" alt="Evidence" />
+                <button type="button" onclick="openSlipIncidentPhotoLightbox(${idx})" class="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition active:scale-95">
+                  <span>📷</span> ดูรูปถ่ายหลักฐานขนาดใหญ่
+                </button>
               </div>
             ` : ''}
           </div>
@@ -1639,5 +1642,27 @@ async function openPayslipIncidentBreakdownModal() {
     if (contentEl) {
       contentEl.innerHTML = '<div class="text-center py-4 text-rose-500 text-xs">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
     }
+  }
+}
+
+function openSlipIncidentPhotoLightbox(idx) {
+  const url = window.slipIncidentPhotosCache?.[idx];
+  if (!url) return;
+
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      title: '📷 รูปถ่ายหลักฐานความเสียหาย',
+      html: `
+        <div class="mt-2 max-h-[65vh] overflow-auto bg-slate-50 rounded-2xl p-2 border border-slate-200">
+          <img src="${url}" class="max-w-full max-h-[60vh] mx-auto rounded-xl object-contain" alt="Evidence" />
+        </div>
+      `,
+      width: 'auto',
+      showCloseButton: true,
+      confirmButtonText: 'ปิดหน้าต่าง',
+      confirmButtonColor: '#0284c7'
+    });
+  } else {
+    window.open(url, '_blank');
   }
 }
