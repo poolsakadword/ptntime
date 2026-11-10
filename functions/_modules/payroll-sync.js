@@ -379,6 +379,15 @@ export const payrollSyncHandlers = {
         isClosed: closedMap[targetCalc.period] || false
       };
 
+      const incidentItems = await db.prepare(`
+        SELECT s.amount, s.installment_no, s.total_installments, i.category, i.title, i.incident_date, i.incident_code, i.description
+        FROM incident_deduction_schedules s
+        JOIN incident_deductions i ON s.incident_id = i.id
+        WHERE s.emp_id = ? AND s.target_period = ? AND s.status = 'SCHEDULED'
+        ORDER BY i.incident_date ASC
+      `).bind(empId, targetCalc.period).all().catch(() => ({ results: [] }));
+      payslipData.incidentDeductions = incidentItems.results || [];
+
       return {
         success: true,
         empId,

@@ -237,6 +237,48 @@ export async function ensureTables(db) {
   `).run().catch(() => {});
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_company_holidays_date ON company_holidays(date)').run().catch(() => {});
 
+  // Incident & Damage Deductions Tables
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS incident_deductions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      incident_code TEXT UNIQUE,
+      incident_date TEXT NOT NULL,
+      branch_id TEXT NOT NULL,
+      category TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      evidence_photo_url TEXT,
+      total_incident_amount REAL NOT NULL,
+      company_absorbed_amount REAL DEFAULT 0,
+      net_employee_amount REAL NOT NULL,
+      split_count INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'PENDING',
+      reporter_username TEXT,
+      approver_username TEXT,
+      approved_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run().catch(() => {});
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_incident_deductions_date ON incident_deductions(incident_date)").run().catch(() => {});
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_incident_deductions_status ON incident_deductions(status)").run().catch(() => {});
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_incident_deductions_branch ON incident_deductions(branch_id)").run().catch(() => {});
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS incident_deduction_schedules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      incident_id INTEGER NOT NULL,
+      emp_id TEXT NOT NULL,
+      target_period TEXT NOT NULL,
+      installment_no INTEGER DEFAULT 1,
+      total_installments INTEGER DEFAULT 1,
+      amount REAL NOT NULL,
+      status TEXT DEFAULT 'SCHEDULED',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run().catch(() => {});
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_incident_sched_emp_period ON incident_deduction_schedules(emp_id, target_period)").run().catch(() => {});
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_incident_sched_incident ON incident_deduction_schedules(incident_id)").run().catch(() => {});
+
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

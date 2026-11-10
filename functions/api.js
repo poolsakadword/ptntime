@@ -13,6 +13,7 @@ import { requestHandlers } from './_modules/requests.js';
 import { settingsBranchesHandlers } from './_modules/settings-branches.js';
 import { payrollSyncHandlers } from './_modules/payroll-sync.js';
 import { notificationHandlers } from './_modules/notifications.js';
+import { incidentHandlers } from './_modules/incidents.js';
 
 const actionHandlers = {
   ...kioskHandlers,
@@ -21,6 +22,7 @@ const actionHandlers = {
   ...settingsBranchesHandlers,
   ...payrollSyncHandlers,
   ...notificationHandlers,
+  ...incidentHandlers,
 };
 
 export async function onRequest(context) {

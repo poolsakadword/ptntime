@@ -735,32 +735,39 @@ function switchSubTab(sub) {
 
   const advBtn = document.getElementById('subTabBtnAdvance');
   const leaveBtn = document.getElementById('subTabBtnLeave');
+  const incBtn = document.getElementById('subTabBtnIncident');
   const otBtn = document.getElementById('subTabBtnOt');
   const statusBtn = document.getElementById('subTabBtnStatus');
   
   const advContent = document.getElementById('subTabAdvanceContent');
   const leaveContent = document.getElementById('subTabLeaveContent');
+  const incContent = document.getElementById('subTabIncidentContent');
   const otContent = document.getElementById('subTabOtContent');
   const statusContent = document.getElementById('subTabStatusContent');
 
-  [advContent, leaveContent, otContent, statusContent].forEach(el => el?.classList.add('hidden'));
-  [advBtn, leaveBtn, otBtn, statusBtn].forEach(b => {
-    if (b) b.className = 'flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition';
+  [advContent, leaveContent, incContent, otContent, statusContent].forEach(el => el?.classList.add('hidden'));
+  [advBtn, leaveBtn, incBtn, otBtn, statusBtn].forEach(b => {
+    if (b) b.className = 'flex-1 min-w-[65px] py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition';
   });
 
   if (sub === 'advance') {
     advContent?.classList.remove('hidden');
-    if (advBtn) advBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-emerald-700 transition';
+    if (advBtn) advBtn.className = 'flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-emerald-700 transition';
     loadAdvanceEligibility();
   } else if (sub === 'leave') {
     leaveContent?.classList.remove('hidden');
-    if (leaveBtn) leaveBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-sky-700 transition';
+    if (leaveBtn) leaveBtn.className = 'flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-sky-700 transition';
+  } else if (sub === 'incident') {
+    incContent?.classList.remove('hidden');
+    if (incBtn) incBtn.className = 'flex-1 min-w-[95px] py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-amber-700 transition';
+    initIncidentForm();
+    loadBranchIncidentsList();
   } else if (sub === 'ot') {
     otContent?.classList.remove('hidden');
-    if (otBtn) otBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-indigo-700 transition';
+    if (otBtn) otBtn.className = 'flex-1 min-w-[65px] py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-indigo-700 transition';
   } else if (sub === 'status') {
     statusContent?.classList.remove('hidden');
-    if (statusBtn) statusBtn.className = 'flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-slate-800 transition';
+    if (statusBtn) statusBtn.className = 'flex-1 min-w-[65px] py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-slate-800 transition';
     loadMyRequests();
   }
 
@@ -1056,5 +1063,286 @@ async function cancelMyRequest(type, id) {
     }
   } catch(e) {
     Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+}
+
+// ==============================================================================
+// 12. INCIDENT & DAMAGE DEDUCTIONS (แจ้งเงินขาด / สินค้าเสียหาย)
+// ==============================================================================
+var incidentEvidenceBase64 = '';
+
+function initIncidentForm() {
+  const dateEl = document.getElementById('incDate');
+  if (dateEl && !dateEl.value) {
+    const todayIso = new Date().toISOString().substring(0, 10);
+    dateEl.value = todayIso;
+  }
+
+  // Populate Branches
+  const branchSelect = document.getElementById('incBranch');
+  if (branchSelect && Array.isArray(branchList) && branchList.length > 0) {
+    const currentVal = branchSelect.value;
+    branchSelect.innerHTML = branchList.map(b => 
+      `<option value="${b.branch_id || b.branchId}">${b.branch_name || b.name || b.branch_id}</option>`
+    ).join('');
+    if (currentEmployee && currentEmployee.branch) {
+      branchSelect.value = currentEmployee.branch;
+    } else if (currentVal) {
+      branchSelect.value = currentVal;
+    }
+  }
+
+  // Populate Employees Checklist
+  const staffContainer = document.getElementById('incStaffChecklist');
+  if (staffContainer && Array.isArray(employeeList)) {
+    const sortedEmps = [...employeeList].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
+    staffContainer.innerHTML = sortedEmps.map(emp => {
+      const isSelf = currentEmployee && emp.empId === currentEmployee.empId;
+      const nick = emp.nickname ? ` (${emp.nickname})` : '';
+      return `
+        <label class="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer text-slate-800 transition">
+          <input type="checkbox" name="incEmpCheckbox" value="${emp.empId}" ${isSelf ? 'checked' : ''} onchange="calculateIncidentSplit()" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
+          <span class="font-bold text-slate-700">[${emp.empId}] ${emp.name || emp.full_name}${nick}</span>
+        </label>
+      `;
+    }).join('');
+  }
+
+  calculateIncidentSplit();
+}
+
+function calculateIncidentSplit() {
+  const totalInput = document.getElementById('incTotalAmount');
+  const totalAmount = Math.max(0, parseFloat(totalInput?.value) || 0);
+
+  const checkboxes = document.querySelectorAll('input[name="incEmpCheckbox"]:checked');
+  const count = checkboxes.length;
+
+  const countBadge = document.getElementById('incStaffSelectedCountBadge');
+  if (countBadge) countBadge.textContent = `เลือก ${count} คน`;
+
+  const perPersonEl = document.getElementById('incSplitPerPerson');
+  const formulaEl = document.getElementById('incSplitFormula');
+
+  if (count > 0 && totalAmount > 0) {
+    const perPerson = Math.round((totalAmount / count) * 100) / 100;
+    if (perPersonEl) perPersonEl.textContent = perPerson.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (formulaEl) formulaEl.textContent = `ยอดรวม ฿${totalAmount.toLocaleString()} ÷ ${count} คน`;
+  } else {
+    if (perPersonEl) perPersonEl.textContent = '0.00';
+    if (formulaEl) formulaEl.textContent = count === 0 ? 'กรุณาเลือกพนักงานผู้ร่วมรับผิดชอบ' : 'กรุณาระบุยอดเงินความเสียหาย';
+  }
+}
+
+async function handleIncidentPhotoChange(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    if (typeof compressImage === 'function') {
+      incidentEvidenceBase64 = await compressImage(file, 1024, 0.75);
+    } else {
+      incidentEvidenceBase64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const previewContainer = document.getElementById('incPhotoPreviewContainer');
+    const previewImg = document.getElementById('incPhotoPreview');
+    const clearBtn = document.getElementById('incPhotoClearBtn');
+    const label = document.getElementById('incPhotoBtnLabel');
+
+    if (previewContainer && previewImg) {
+      previewImg.src = incidentEvidenceBase64;
+      previewContainer.classList.remove('hidden');
+    }
+    if (clearBtn) clearBtn.classList.remove('hidden');
+    if (label) label.textContent = 'เปลี่ยนรูปถ่ายหลักฐาน';
+  } catch (err) {
+    console.error('Error reading photo:', err);
+    Swal.fire('แนบรูปไม่สำเร็จ', 'ไม่สามารถประมวลผลไฟล์ภาพได้', 'error');
+  }
+}
+
+function clearIncidentPhoto() {
+  incidentEvidenceBase64 = '';
+  const input = document.getElementById('incPhotoInput');
+  if (input) input.value = '';
+  const previewContainer = document.getElementById('incPhotoPreviewContainer');
+  const previewImg = document.getElementById('incPhotoPreview');
+  const clearBtn = document.getElementById('incPhotoClearBtn');
+  const label = document.getElementById('incPhotoBtnLabel');
+
+  if (previewContainer) previewContainer.classList.add('hidden');
+  if (previewImg) previewImg.src = '';
+  if (clearBtn) clearBtn.classList.add('hidden');
+  if (label) label.textContent = 'แตะเพื่อถ่ายรูป / แนบภาพ';
+}
+
+async function submitIncidentForm() {
+  const date = document.getElementById('incDate')?.value;
+  const branch = document.getElementById('incBranch')?.value || 'B01';
+  const category = document.getElementById('incCategory')?.value || 'OTHER';
+  const title = document.getElementById('incTitle')?.value.trim();
+  const totalAmount = parseFloat(document.getElementById('incTotalAmount')?.value) || 0;
+  const description = document.getElementById('incDescription')?.value.trim();
+
+  const checkedBoxes = document.querySelectorAll('input[name="incEmpCheckbox"]:checked');
+  const involvedEmpIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+  if (!date) {
+    Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุวันที่เกิดเหตุ', 'warning');
+    return;
+  }
+  if (!title) {
+    Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุหัวข้อเรื่อง / สาเหตุโดยย่อ', 'warning');
+    return;
+  }
+  if (totalAmount <= 0) {
+    Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุมูลค่าความเสียหายที่มากกว่า 0 บาท', 'warning');
+    return;
+  }
+  if (involvedEmpIds.length === 0) {
+    Swal.fire('ข้อมูลไม่ครบ', 'กรุณาเลือกพนักงานผู้ร่วมรับผิดชอบอย่างน้อย 1 ท่าน', 'warning');
+    return;
+  }
+
+  const perPerson = Math.round((totalAmount / involvedEmpIds.length) * 100) / 100;
+
+  const confirmRes = await Swal.fire({
+    title: 'ยืนยันการส่งรายงานความเสียหาย?',
+    html: `
+      <div class="text-left text-xs space-y-2 p-2 bg-slate-50 rounded-xl">
+        <div><strong>สาเหตุ:</strong> ${title}</div>
+        <div><strong>ยอดรวม:</strong> <span class="text-amber-700 font-bold font-mono">฿${totalAmount.toLocaleString()}</span></div>
+        <div><strong>ผู้รับผิดชอบ:</strong> ${involvedEmpIds.length} ท่าน (คนละ ฿${perPerson.toLocaleString()})</div>
+        <div class="text-[11px] text-slate-500">* รายการนี้จะถูกส่งไปยัง HR ใน PTN Payroll เพื่อตรวจสอบและอนุมัติการหักเงินต่อไป</div>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ยืนยันส่งรายงาน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#d97706'
+  });
+
+  if (!confirmRes.isConfirmed) return;
+
+  const submitBtn = document.getElementById('btnSubmitIncident');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'กำลังส่งรายงาน...';
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'submitIncidentReport',
+        incidentDate: date,
+        branchId: branch,
+        category,
+        title,
+        description,
+        totalIncidentAmount: totalAmount,
+        involvedEmpIds,
+        evidencePhotoUrl: incidentEvidenceBase64 || '',
+        username: (currentEmployee && (currentEmployee.name || currentEmployee.empId)) || supervisorSession?.username || 'BranchStaff'
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'ส่งรายงานสำเร็จ',
+        text: data.message || `บันทึกรายการ [${data.incidentCode}] เรียบร้อยแล้ว`,
+        confirmButtonColor: '#d97706'
+      });
+
+      // Reset form
+      document.getElementById('incTitle').value = '';
+      document.getElementById('incTotalAmount').value = '';
+      document.getElementById('incDescription').value = '';
+      clearIncidentPhoto();
+      initIncidentForm();
+      loadBranchIncidentsList();
+    } else {
+      Swal.fire('บันทึกไม่สำเร็จ', data.message || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
+    }
+  } catch (err) {
+    console.error('Submit incident error:', err);
+    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🚨 ส่งรายงานความเสียหายไปยังฝ่ายบุคคล';
+    }
+  }
+}
+
+async function loadBranchIncidentsList() {
+  const container = document.getElementById('incRecentReportsList');
+  if (!container) return;
+
+  const branchId = document.getElementById('incBranch')?.value || (currentEmployee?.branch) || 'ALL';
+
+  try {
+    const res = await fetch(`${API_URL}?action=getBranchIncidents&branchId=${branchId}`);
+    const data = await res.json();
+
+    if (data.success && Array.isArray(data.incidents) && data.incidents.length > 0) {
+      const categoryMap = {
+        CASH_SHORT: '💵 เงินสดขาด',
+        GOODS_DAMAGE: '📦 สินค้าเสียหาย',
+        STOCK_LOSS: '🔍 สต็อกหาย',
+        PROPERTY_DAMAGE: '🏢 ทรัพย์สินร้าน',
+        OTHER: '📝 อื่นๆ'
+      };
+
+      const statusMap = {
+        PENDING: { label: 'รอ HR ตรวจสอบ', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+        APPROVED: { label: 'อนุมัติหักเงินแล้ว', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+        REJECTED: { label: 'ปฏิเสธ / ยกเลิก', cls: 'bg-rose-100 text-rose-800 border-rose-200' }
+      };
+
+      container.innerHTML = data.incidents.map(inc => {
+        const catText = categoryMap[inc.category] || inc.category;
+        const st = statusMap[inc.status] || { label: inc.status, cls: 'bg-slate-100 text-slate-700 border-slate-200' };
+        const empText = inc.involvedEmployeesText || `${inc.involvedEmpCount || 1} คน`;
+
+        return `
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1.5 hover:border-amber-300 transition">
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-bold text-slate-800 text-xs">${inc.incident_code || '#' + inc.id}</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${st.cls}">${st.label}</span>
+            </div>
+            <div class="font-bold text-slate-900 text-xs">${inc.title}</div>
+            <div class="flex items-center justify-between text-[11px] text-slate-500">
+              <span>📅 ${inc.incident_date} • ${catText}</span>
+              <span class="font-mono font-bold text-amber-700 text-xs">฿${(Number(inc.total_incident_amount) || 0).toLocaleString()}</span>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-200/80">
+              👥 <strong>ผู้ร่วมรับผิดชอบ:</strong> ${empText}
+            </div>
+            ${inc.evidence_photo_url ? `
+              <div class="pt-1">
+                <a href="${inc.evidence_photo_url}" target="_blank" class="text-[11px] text-sky-600 hover:underline font-bold flex items-center gap-1">
+                  <span>📷</span> ดูรูปภาพหลักฐาน
+                </a>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    } else {
+      container.innerHTML = '<div class="text-center py-4 text-slate-400 text-xs">ยังไม่มีรายงานความเสียหายที่บันทึกไว้</div>';
+    }
+  } catch (err) {
+    console.error('Error loading branch incidents:', err);
+    container.innerHTML = '<div class="text-center py-3 text-slate-400 text-xs">ไม่สามารถโหลดรายการได้</div>';
   }
 }

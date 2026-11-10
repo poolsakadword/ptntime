@@ -415,18 +415,21 @@
       <!-- TAB 3: REQUESTS (ขอลา / ขอ OT / ขอเบิกเงินล่วงหน้า) -->
       <!-- ========================================================================= -->
       <section id="tabRequests" class="space-y-4 hidden">
-        <!-- Sub-tabs: Leave / OT / Advance / Status -->
-        <div class="flex p-1.5 bg-slate-200/90 rounded-2xl">
-          <button id="subTabBtnAdvance" onclick="switchSubTab('advance')" class="flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-emerald-700 transition">
-            💵 ขอเบิกเงิน
+        <!-- Sub-tabs: Leave / OT / Advance / Status / Incident -->
+        <div class="flex p-1.5 bg-slate-200/90 rounded-2xl gap-1 overflow-x-auto no-scrollbar">
+          <button id="subTabBtnAdvance" onclick="switchSubTab('advance')" class="flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-emerald-700 transition">
+            💵 เบิกเงิน
           </button>
-          <button id="subTabBtnLeave" onclick="switchSubTab('leave')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
+          <button id="subTabBtnLeave" onclick="switchSubTab('leave')" class="flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
             🏖️ ขอลางาน
           </button>
-          <button id="subTabBtnOt" onclick="switchSubTab('ot')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition hidden">
+          <button id="subTabBtnIncident" onclick="switchSubTab('incident')" class="flex-1 min-w-[95px] py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
+            🚨 เงินขาด/ของเสีย
+          </button>
+          <button id="subTabBtnOt" onclick="switchSubTab('ot')" class="flex-1 min-w-[65px] py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition hidden">
             ⏱️ ขอ OT
           </button>
-          <button id="subTabBtnStatus" onclick="switchSubTab('status')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
+          <button id="subTabBtnStatus" onclick="switchSubTab('status')" class="flex-1 min-w-[65px] py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
             📋 สถานะ
           </button>
         </div>
@@ -572,6 +575,125 @@
           </div>
           <div id="myRequestsList" class="space-y-2.5 text-xs">
             <div class="text-center py-8 text-slate-400 font-medium text-sm">กำลังโหลดรายการคำขอ...</div>
+          </div>
+        </div>
+
+        <!-- Sub Tab 5: Incident Report Form (แจ้งเงินขาด / สินค้าเสียหาย) -->
+        <div id="subTabIncidentContent" class="space-y-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hidden">
+          <div class="flex items-center justify-between border-b pb-3">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-800 flex items-center space-x-1.5">
+                <span>🚨 แจ้งเงินขาด / สินค้าเสียหาย</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5 font-medium">บันทึกรายงานเหตุการณ์เพื่อส่งฝ่ายบุคคลพิจารณาหักค่าเสียหาย</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+              รอ HR อนุมัติ
+            </span>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <!-- Incident Date & Branch -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">วันที่เกิดเหตุ</label>
+                <input type="date" id="incDate" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">สาขา</label>
+                <select id="incBranch" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500">
+                  <option value="B01">สาขาหลัก</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Category -->
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">ประเภทความเสียหาย</label>
+              <select id="incCategory" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500">
+                <option value="CASH_SHORT">💵 เงินสดขาด / ทอนเงินผิด / เก็บเงินไม่ครบ</option>
+                <option value="GOODS_DAMAGE">📦 สินค้าชำรุด / เสียหาย / ทำแตกหัก</option>
+                <option value="STOCK_LOSS">🔍 สินค้าสูญหาย / สต็อกไม่ตรง</option>
+                <option value="PROPERTY_DAMAGE">🏢 อุปกรณ์ / ทรัพย์สินร้านค้าเสียหาย</option>
+                <option value="OTHER">📝 อื่นๆ</option>
+              </select>
+            </div>
+
+            <!-- Incident Title -->
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">หัวข้อเรื่อง / สาเหตุโดยย่อ <span class="text-rose-500">*</span></label>
+              <input type="text" id="incTitle" placeholder="เช่น เงินทอนแคชเชียร์รอบค่ำขาด 300 บ., ทำขวดน้ำยาตกแตก" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+
+            <!-- Total Amount -->
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">ยอดมูลค่าความเสียหายรวม (บาท) <span class="text-rose-500">*</span></label>
+              <input type="number" step="any" id="incTotalAmount" oninput="calculateIncidentSplit()" placeholder="เช่น 600" class="w-full text-base font-bold p-3 bg-amber-50/50 border border-amber-300 rounded-xl text-amber-900 outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+
+            <!-- Responsible Staff Picker -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-700">พนักงานผู้ร่วมรับผิดชอบ <span class="text-rose-500">*</span></label>
+                <span id="incStaffSelectedCountBadge" class="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">เลือก 0 คน</span>
+              </div>
+              <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl max-h-44 overflow-y-auto space-y-1" id="incStaffChecklist">
+                <!-- Checkboxes populated via JS -->
+                <div class="text-center py-2 text-slate-400">กำลังโหลดรายชื่อพนักงาน...</div>
+              </div>
+
+              <!-- Split Calculation Preview Banner -->
+              <div id="incSplitBanner" class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between text-xs">
+                <div>
+                  <span class="text-slate-600">หารเฉลี่ยรับผิดชอบคนละ:</span>
+                  <div class="font-bold text-slate-800 text-[11px]" id="incSplitFormula">เลือกพนักงานเพื่อคำนวณ</div>
+                </div>
+                <div class="text-right">
+                  <span class="text-base font-black text-amber-700 font-mono" id="incSplitPerPerson">0.00</span>
+                  <span class="text-xs font-bold text-amber-700">บาท</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Photo Upload with Preview -->
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">ถ่ายรูป / แนบหลักฐานความเสียหาย</label>
+              <div class="flex items-center gap-3">
+                <label class="flex-1 cursor-pointer flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 border border-dashed border-slate-300 rounded-xl text-slate-700 font-bold transition active:scale-95">
+                  <span>📷</span>
+                  <span id="incPhotoBtnLabel">แตะเพื่อถ่ายรูป / แนบภาพ</span>
+                  <input type="file" id="incPhotoInput" accept="image/*" onchange="handleIncidentPhotoChange(event)" class="hidden">
+                </label>
+                <button type="button" id="incPhotoClearBtn" onclick="clearIncidentPhoto()" class="hidden py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition">
+                  ลบรูป
+                </button>
+              </div>
+              <div id="incPhotoPreviewContainer" class="hidden mt-2 border border-slate-200 rounded-2xl p-2 bg-slate-50 text-center">
+                <img id="incPhotoPreview" src="" alt="Evidence" class="max-h-48 mx-auto rounded-xl object-contain shadow-sm">
+              </div>
+            </div>
+
+            <!-- Detailed Description -->
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">รายละเอียดเหตุการณ์ / คำชี้แจงเพิ่มเติม</label>
+              <textarea id="incDescription" rows="2" placeholder="อธิบายรายละเอียด เช่น เกิดขึ้นช่วงกะใด ลูกค้าชำระเงินอย่างไร หรือพบเห็นเมื่อไหร่..." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="button" id="btnSubmitIncident" onclick="submitIncidentForm()" class="w-full py-3.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-sm font-bold rounded-2xl shadow-md transition disabled:opacity-50">
+              🚨 ส่งรายงานความเสียหายไปยังฝ่ายบุคคล
+            </button>
+          </div>
+
+          <!-- Recent Incident Reports at Branch -->
+          <div class="border-t pt-4 mt-4 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold text-slate-700">📋 รายการความเสียหายที่ส่งเรื่องแล้ว</h4>
+              <button type="button" onclick="loadBranchIncidentsList()" class="text-[11px] text-amber-700 hover:underline font-bold">รีเฟรช</button>
+            </div>
+            <div id="incRecentReportsList" class="space-y-2 text-xs">
+              <div class="text-center py-4 text-slate-400">ยังไม่มีรายงานความเสียหาย</div>
+            </div>
           </div>
         </div>
       </section>
@@ -740,8 +862,11 @@
                   <span>หักลากิจ / ขาดงาน</span>
                   <span class="font-mono font-bold text-rose-600" id="slipLeaveDedDisplay">0.00</span>
                 </div>
-                <div class="py-1.5 flex justify-between" id="slipOtherDedRow">
-                  <span>หักอื่นๆ</span>
+                <div class="py-1.5 flex justify-between items-center" id="slipOtherDedRow">
+                  <div class="flex items-center gap-1.5">
+                    <span>หักอื่นๆ</span>
+                    <button type="button" id="btnViewSlipIncidentBreakdown" onclick="openPayslipIncidentBreakdownModal()" class="hidden text-[10px] text-amber-800 font-bold bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-full transition">🔍 ดูแจกแจง</button>
+                  </div>
                   <span class="font-mono font-bold text-rose-600" id="slipOtherDisplay">0.00</span>
                 </div>
               </div>
@@ -1795,6 +1920,36 @@
         <button type="button" onclick="closeModal('modalPwaIosInstall')" class="w-full py-3 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold rounded-2xl shadow transition text-xs">
           เข้าใจแล้ว
         </button>
+      </div>
+    </div>
+
+    <!-- MODAL: INCIDENT & DAMAGE DEDUCTIONS BREAKDOWN POPUP -->
+    <div id="modalIncidentBreakdown" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 md:p-4 hidden backdrop-blur-sm">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between border-b pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📋</span>
+            <div>
+              <h3 class="font-black text-slate-800 text-sm">แจกแจงรายการหักเงินค่าเสียหาย</h3>
+              <p class="text-[11px] text-slate-500" id="incBreakdownSubtitle">งวดประจำเดือน</p>
+            </div>
+          </div>
+          <button type="button" onclick="closeModal('modalIncidentBreakdown')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto space-y-3" id="incBreakdownContent">
+          <!-- Populated via JS -->
+        </div>
+
+        <div class="border-t pt-3 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500">รวมยอดหักงวดนี้:</span>
+            <div class="text-base font-black text-rose-600 font-mono" id="incBreakdownTotalSum">0.00 บาท</div>
+          </div>
+          <button type="button" onclick="closeModal('modalIncidentBreakdown')" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-bold rounded-xl transition">
+            ปิด
+          </button>
+        </div>
       </div>
     </div>
 

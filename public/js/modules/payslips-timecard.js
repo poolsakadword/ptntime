@@ -262,6 +262,18 @@ function renderPayslipVoucher(slip, companyInfo) {
   const otherDedEl = document.getElementById('slipOtherDisplay');
   if (otherDedEl) otherDedEl.textContent = fmt(slip.otherDeduct);
 
+  // Toggle Breakdown Button for Incident & Damage Deductions
+  const btnIncBreakdown = document.getElementById('btnViewSlipIncidentBreakdown');
+  window.currentSlipIncidentDeductions = slip.incidentDeductions || [];
+  window.currentSlipPeriod = slip.period || '';
+  if (btnIncBreakdown) {
+    if (window.currentSlipIncidentDeductions.length > 0 || (Number(slip.otherDeduct) > 0)) {
+      btnIncBreakdown.classList.remove('hidden');
+    } else {
+      btnIncBreakdown.classList.add('hidden');
+    }
+  }
+
   // Attendance Stats
   const absEl = document.getElementById('slipAbsentDays');
   if (absEl) absEl.textContent = `${slip.absentDays || 0} วัน`;
@@ -1528,5 +1540,104 @@ function printPayslipDocument() {
   } else {
     // Fallback if popup blocked
     window.print();
+  }
+}
+
+// ==============================================================================
+// INCIDENT & DAMAGE DEDUCTIONS BREAKDOWN MODAL IN PAYSLIP
+// ==============================================================================
+async function openPayslipIncidentBreakdownModal() {
+  const subtitleEl = document.getElementById('incBreakdownSubtitle');
+  const contentEl = document.getElementById('incBreakdownContent');
+  const totalSumEl = document.getElementById('incBreakdownTotalSum');
+
+  const period = window.currentSlipPeriod || (typeof currentPayslipData !== 'undefined' ? currentPayslipData?.period : '') || '';
+  const empId = currentEmployee?.empId;
+
+  if (subtitleEl) subtitleEl.textContent = `งวดประจำ: ${period || 'ปัจจุบัน'} • พนักงาน: [${empId}] ${currentEmployee?.name || ''}`;
+
+  if (contentEl) {
+    contentEl.innerHTML = '<div class="text-center py-6 text-slate-400">กำลังโหลดรายละเอียดการหักเงิน...</div>';
+  }
+
+  if (typeof openModal === 'function') {
+    openModal('modalIncidentBreakdown');
+  } else {
+    document.getElementById('modalIncidentBreakdown')?.classList.remove('hidden');
+  }
+
+  try {
+    let items = window.currentSlipIncidentDeductions || [];
+    let totalAmt = 0;
+
+    // If not preloaded, fetch dynamically
+    if (items.length === 0 && empId) {
+      const res = await fetch(`${API_URL}?action=getEmployeeIncidentBreakdown&empId=${empId}&period=${encodeURIComponent(period)}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.items)) {
+        items = data.items;
+        totalAmt = data.totalAmount || 0;
+      }
+    } else {
+      totalAmt = items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+    }
+
+    if (totalSumEl) {
+      totalSumEl.textContent = `${totalAmt.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+    }
+
+    if (items.length > 0 && contentEl) {
+      const categoryMap = {
+        CASH_SHORT: '💵 เงินสดขาด',
+        GOODS_DAMAGE: '📦 สินค้าเสียหาย',
+        STOCK_LOSS: '🔍 สต็อกหาย',
+        PROPERTY_DAMAGE: '🏢 ทรัพย์สินร้าน',
+        OTHER: '📝 อื่นๆ'
+      };
+
+      contentEl.innerHTML = items.map((it, idx) => {
+        const catText = categoryMap[it.category] || it.category || 'อื่นๆ';
+        const instText = it.total_installments > 1 ? `งวดที่ ${it.installment_no}/${it.total_installments}` : 'หักงวดเดียว';
+
+        return `
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-bold text-xs text-slate-800">${it.incident_code || '#' + (it.incident_id || (idx + 1))}</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">${instText}</span>
+            </div>
+            <div class="font-bold text-slate-900 text-xs">${it.title || 'ค่าชดใช้ความเสียหาย'}</div>
+            <div class="flex items-center justify-between text-[11px] text-slate-500">
+              <span>📅 ${it.incident_date || '-'} • ${catText}</span>
+              <span class="font-mono font-bold text-rose-600 text-sm">฿${(Number(it.amount) || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            ${it.description ? `
+              <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-200">
+                ${it.description}
+              </div>
+            ` : ''}
+            ${it.evidence_photo_url ? `
+              <div class="pt-1">
+                <a href="${it.evidence_photo_url}" target="_blank" class="text-[11px] text-sky-600 hover:underline font-bold flex items-center gap-1">
+                  <span>📷</span> ดูรูปถ่ายหลักฐาน
+                </a>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    } else if (contentEl) {
+      contentEl.innerHTML = `
+        <div class="text-center py-6 text-slate-400 space-y-1">
+          <div>ℹ️</div>
+          <div class="text-xs">ไม่พบรายการหักความเสียหายเฉพาะในงวดนี้</div>
+          <div class="text-[11px] text-slate-400">(ยอดหักอื่นๆ อาจมาจากการปรับปรุงยอดประจำงวดของฝ่ายบุคคล)</div>
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.error('Error fetching incident breakdown:', err);
+    if (contentEl) {
+      contentEl.innerHTML = '<div class="text-center py-4 text-rose-500 text-xs">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    }
   }
 }
