@@ -1,7 +1,7 @@
 /**
  * Kiosk Counter & Device Lock Handlers Module
  */
-import { calculateDistanceMeters } from './db.js';
+import { calculateDistanceMeters, logSystemActivity } from './db.js';
 import { getDynamicQrToken, getMasterUnlockToken, verifyQrToken, verifyUserPassword, isUserSuperAdmin, userHasPermission } from './security.js';
 
 export const kioskHandlers = {
@@ -221,6 +221,12 @@ export const kioskHandlers = {
         }
 
         if (valid) {
+          await logSystemActivity(
+            db,
+            userRow.username,
+            'PTN_TIME_SUPERVISOR_LOGIN',
+            `เข้าสู่ระบบ Supervisor / Admin บน PTN Time (${userRow.role || 'Admin'})`
+          );
           return {
             success: true,
             user: {
@@ -257,6 +263,13 @@ export const kioskHandlers = {
         INSERT INTO employee_devices (emp_id, device_id, device_name, bound_at, updated_at)
         VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).bind(empId, deviceId, deviceName || 'Mobile Web').run();
+
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_DEVICE_BIND',
+        `ผูกอุปกรณ์เข้าใช้งาน (${deviceName || 'Mobile Web'}) [Device ID: ${String(deviceId).substring(0, 12)}...]`
+      );
 
       return { success: true, message: 'ผูกอุปกรณ์เข้ากับบัญชีพนักงานสำเร็จเรียบร้อย' };
   },
@@ -350,6 +363,13 @@ export const kioskHandlers = {
         await db.prepare('DELETE FROM employee_devices WHERE device_id = ?').bind(deviceId).run();
       }
 
+      await logSystemActivity(
+        db,
+        u || 'Admin',
+        'PTN_TIME_DEVICE_UNLOCK_PW',
+        `ปลดล็อก/สลับอุปกรณ์ด้วยรหัสผ่าน (${empId ? 'พนักงาน ' + empId : 'Device ID ' + deviceId})`
+      );
+
       return { success: true, message: `ปลดล็อกอุปกรณ์สำเร็จเรียบร้อยโดยหัวหน้างาน (${u})` };
   },
 
@@ -383,6 +403,13 @@ export const kioskHandlers = {
         await db.prepare('DELETE FROM employee_devices WHERE device_id = ?').bind(deviceId).run();
       }
 
+      await logSystemActivity(
+        db,
+        empId || 'Supervisor',
+        'PTN_TIME_DEVICE_UNLOCK_QR',
+        `ปลดล็อกอุปกรณ์ด้วย Master QR (${empId ? 'พนักงาน ' + empId : 'Device ID ' + deviceId})`
+      );
+
       return { success: true, message: 'ปลดล็อกอุปกรณ์สำเร็จด้วย Master QR ของหัวหน้างาน' };
   },
 
@@ -396,6 +423,13 @@ export const kioskHandlers = {
       } else if (deviceId) {
         await db.prepare('DELETE FROM employee_devices WHERE device_id = ?').bind(deviceId).run();
       }
+
+      await logSystemActivity(
+        db,
+        params.username || 'Supervisor',
+        'PTN_TIME_DEVICE_RESET',
+        `รีเซ็ตการผูกอุปกรณ์ (${empId ? 'พนักงาน ' + empId : 'Device ID ' + deviceId})`
+      );
 
       return { success: true, message: 'รีเซ็ตการผูกอุปกรณ์เรียบร้อยแล้ว' };
   },

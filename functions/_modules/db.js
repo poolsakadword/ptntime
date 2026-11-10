@@ -2,6 +2,17 @@
  * Database & Core Helpers Module
  */
 
+export async function logSystemActivity(db, username, action, details) {
+  try {
+    await db.prepare('CREATE TABLE IF NOT EXISTS activity_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, username TEXT, action TEXT, details TEXT)').run().catch(() => {});
+    const bkk = new Date(Date.now() + (7 * 3600 * 1000));
+    const now = bkk.toISOString().replace('T', ' ').substring(0, 19);
+    await db.prepare('INSERT INTO activity_logs (timestamp, username, action, details) VALUES (?, ?, ?, ?)').bind(now, username || 'PTN Time', action, details || '').run();
+  } catch (e) {
+    console.error('Failed to log PTN Time activity:', e);
+  }
+}
+
 export function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
   const R = 6371e3;

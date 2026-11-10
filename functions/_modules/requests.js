@@ -1,7 +1,7 @@
 /**
  * Leave, OT & Salary Advance Requests Handlers Module
  */
-import { normalizeDateToIso, timeStringToMinutes } from './db.js';
+import { normalizeDateToIso, timeStringToMinutes, logSystemActivity } from './db.js';
 import { sendPushToAdmins, sendPushToEmployee } from './notifications.js';
 
 export const requestHandlers = {
@@ -148,6 +148,13 @@ export const requestHandlers = {
         tag: `advance-new-${empId}-${Date.now()}`
       }).catch(() => {});
 
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_REQ_ADVANCE',
+        `ยื่นขอเบิกเงินล่วงหน้า จำนวน ฿${numAmount.toLocaleString()}${reason ? ` (เหตุผล: ${reason})` : ''}`
+      );
+
       return { success: true, message: `ยื่นขอเบิกเงินล่วงหน้าจำนวน ${numAmount} บาท เรียบร้อยแล้ว` };
   },
 
@@ -178,6 +185,13 @@ export const requestHandlers = {
         url: '/?tab=attendance&sub=requests',
         tag: `leave-new-${empId}-${Date.now()}`
       }).catch(() => {});
+
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_REQ_LEAVE',
+        `ยื่นขอลางาน (${leaveType}) ${numDays} วัน (${cleanStart} ถึง ${cleanEnd})${reason ? ` [เหตุผล: ${reason}]` : ''}`
+      );
 
       return { success: true, message: 'ส่งคำขอลางานเรียบร้อยแล้ว รอการอนุมัติ' };
   },
@@ -210,6 +224,13 @@ export const requestHandlers = {
         url: '/?tab=attendance&sub=requests',
         tag: `ot-new-${empId}-${Date.now()}`
       }).catch(() => {});
+
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_REQ_OT',
+        `ยื่นขอทำ OT วันที่ ${cleanOtDate} จำนวน ${plannedHours} ชม.${reason ? ` [เหตุผล: ${reason}]` : ''}`
+      );
 
       return { success: true, message: 'ส่งคำขอทำงานล่วงเวลาเรียบร้อยแล้ว' };
   },
@@ -502,6 +523,13 @@ export const requestHandlers = {
         }).catch(err => console.error('sendPushToEmployee error:', err));
       }
 
+      await logSystemActivity(
+        db,
+        approverId || 'Supervisor',
+        'PTN_TIME_APPROVAL',
+        `${status} คำขอ ${type} ID: ${id} (พนักงาน ${targetEmpId || '-'})`
+      );
+
       return { success: true, message: `ดำเนินการ ${decision === 'APPROVE' ? 'อนุมัติ' : 'ปฏิเสธ'} เรียบร้อยแล้ว` };
   },
 
@@ -526,6 +554,13 @@ export const requestHandlers = {
       if (res && res.meta && res.meta.changes === 0) {
         return { success: false, message: 'ไม่สามารถยกเลิกคำขอนี้ได้ (อาจได้รับการอนุมัติแล้วหรือไม่มีอยู่ในระบบ)' };
       }
+
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_REQ_CANCEL',
+        `ยกเลิกคำขอ ${type} (ID: ${id})`
+      );
 
       return { success: true, message: 'ยกเลิกคำขอเรียบร้อยแล้ว' };
   }

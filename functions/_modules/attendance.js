@@ -1,7 +1,7 @@
 /**
  * Attendance & Time Tracking Handlers Module
  */
-import { calculateDistanceMeters, timeToMinutes, minutesToTime, getMinutesDiff, getEmployeeBranchConfig } from './db.js';
+import { calculateDistanceMeters, timeToMinutes, minutesToTime, getMinutesDiff, getEmployeeBranchConfig, logSystemActivity } from './db.js';
 import { verifyQrToken, validateTimeWindow } from './security.js';
 import { sendPushToAdmins } from './notifications.js';
 
@@ -175,6 +175,13 @@ export const attendanceHandlers = {
         }).catch(() => {});
       }
 
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_CLOCK_IN',
+        `สแกนเข้างาน (${branchCfg.branchName}) เวลา ${timeStr}${lateMinutes > 0 ? ` [สาย ${lateMinutes} นาที]` : ''}${distanceMeters !== null ? ` [ระยะห่าง ${distanceMeters} ม.]` : ''}`
+      );
+
       return {
         success: true,
         message: clockInMsg,
@@ -257,6 +264,13 @@ export const attendanceHandlers = {
         SET break_out = ?, break_out_lat = ?, break_out_lng = ?, break_out_photo_url = ?
         WHERE id = ?
       `).bind(timeStr, lat || null, lng || null, photoUrl || null, existing.id).run();
+
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_BREAK_OUT',
+        `สแกนออกไปพัก (${branchCfg.branchName}) เวลา ${timeStr}`
+      );
 
       return {
         success: true,
@@ -345,6 +359,13 @@ export const attendanceHandlers = {
         SET break_in = ?, break_in_lat = ?, break_in_lng = ?, break_in_photo_url = ?, break_minutes = ?, overbreak_minutes = ?
         WHERE id = ?
       `).bind(timeStr, lat || null, lng || null, photoUrl || null, actualBreakMinutes, overBreakMinutes, existing.id).run();
+
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_BREAK_IN',
+        `สแกนกลับเข้าทำงานหลังพัก (${branchCfg.branchName}) เวลา ${timeStr} (พัก ${actualBreakMinutes} นาที${overBreakMinutes > 0 ? `, เกินเวลา ${overBreakMinutes} นาที` : ''})`
+      );
 
       return {
         success: true,
@@ -565,6 +586,13 @@ export const attendanceHandlers = {
       if (hasApprovedLeaveToday || (existing && existing.remark && existing.remark.includes('[ระบบตรวจจับอัตโนมัติ: มีใบลาแต่วันนี้มาทำงานจริง]'))) {
         clockOutMsg += ` ⚡ ตรวจพบมาทำงานจริง (${totalWorkHours} ชม.) ระบบจะยกเว้นการหักวันลาในวันนี้ให้อัตโนมัติ`;
       }
+
+      await logSystemActivity(
+        db,
+        empId,
+        'PTN_TIME_CLOCK_OUT',
+        `สแกนออกงาน (${effectiveBranchCfg.branchName}) เวลา ${timeStr} (ทำงาน ${totalWorkHours} ชม., OT ${calculatedOtHours} ชม.)`
+      );
 
       return {
         success: true,
