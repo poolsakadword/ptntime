@@ -11,7 +11,7 @@ export const payrollSyncHandlers = {
       let employees = [];
 
       if (targetEmpId) {
-        const empRow = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, status, photo_url, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE UPPER(emp_id) = UPPER(?) AND status != 'Resigned'").bind(targetEmpId).first().catch(() => null);
+        const empRow = await db.prepare("SELECT emp_id, full_name, nickname, department, position, phone, status, photo_url, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE UPPER(emp_id) = UPPER(?) AND status != 'Resigned' AND (is_confidential IS NULL OR is_confidential = 0)").bind(targetEmpId).first().catch(() => null);
         if (empRow) {
           const devRow = await db.prepare('SELECT emp_id, device_id, device_name, bound_at FROM employee_devices WHERE UPPER(emp_id) = UPPER(?)').bind(targetEmpId).first().catch(() => null);
           employees = [{
@@ -88,7 +88,7 @@ export const payrollSyncHandlers = {
       // End: 25th of current month
       const endDateStr = `${pYear}-${String(pMonth).padStart(2, '0')}-25`;
 
-      const empRows = await db.prepare('SELECT emp_id, full_name, department, status, resign_date FROM employees ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
+      const empRows = await db.prepare('SELECT emp_id, full_name, department, status, resign_date FROM employees WHERE (is_confidential IS NULL OR is_confidential = 0) ORDER BY emp_id ASC').all().catch(() => ({ results: [] }));
       const syncList = [];
 
       const overbreakSettingSync = await db.prepare('SELECT value FROM settings WHERE key = "CountOverbreakAsLate"').first().catch(() => null);
@@ -179,6 +179,12 @@ export const payrollSyncHandlers = {
       const empId = params.empId ? String(params.empId).trim() : null;
       if (!empId) {
         return { success: false, message: 'กรุณาระบุรหัสพนักงาน' };
+      }
+
+      // Check confidential status
+      const confEmpCheck = await db.prepare('SELECT is_confidential FROM employees WHERE emp_id = ?').bind(empId).first().catch(() => null);
+      if (confEmpCheck && (confEmpCheck.is_confidential === 1 || confEmpCheck.is_confidential === '1')) {
+        return { success: false, message: 'ไม่พบข้อมูลพนักงาน' };
       }
 
       // 1. Check feature toggle in attendance_settings

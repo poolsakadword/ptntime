@@ -155,6 +155,7 @@ export const kioskHandlers = {
         }
       }
       if (!emp) return { success: false, message: 'ไม่พบรหัสพนักงานหรือเบอร์โทรศัพท์นี้ในระบบ' };
+      if (emp.is_confidential === 1 || emp.is_confidential === '1') return { success: false, message: 'ไม่พบรหัสพนักงานหรือเบอร์โทรศัพท์นี้ในระบบ' };
       if (emp.status === 'Resigned') return { success: false, message: 'พนักงานรหัสนี้พ้นสภาพการเป็นพนักงานแล้ว (ลาออก)' };
 
       if (!pinOrPhone) {
@@ -265,8 +266,8 @@ export const kioskHandlers = {
       const { empId, deviceId } = params;
       if (!empId) return { success: false, message: 'ระบุ empId' };
 
-      const emp = await db.prepare('SELECT emp_id, full_name, nickname, department, position, phone, photo_url, status, branch_id, allow_all_branches, is_ot_eligible, birth_date FROM employees WHERE UPPER(emp_id) = UPPER(?)').bind(empId).first();
-      if (!emp || emp.status === 'Resigned') {
+      const emp = await db.prepare('SELECT emp_id, full_name, nickname, department, position, phone, photo_url, status, branch_id, allow_all_branches, is_ot_eligible, birth_date, is_confidential FROM employees WHERE UPPER(emp_id) = UPPER(?)').bind(empId).first();
+      if (!emp || emp.status === 'Resigned' || emp.is_confidential === 1 || emp.is_confidential === '1') {
         return { success: true, isBound: false, isResigned: true, message: 'พนักงานพ้นสภาพการเป็นพนักงานแล้ว' };
       }
 
@@ -406,6 +407,7 @@ export const kioskHandlers = {
                e.full_name, e.nickname, e.department
         FROM employee_devices d
         LEFT JOIN employees e ON d.emp_id = e.emp_id
+        WHERE (e.is_confidential IS NULL OR e.is_confidential = 0)
         ORDER BY d.updated_at DESC
       `).all().catch(() => ({ results: [] }));
 
