@@ -793,9 +793,17 @@ async function downloadEmployeeTimeCardImage() {
         }
         if (otH > 0) notes.push(`OT ${otH} ชม.`);
         if (lateM > 0) notes.push(`สาย ${lateM} น.`);
-        if (l.is_full_pay === 1 || l.is_full_pay === '1' || (l.remark && l.remark.includes('จ่ายเต็มวัน'))) notes.push('จ่ายเต็มวัน');
         if (l.status === 'GEOFENCE_FAIL') notes.push('นอกพิกัด');
-        if (l.remark && !notes.some(n => l.remark.includes(n))) notes.push(l.remark);
+        if (l.remark) {
+          const cleanRem = String(l.remark)
+            .replace(/\[(?:สิทธิ์[^\]]*|นโยบาย[^\]]*|ยกเว้น[^\]]*|งานเสร็จ[^\]]*|ระบบ[^\]]*|เพิ่มโดย HR[^\]]*|แก้ไขโดย[^\]]*|จ่ายเต็มวัน[^\]]*)\]/g, '')
+            .replace(/\|?\s*งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน/g, '')
+            .replace(/\|?\s*สิทธิ์ประจำตำแหน่ง[^|,\n]*/g, '')
+            .replace(/^[\s|,]+|[\s|,]+$/g, '')
+            .replace(/\s*\|\s*\|\s*/g, ' | ')
+            .trim();
+          if (cleanRem && !notes.some(n => cleanRem.includes(n))) notes.push(cleanRem);
+        }
 
         const lateCellStyle = lateM > 0 ? 'color:#b91c1c;font-weight:700;background:#fee2e2;' : 'color:#64748b;';
         const in1Color = lateM > 0 ? '#dc2626' : '#1d4ed8';
