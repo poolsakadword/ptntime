@@ -973,6 +973,20 @@ async function loadMyRequests() {
             </div>
             <div class="text-slate-600 text-xs font-medium">วันที่: ${formatDateThaiBE(lv.start_date)} ถึง ${formatDateThaiBE(lv.end_date)} (${lv.days_count} วัน)</div>
             ${lv.reason ? `<div class="text-slate-500 text-xs bg-slate-50 p-2 rounded-xl mt-1">เหตุผล: ${lv.reason}</div>` : ''}
+            ${lv.medical_cert_url ? `
+              <div class="mt-2 p-2 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="previewCertPhoto('${lv.medical_cert_url}', 'เอกสารแนบการลา (${formatDateThaiBE(lv.start_date)})')" title="แตะเพื่อดูรูปขยาย">
+                  <img src="${lv.medical_cert_url}" alt="Cert" class="w-10 h-10 rounded-lg object-cover border border-sky-400 shadow-xs flex-shrink-0" />
+                  <div>
+                    <div class="text-[11px] font-bold text-sky-900 flex items-center gap-1">📎 เอกสารแนบ / ใบรับรองแพทย์</div>
+                    <div class="text-[10px] text-sky-700">แตะเพื่อดูรูปขยาย &amp; ซูม</div>
+                  </div>
+                </div>
+                <button type="button" onclick="previewCertPhoto('${lv.medical_cert_url}', 'เอกสารแนบการลา (${formatDateThaiBE(lv.start_date)})')" class="py-1 px-2.5 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white rounded-lg font-bold text-[11px] shadow-xs flex items-center gap-1 whitespace-nowrap">
+                  <i class="fa-solid fa-magnifying-glass-plus"></i> ดูรูปขยาย
+                </button>
+              </div>
+            ` : ''}
           </div>
         `;
       });

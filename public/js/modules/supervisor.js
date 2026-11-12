@@ -118,9 +118,21 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
           ${lv.reason ? `<span class="text-slate-600 mt-1 block">เหตุผล: <i>${lv.reason}</i></span>` : ''}
         </div>
         ${lv.medical_cert_url ? `
-          <button onclick="previewCertPhoto('${lv.medical_cert_url}')" class="text-xs text-sky-600 font-bold underline py-0.5">
-            📄 ดูรูปภาพใบรับรองแพทย์
-          </button>
+          <div class="mt-2 p-2.5 rounded-xl bg-sky-50 border border-sky-200 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="previewCertPhoto('${lv.medical_cert_url}', 'ใบรับรองแพทย์: ${lv.full_name || lv.emp_id}')" title="แตะเพื่อดูรูปขยาย">
+              <div class="relative flex-shrink-0">
+                <img src="${lv.medical_cert_url}" alt="Cert" class="w-12 h-12 rounded-lg object-cover border-2 border-sky-500 shadow-xs" />
+                <span class="absolute -bottom-1 -right-1 bg-sky-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[9px] shadow-xs"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-sky-900 flex items-center gap-1">📎 เอกสารแนบการลา</div>
+                <div class="text-[11px] text-sky-700">แตะที่รูปหรือปุ่มเพื่อดูรูปขยาย</div>
+              </div>
+            </div>
+            <button type="button" onclick="previewCertPhoto('${lv.medical_cert_url}', 'ใบรับรองแพทย์: ${lv.full_name || lv.emp_id}')" class="py-1.5 px-3 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white rounded-lg font-bold text-xs shadow-xs flex items-center gap-1 whitespace-nowrap">
+              <i class="fa-solid fa-magnifying-glass-plus"></i> ดูรูปขยาย
+            </button>
+          </div>
         ` : ''}
         <div class="flex space-x-2 pt-1.5">
           <button onclick="approveReject('leave', ${lv.id}, 'APPROVE')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-sm">
@@ -168,12 +180,105 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
 
 function previewCertPhoto(url, title = 'เอกสาร / ภาพถ่ายเซลฟี่') {
   if (!url) return;
+  
+  let currentZoom = 1;
+  let currentRotation = 0;
+
+  const html = `
+    <div class="space-y-3">
+      <div class="flex items-center justify-between bg-slate-900 text-slate-300 px-3 py-1.5 rounded-xl text-xs">
+        <div class="flex items-center gap-1.5">
+          <span class="text-[11px] text-slate-400">ขนาด:</span>
+          <span class="text-sky-400 font-bold" id="swalZoomLevel">100%</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <button type="button" id="btnSwalZoomOut" class="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition" title="ซูมออก">
+            <i class="fa-solid fa-magnifying-glass-minus"></i>
+          </button>
+          <button type="button" id="btnSwalZoomIn" class="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition" title="ซูมเข้า">
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+          </button>
+          <button type="button" id="btnSwalRotate" class="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition" title="หมุน 90 องศา">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+          <button type="button" id="btnSwalReset" class="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition" title="รีเซ็ต">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </div>
+      <div id="swalImgContainer" class="bg-black/95 rounded-2xl overflow-hidden flex items-center justify-center p-2 min-h-[280px] max-h-[62vh] cursor-grab select-none">
+        <img id="swalPreviewImg" src="${url}" alt="Preview" class="max-w-full max-h-[58vh] object-contain transition-transform duration-150" />
+      </div>
+      <div class="flex items-center justify-center gap-2 pt-1 flex-wrap">
+        <button type="button" id="btnSwalOpenTab" class="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> เปิดแท็บใหม่
+        </button>
+        <button type="button" id="btnSwalDownload" class="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-download"></i> ดาวน์โหลด
+        </button>
+      </div>
+    </div>
+  `;
+
   Swal.fire({
-    title: title,
-    imageUrl: url,
-    imageAlt: 'Photo Preview',
+    title: `<div class="text-sm sm:text-base font-bold text-slate-800 flex items-center justify-center gap-2"><i class="fa-solid fa-file-medical text-sky-600"></i><span>${title}</span></div>`,
+    html: html,
+    width: 'min(94vw, 720px)',
     confirmButtonText: 'ปิดหน้าต่าง',
-    confirmButtonColor: '#0284c7'
+    confirmButtonColor: '#0284c7',
+    showCloseButton: true,
+    didOpen: () => {
+      const img = document.getElementById('swalPreviewImg');
+      const zoomText = document.getElementById('swalZoomLevel');
+      
+      const updateTransform = () => {
+        if (img) img.style.transform = `scale(${currentZoom}) rotate(${currentRotation}deg)`;
+        if (zoomText) zoomText.textContent = `${Math.round(currentZoom * 100)}%`;
+      };
+
+      document.getElementById('btnSwalZoomIn')?.addEventListener('click', () => {
+        currentZoom = Math.min(3.5, Math.round((currentZoom + 0.25) * 100) / 100);
+        updateTransform();
+      });
+
+      document.getElementById('btnSwalZoomOut')?.addEventListener('click', () => {
+        currentZoom = Math.max(0.5, Math.round((currentZoom - 0.25) * 100) / 100);
+        updateTransform();
+      });
+
+      document.getElementById('btnSwalRotate')?.addEventListener('click', () => {
+        currentRotation = (currentRotation + 90) % 360;
+        updateTransform();
+      });
+
+      document.getElementById('btnSwalReset')?.addEventListener('click', () => {
+        currentZoom = 1;
+        currentRotation = 0;
+        updateTransform();
+      });
+
+      img?.addEventListener('dblclick', () => {
+        currentZoom = currentZoom > 1.2 ? 1 : 2;
+        updateTransform();
+      });
+
+      document.getElementById('btnSwalOpenTab')?.addEventListener('click', () => {
+        const w = window.open('');
+        if (w) {
+          w.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>body{margin:0;background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:98vw;max-height:98vh;object-fit:contain}</style></head><body><img src="${url}"></body></html>`);
+          w.document.close();
+        }
+      });
+
+      document.getElementById('btnSwalDownload')?.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${title.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F]/g, '_')}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
+    }
   });
 }
 
