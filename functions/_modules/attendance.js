@@ -98,10 +98,31 @@ export const attendanceHandlers = {
         }
       }
 
-      // Calculate Late against branch's workStartTime with graceMinutes
+      // Calculate Late against branch's workStartTime with graceMinutes (taking into account approved leave)
       const isSunday = (dayOfWeekNumber === 0);
-      const diffMinutes = getMinutesDiff(branchCfg.workStartTime, timeStr.substring(0, 5));
-      const lateMinutes = isSunday ? 0 : Math.max(0, diffMinutes - (branchCfg.graceMinutes || 0));
+      let lateMinutes = 0;
+      if (!isSunday) {
+        if (hasApprovedLeaveToday) {
+          // If employee has an approved leave today and clocks in around/after lunch
+          const curMins = timeToMinutes(timeStr.substring(0, 5));
+          const lunchStartMins = timeToMinutes(branchCfg.lunchStartTime || '13:00');
+          const lunchEndMins = timeToMinutes(branchCfg.lunchEndTime || '14:00');
+          if (curMins >= lunchStartMins) {
+            // Coming in for afternoon shift: only late if arrived after lunchEnd
+            if (curMins > (lunchEndMins + (branchCfg.graceMinutes || 0))) {
+              lateMinutes = curMins - lunchEndMins;
+            } else {
+              lateMinutes = 0;
+            }
+          } else {
+            // Clocked in morning: waived because approved leave covers today
+            lateMinutes = 0;
+          }
+        } else {
+          const diffMinutes = getMinutesDiff(branchCfg.workStartTime, timeStr.substring(0, 5));
+          lateMinutes = Math.max(0, diffMinutes - (branchCfg.graceMinutes || 0));
+        }
+      }
       const status = isSunday ? 'SUNDAY_WORK' : (lateMinutes > 0 ? 'LATE' : 'NORMAL');
 
       // Auto-resolve any previous unclosed shifts (e.g. yesterday's clock_in without clock_out, unclosed break_out)
