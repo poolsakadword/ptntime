@@ -19,6 +19,118 @@ function calculateHaversineMeters(lat1, lon1, lat2, lon2) {
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
 
+var lastGeolocationError = null;
+
+function isIosDevice() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isLineBrowser() {
+  return /Line/i.test(navigator.userAgent);
+}
+
+function showLocationHelpModal(err) {
+  const errCode = err ? err.code : (lastGeolocationError ? lastGeolocationError.code : 0);
+  const isIos = isIosDevice();
+  const isLine = isLineBrowser();
+
+  if (isLine) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'กรุณาเปิดใน Safari',
+      html: `
+        <div class="text-left text-xs sm:text-sm space-y-2.5 text-slate-700">
+          <p class="font-medium text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+            แอป LINE อาจจำกัดหรือบล็อกสิทธิ์การเข้าถึงพิกัด GPS/ดาวเทียม
+          </p>
+          <p class="font-semibold text-slate-900 mt-2">วิธีเปิดลงเวลาใน Safari:</p>
+          <ol class="list-decimal pl-5 space-y-1.5 text-slate-600">
+            <li>แตะปุ่ม <b>⋯ (จุด 3 จุด)</b> หรือปุ่มแชร์ที่มุมบนหรือล่างของหน้าจอ LINE</li>
+            <li>เลือก <b>"เปิดในเบราว์เซอร์อื่น"</b> หรือ <b>"เปิดใน Safari" (Open in Safari)</b></li>
+          </ol>
+        </div>
+      `,
+      confirmButtonText: 'เข้าใจแล้ว',
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
+  if (errCode === 1) { // PERMISSION_DENIED
+    if (isIos) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Safari ยังไม่ได้รับอนุญาตสิทธิ์ตำแหน่ง',
+        html: `
+          <div class="text-left text-xs sm:text-sm space-y-2.5 text-slate-700">
+            <div class="font-medium text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-xs leading-relaxed">
+              iPhone/iPad เปิดบริการตำแหน่งแล้ว แต่ <b>เบราว์เซอร์ Safari ปฏิเสธสิทธิ์สำหรับเว็บไซต์นี้</b>
+            </div>
+            <p class="font-semibold text-slate-900 pt-1">วิธีเปิดอนุญาตใน Safari (ทำครั้งเดียว):</p>
+            <ol class="list-decimal pl-5 space-y-2 text-slate-600 text-xs sm:text-sm">
+              <li>แตะที่ไอคอน <b>aA</b> หรือ <b>รูปแม่กุญแจ/การตั้งค่าเว็บ</b> ที่แถบพิมพ์ URL (ด้านบนหรือล่าง)</li>
+              <li>เลือก <b>"การตั้งค่าเว็บไซต์" (Website Settings)</b></li>
+              <li>ที่หัวข้อ <b>"ตำแหน่งที่ตั้ง" (Location)</b> ให้เปลี่ยนเป็น <b>"อนุญาต" (Allow)</b> หรือ "ถาม"</li>
+              <li>กด <b>เสร็จสิ้น (Done)</b> แล้วแตะปุ่มหมุนวนเพื่อตรวจพิกัดใหม่</li>
+            </ol>
+            <div class="p-2.5 rounded-xl bg-slate-100 text-[11px] text-slate-600 border border-slate-200 leading-relaxed">
+              💡 <b>หากยังไม่พบ:</b> ไปที่ <i>การตั้งค่าเครื่อง (Settings) ➜ ความเป็นส่วนตัวและความปลอดภัย (Privacy & Security) ➜ บริการหาตำแหน่งที่ตั้ง (Location Services) ➜ Safari Websites</i> เลือก <b>ขณะใช้แอป</b> และเปิด <b>ตำแหน่งที่ตั้งที่แน่นอน (Precise Location)</b>
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'รับทราบ',
+        confirmButtonColor: '#2563eb'
+      });
+    } else {
+      Swal.fire({
+        icon: 'warning',
+        title: 'เบราว์เซอร์ยังไม่ได้รับสิทธิ์เข้าถึงตำแหน่ง',
+        html: `
+          <div class="text-left text-xs sm:text-sm space-y-2 text-slate-700">
+            <p class="font-semibold text-slate-900">วิธีเปิดสิทธิ์ระบุตำแหน่ง:</p>
+            <ol class="list-decimal pl-5 space-y-1.5 text-slate-600">
+              <li>แตะที่ไอคอน <b>แม่กุญแจ 🔒 หรือการตั้งค่า</b> ข้างแถบที่อยู่ URL</li>
+              <li>เลือก <b>สิทธิ์ (Permissions)</b> ➜ เปิด <b>ตำแหน่ง (Location)</b></li>
+              <li>รีเฟรชหน้าเว็บแล้วแตะจับพิกัดใหม่อีกครั้ง</li>
+            </ol>
+          </div>
+        `,
+        confirmButtonText: 'รับทราบ',
+        confirmButtonColor: '#2563eb'
+      });
+    }
+  } else if (errCode === 2 || errCode === 3) { // POSITION_UNAVAILABLE or TIMEOUT
+    Swal.fire({
+      icon: 'info',
+      title: 'สัญญาณ GPS อ่อน / ค้นหาไม่พบ',
+      html: `
+        <div class="text-left text-xs sm:text-sm space-y-2.5 text-slate-700">
+          <div class="font-medium text-blue-800 bg-blue-50 p-2.5 rounded-xl border border-blue-200 text-xs leading-relaxed">
+            ระบบเปิด GPS แล้ว แต่อุปกรณ์ค้นหาตำแหน่งดาวเทียมไม่ทัน (มักพบเมื่ออยู่ใต้หลังคาเหล็ก อาคารทึบ หรือในห้องปิด)
+          </div>
+          <p class="font-semibold text-slate-900 pt-1">วิธีช่วยให้อุปกรณ์จับพิกัดได้ทันที:</p>
+          <ul class="list-disc pl-5 space-y-2 text-slate-600 text-xs sm:text-sm">
+            <li><b>เปิด Wi-Fi ของโทรศัพท์ไว้:</b> (แม้ไม่ได้เชื่อมต่อ Wi-Fi) มือถือ iPhone และ Android จะตรวจจับเสาสัญญาณ Wi-Fi รอบข้างเพื่อคำนวณตำแหน่งอาคารได้ทันที</li>
+            <li><b>ขยับเข้าใกล้ประตู หน้าต่าง หรือพื้นที่เปิดโล่ง</b> สักครู่เพื่อรับสัญญาณดาวเทียม</li>
+            <li><b>สำหรับ iPhone:</b> ตรวจสอบว่าเปิด <i>"ตำแหน่งที่ตั้งที่แน่นอน" (Precise Location)</i> ในการตั้งค่า Safari</li>
+          </ul>
+        </div>
+      `,
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#2563eb'
+    });
+  } else {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ไม่สามารถอ่านพิกัดได้',
+      text: 'กรุณาเปิดบริการตำแหน่ง (GPS) บนโทรศัพท์ และอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง แล้วลองใหม่อีกครั้ง',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#2563eb'
+    });
+  }
+}
+
 function refreshGpsLocation() {
   const icon = document.getElementById('iconRefreshGps');
   if (icon) icon.classList.add('animate-spin');
@@ -48,81 +160,117 @@ function getCurrentLocation(silent = false, isManual = false) {
   if (statusText) statusText.textContent = 'กำลังค้นหาพิกัด GPS...';
   if (distText && isManual) distText.textContent = 'กำลังคำนวณระยะห่างล่าสุด...';
   if (badge && isManual) {
-    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700';
+    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 cursor-pointer';
     badge.textContent = 'กำลังตรวจพิกัด...';
   }
 
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      if (icon) icon.classList.remove('animate-spin');
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
-      
-      // Fetch location name dynamically
-      fetchLocationName(lat, lng).then(name => {
-        if (name && currentLocation) {
-          currentLocation.locationName = name;
-        }
+  const handleSuccess = (pos) => {
+    if (icon) icon.classList.remove('animate-spin');
+    lastGeolocationError = null;
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const acc = pos.coords.accuracy;
+    currentLocation = { lat, lng, accuracy: acc };
+    
+    // Fetch location name dynamically
+    fetchLocationName(lat, lng).then(name => {
+      if (name && currentLocation) {
+        currentLocation.locationName = name;
+      }
+    });
+
+    const targetBranch = getCurrentEmployeeTargetBranch();
+    const targetLat = targetBranch.lat || appSettings.office_lat;
+    const targetLng = targetBranch.lng || appSettings.office_lng;
+    const targetRadius = targetBranch.radius_meters || appSettings.geofence_radius_meters || 200;
+    const targetBranchName = targetBranch.branch_name || 'สำนักงานใหญ่';
+
+    const dist = calculateHaversineMeters(lat, lng, targetLat, targetLng);
+    currentDistanceMeters = dist;
+
+    const isInside = dist <= targetRadius;
+
+    if (statusText) statusText.textContent = targetBranchName;
+    if (distText) distText.textContent = `ระยะห่าง ${dist} ม. (รัศมีอนุญาต ${targetRadius} ม.)`;
+
+    if (badge) {
+      badge.title = 'แตะเพื่อจับพิกัด GPS ใหม่';
+      if (isInside) {
+        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 cursor-pointer';
+        badge.textContent = 'ในพิกัด ✅';
+        if (pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
+      } else {
+        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 cursor-pointer';
+        badge.textContent = 'นอกพื้นที่ ⚠️';
+        if (pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+      }
+    }
+
+    if (isManual) {
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: false
       });
+      Toast.fire({
+        icon: isInside ? 'success' : 'warning',
+        title: isInside ? `อยู่ในพื้นที่ ${targetBranchName}` : `อยู่นอกพื้นที่ ${targetBranchName} (${dist} ม.)`
+      });
+    }
+  };
 
-      const targetBranch = getCurrentEmployeeTargetBranch();
-      const targetLat = targetBranch.lat || appSettings.office_lat;
-      const targetLng = targetBranch.lng || appSettings.office_lng;
-      const targetRadius = targetBranch.radius_meters || appSettings.geofence_radius_meters || 200;
-      const targetBranchName = targetBranch.branch_name || 'สำนักงานใหญ่';
+  const handleFailure = (err, isFallback = false) => {
+    lastGeolocationError = err;
 
-      const dist = calculateHaversineMeters(lat, lng, targetLat, targetLng);
-      currentDistanceMeters = dist;
+    // If high-accuracy failed with timeout or unavailable, retry once with network/low accuracy positioning
+    if (!isFallback && (err.code === 2 || err.code === 3)) {
+      console.log('High accuracy GPS timed out or unavailable, attempting network/low-accuracy fallback...');
+      if (statusText) statusText.textContent = 'สัญญาณ GPS อ่อน กำลังค้นหาผ่าน Wi-Fi/เครือข่าย...';
+      navigator.geolocation.getCurrentPosition(
+        handleSuccess,
+        (err2) => handleFailure(err2, true),
+        { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+      );
+      return;
+    }
 
-      const isInside = dist <= targetRadius;
+    if (icon) icon.classList.remove('animate-spin');
+    console.warn('Geolocation notice:', err.message, 'code:', err.code);
 
-      if (statusText) statusText.textContent = targetBranchName;
-      if (distText) distText.textContent = `ระยะห่าง ${dist} ม. (รัศมีอนุญาต ${targetRadius} ม.)`;
+    if (badge) {
+      badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 cursor-pointer';
+      badge.title = 'แตะเพื่อดูคำแนะนำการเปิดใช้งาน';
+    }
 
+    if (err.code === 1) { // PERMISSION_DENIED
+      if (statusText) statusText.textContent = 'เบราว์เซอร์ยังไม่ได้รับอนุญาตสิทธิ์ตำแหน่ง';
       if (badge) {
-        if (isInside) {
-          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800';
-          badge.textContent = 'ในพิกัด ✅';
-          if (pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
-        } else {
-          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800';
-          badge.textContent = 'นอกพื้นที่ ⚠️';
-          if (pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
-        }
+        badge.textContent = isIosDevice() ? '⚠️ สิทธิ์ Safari ปิด' : '⚠️ รออนุญาตสิทธิ์';
       }
-
-      if (isManual) {
-        const Toast = Swal.mixin({
-          toast: true,
-          position: 'top-end',
-          showConfirmButton: false,
-          timer: 2500,
-          timerProgressBar: false
-        });
-        Toast.fire({
-          icon: isInside ? 'success' : 'warning',
-          title: isInside ? `อยู่ในพื้นที่ ${targetBranchName}` : `อยู่นอกพื้นที่ ${targetBranchName} (${dist} ม.)`
-        });
-      }
-    },
-    (err) => {
-      if (icon) icon.classList.remove('animate-spin');
-      console.warn('Geolocation notice:', err.message);
-      if (statusText) statusText.textContent = 'ไม่พบพิกัด (กรุณาเปิด GPS/อนุญาตเข้าถึงตำแหน่ง)';
+    } else if (err.code === 2 || err.code === 3) { // POSITION_UNAVAILABLE or TIMEOUT
+      if (statusText) statusText.textContent = 'สัญญาณ GPS อ่อน (ลองเปิด Wi-Fi ช่วยจับพิกัด)';
       if (badge) {
-        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700';
+        badge.textContent = '⚠️ สัญญาณ GPS อ่อน';
+      }
+    } else {
+      if (statusText) statusText.textContent = 'ไม่พบพิกัด (กรุณาเปิดบริการตำแหน่ง)';
+      if (badge) {
         badge.textContent = '⚠️ GPS ปิดอยู่';
       }
-      if (isManual) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'ไม่สามารถอ่านพิกัด GPS ได้',
-          text: 'กรุณาเปิด Location Service (GPS) บนมือถือ หรือกดอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง แล้วลองใหม่อีกครั้ง'
-        });
-      }
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    }
+
+    if (isManual) {
+      showLocationHelpModal(err);
+    }
+  };
+
+  // Attempt high accuracy first
+  navigator.geolocation.getCurrentPosition(
+    handleSuccess,
+    (err) => handleFailure(err, false),
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
   );
 }
 
@@ -592,7 +740,7 @@ function stopFaceDetectionLoop() {
   }
 }
 
-function fetchCurrentLocationPromise(timeoutMs = 6000) {
+function fetchCurrentLocationPromise(timeoutMs = 7000) {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
     let resolved = false;
@@ -603,29 +751,47 @@ function fetchCurrentLocationPromise(timeoutMs = 6000) {
       }
     }, timeoutMs);
 
+    const onPos = (pos) => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        lastGeolocationError = null;
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
+        try {
+          const targetBranch = getCurrentEmployeeTargetBranch();
+          currentDistanceMeters = calculateHaversineMeters(lat, lng, targetBranch.lat || appSettings.office_lat, targetBranch.lng || appSettings.office_lng);
+        } catch(e) {}
+        resolve(currentLocation);
+      }
+    };
+
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
-          try {
-            const targetBranch = getCurrentEmployeeTargetBranch();
-            currentDistanceMeters = calculateDistanceMeters(lat, lng, targetBranch.lat || appSettings.office_lat, targetBranch.lng || appSettings.office_lng);
-          } catch(e) {}
-          resolve(currentLocation);
-        }
-      },
+      onPos,
       (err) => {
-        if (!resolved) {
+        lastGeolocationError = err;
+        // If high accuracy timed out or unavailable, try low accuracy / Wi-Fi fallback immediately
+        if (!resolved && (err.code === 2 || err.code === 3)) {
+          navigator.geolocation.getCurrentPosition(
+            onPos,
+            (err2) => {
+              lastGeolocationError = err2;
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timer);
+                resolve(currentLocation);
+              }
+            },
+            { enableHighAccuracy: false, timeout: 3500, maximumAge: 60000 }
+          );
+        } else if (!resolved) {
           resolved = true;
           clearTimeout(timer);
           resolve(currentLocation);
         }
       },
-      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 4000, maximumAge: 20000 }
     );
   });
 }
@@ -677,14 +843,10 @@ async function openFullscreenCamera(type, qrToken) {
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
-    await fetchCurrentLocationPromise(5000);
+    await fetchCurrentLocationPromise(6000);
     Swal.close();
     if (!currentLocation) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'ไม่สามารถระบุพิกัดได้',
-        text: 'กรุณาเปิดบริการตำแหน่ง (GPS) ในโทรศัพท์ แล้วลองใหม่อีกครั้ง'
-      });
+      showLocationHelpModal(lastGeolocationError);
       return;
     }
   }

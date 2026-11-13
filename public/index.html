@@ -244,7 +244,7 @@
             </div>
           </div>
           <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
-            <span id="gpsBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+            <span id="gpsBadge" onclick="refreshGpsLocation()" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 cursor-pointer hover:opacity-85 active:scale-95 transition" title="แตะเพื่อจับพิกัด GPS ใหม่ หรือดูวิธีเปิดใช้งาน">
               รอตรวจพิกัด
             </span>
             <button type="button" onclick="refreshGpsLocation()" id="btnRefreshGps" class="p-1 px-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-[11px] transition shadow-2xs flex items-center gap-0.5" title="แตะเพื่อจับพิกัด GPS ใหม่">
@@ -1833,15 +1833,15 @@
 
   </div>
 
-  <!-- Main JavaScript Modules (PTN Time v12.02) -->
-  <script src="js/modules/core.js?v=12.02"></script>
-  <script src="js/modules/auth-employee.js?v=12.02"></script>
-  <script src="js/modules/geo-camera.js?v=12.02"></script>
-  <script src="js/modules/attendance.js?v=12.02"></script>
-  <script src="js/modules/requests.js?v=12.02"></script>
-  <script src="js/modules/device-lock.js?v=12.02"></script>
-  <script src="js/modules/payslips-timecard.js?v=12.02"></script>
-  <script src="js/modules/supervisor.js?v=12.02"></script>
-  <script src="js/app.js?v=12.02"></script>
+  <!-- Main JavaScript Modules (PTN Time v12.03) -->
+  <script src="js/modules/core.js?v=12.03"></script>
+  <script src="js/modules/auth-employee.js?v=12.03"></script>
+  <script src="js/modules/geo-camera.js?v=12.03"></script>
+  <script src="js/modules/attendance.js?v=12.03"></script>
+  <script src="js/modules/requests.js?v=12.03"></script>
+  <script src="js/modules/device-lock.js?v=12.03"></script>
+  <script src="js/modules/payslips-timecard.js?v=12.03"></script>
+  <script src="js/modules/supervisor.js?v=12.03"></script>
+  <script src="js/app.js?v=12.03"></script>
 </body>
 </html>
