@@ -6,3 +6,7 @@ pages_build_output_dir = "public"
 binding = "DB"
 database_name = "ptn_payroll_db"
 database_id = "5a72c7dd-fedb-4583-85f9-b29964845560"
+
+[[r2_buckets]]
+binding = "PHOTOS_BUCKET"
+bucket_name = "ptn-photos"

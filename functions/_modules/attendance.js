@@ -5,6 +5,13 @@ import { calculateDistanceMeters, timeToMinutes, minutesToTime, getMinutesDiff, 
 import { verifyQrToken, validateTimeWindow } from './security.js';
 import { sendPushToAdmins } from './notifications.js';
 
+function roundOtHours(otMinutes, roundingMode) {
+  const mins = Math.max(0, Number(otMinutes) || 0);
+  if (roundingMode === 'HALF_HOUR') return Math.floor(mins / 30) * 0.5;
+  if (roundingMode === 'QUARTER_HOUR') return Math.floor(mins / 15) * 0.25;
+  return Math.round((mins / 60) * 100) / 100;
+}
+
 export const attendanceHandlers = {
   getTodayStatus: async (db, params, context) => {
     const { settings, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
@@ -525,11 +532,7 @@ export const attendanceHandlers = {
         // Sunday: All hours count as Sunday OT at sunday_ot_rate (1.0x default, starting from workStartTime)
         let totalSunMinutes = Math.max(0, outMinutes - effectiveInMinutes);
         totalSunMinutes = Math.max(0, totalSunMinutes - breakDeduction);
-        if (settings.ot_rounding_mode === 'HALF_HOUR') {
-          calculatedOtHours = Math.floor(totalSunMinutes / 30) * 0.5;
-        } else {
-          calculatedOtHours = Math.round((totalSunMinutes / 60) * 100) / 100;
-        }
+        calculatedOtHours = roundOtHours(totalSunMinutes, settings.ot_rounding_mode);
         normalMinutes = 0;
       } else {
         // Normal workday (Mon - Sat)
@@ -541,11 +544,7 @@ export const attendanceHandlers = {
         // Automatic OT: If Clock Out is after otStartMinutes (branch-specific)
         if (outMinutes > otStartMinutes) {
           const rawOtMinutes = outMinutes - otStartMinutes;
-          if (settings.ot_rounding_mode === 'HALF_HOUR') {
-            calculatedOtHours = Math.floor(rawOtMinutes / 30) * 0.5;
-          } else {
-            calculatedOtHours = Math.round((rawOtMinutes / 60) * 100) / 100;
-          }
+          calculatedOtHours = roundOtHours(rawOtMinutes, settings.ot_rounding_mode);
         }
       }
 
