@@ -281,6 +281,7 @@ function getCurrentLocation(silent = false, isManual = false) {
 var fsCameraStream = null;
 let currentCameraFacing = 'user'; // 'user' (front) or 'environment' (back)
 let activePendingClock = null; // { type: 'IN' | 'OUT', qrToken: string | null }
+let cameraIdleTimeoutTimer = null;
 
 // Face Detection Engine State
 let faceDetectorEngine = null; // Native FaceDetector or MediaPipe FaceDetector
@@ -740,6 +741,29 @@ function stopFaceDetectionLoop() {
   }
 }
 
+function clearCameraIdleTimeout() {
+  if (cameraIdleTimeoutTimer) {
+    clearTimeout(cameraIdleTimeoutTimer);
+    cameraIdleTimeoutTimer = null;
+  }
+}
+
+function startCameraIdleTimeout() {
+  clearCameraIdleTimeout();
+  cameraIdleTimeoutTimer = setTimeout(() => {
+    cameraIdleTimeoutTimer = null;
+    if (!isClockSubmitting && activePendingClock) {
+      closeFullscreenCamera();
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาสแกน QR Code ใหม่อีกครั้ง',
+        confirmButtonColor: '#2563eb',
+        confirmButtonText: 'ตกลง'
+      });
+    }
+  }, 10000);
+}
+
 function fetchCurrentLocationPromise(timeoutMs = 7000) {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
@@ -921,6 +945,9 @@ async function openFullscreenCamera(type, qrToken) {
   }
 
   await initFullscreenCameraStream();
+  if (activePendingClock) {
+    startCameraIdleTimeout();
+  }
 
   // Setup Detection or Direct Unlock based on settings
   if (appSettings.enable_face_detection === 'false') {
@@ -1063,6 +1090,7 @@ function toggleCameraFacing() {
 }
 
 function closeFullscreenCamera() {
+  clearCameraIdleTimeout();
   stopFaceDetectionLoop();
   stopSmileMeterSimulation();
 
@@ -1238,6 +1266,7 @@ async function triggerShutterCapture() {
   }
 
   // Double-submission lock & disable shutter button immediately
+  clearCameraIdleTimeout();
   isClockSubmitting = true;
   const shutterBtn = document.getElementById('fsShutterBtn');
   if (shutterBtn) {
