@@ -12,6 +12,44 @@ function roundOtHours(otMinutes, roundingMode) {
   return Math.round((mins / 60) * 100) / 100;
 }
 
+async function uploadPhotoToR2IfPossible(env, dataUrl, date, empId, tag) {
+  if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image')) {
+    return dataUrl || null;
+  }
+  const r2 = env && (env.PHOTOS_BUCKET || env.R2 || env.BUCKET);
+  if (!r2 || typeof r2.put !== 'function') {
+    return dataUrl;
+  }
+  try {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) return dataUrl;
+    const mimeType = match[1] || 'image/jpeg';
+    const rawBase64 = match[2];
+    const binaryStr = atob(rawBase64);
+    const len = binaryStr.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    const safeDate = String(date || 'unknown').replace(/[^0-9\-]/g, '');
+    const safeEmp = String(empId || 'emp').replace(/[^a-zA-Z0-9_\-]/g, '');
+    const safeTag = String(tag || 'photo').replace(/[^a-zA-Z0-9_\-]/g, '');
+    const ext = mimeType.includes('png') ? 'png' : (mimeType.includes('webp') ? 'webp' : 'jpg');
+    const objectKey = `time_logs/${safeDate}/${safeEmp}_${Date.now()}_${safeTag}.${ext}`;
+
+    await r2.put(objectKey, bytes, {
+      httpMetadata: {
+        contentType: mimeType,
+        cacheControl: 'public, max-age=31536000, immutable'
+      }
+    });
+    return `/api?action=getPhoto&key=${encodeURIComponent(objectKey)}`;
+  } catch (err) {
+    console.warn('R2 direct upload failed, falling back to D1 Base64:', err);
+    return dataUrl;
+  }
+}
+
 export const attendanceHandlers = {
   getTodayStatus: async (db, params, context) => {
     const { settings, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
@@ -37,7 +75,7 @@ export const attendanceHandlers = {
   },
 
   clockIn: async (db, params, context) => {
-    const { settings, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
+    const { settings, env, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
       const { empId, lat, lng, photoUrl, qrToken, remark } = params;
       const date = params.date || today;
       const timeStr = curTimeStr;
@@ -183,16 +221,18 @@ export const attendanceHandlers = {
         effectiveRemark = (effectiveRemark ? effectiveRemark + ' ' : '') + '[ระบบตรวจจับอัตโนมัติ: มีใบลาแต่วันนี้มาทำงานจริง]';
       }
 
+      const savedPhotoUrl = await uploadPhotoToR2IfPossible(env, photoUrl, date, empId, 'in');
+
       if (existing) {
         await db.prepare(`
           UPDATE time_logs SET clock_in = ?, in_lat = ?, in_lng = ?, in_photo_url = ?, late_minutes = ?, status = ?, remark = ?, branch_id = ?, branch_name = ?
           WHERE id = ?
-        `).bind(timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, effectiveRemark, branchCfg.branchId, branchCfg.branchName, existing.id).run();
+        `).bind(timeStr, lat || null, lng || null, savedPhotoUrl, lateMinutes, status, effectiveRemark, branchCfg.branchId, branchCfg.branchName, existing.id).run();
       } else {
         await db.prepare(`
           INSERT INTO time_logs (emp_id, date, clock_in, in_lat, in_lng, in_photo_url, late_minutes, status, remark, branch_id, branch_name)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(empId, date, timeStr, lat || null, lng || null, photoUrl || null, lateMinutes, status, effectiveRemark, branchCfg.branchId, branchCfg.branchName).run();
+        `).bind(empId, date, timeStr, lat || null, lng || null, savedPhotoUrl, lateMinutes, status, effectiveRemark, branchCfg.branchId, branchCfg.branchName).run();
       }
 
       if (distanceMeters && branchCfg.radiusMeters && distanceMeters > branchCfg.radiusMeters) {
@@ -224,7 +264,7 @@ export const attendanceHandlers = {
   },
 
   breakOut: async (db, params, context) => {
-    const { settings, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
+    const { settings, env, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
       const { empId, lat, lng, photoUrl, qrToken, remark } = params;
       const date = params.date || today;
       const timeStr = curTimeStr;
@@ -287,11 +327,13 @@ export const attendanceHandlers = {
         }
       }
 
+      const savedPhotoUrl = await uploadPhotoToR2IfPossible(env, photoUrl, date, empId, 'break_out');
+
       await db.prepare(`
         UPDATE time_logs 
         SET break_out = ?, break_out_lat = ?, break_out_lng = ?, break_out_photo_url = ?
         WHERE id = ?
-      `).bind(timeStr, lat || null, lng || null, photoUrl || null, existing.id).run();
+      `).bind(timeStr, lat || null, lng || null, savedPhotoUrl, existing.id).run();
 
       await logSystemActivity(
         db,
@@ -309,7 +351,7 @@ export const attendanceHandlers = {
   },
 
   breakIn: async (db, params, context) => {
-    const { settings, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
+    const { settings, env, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
       const { empId, lat, lng, photoUrl, qrToken, remark } = params;
       const date = params.date || today;
       const timeStr = curTimeStr;
@@ -382,11 +424,13 @@ export const attendanceHandlers = {
       const allowedBreakMinutes = Number(settings.break_duration_minutes) || 60;
       const overBreakMinutes = Math.max(0, actualBreakMinutes - allowedBreakMinutes);
 
+      const savedPhotoUrl = await uploadPhotoToR2IfPossible(env, photoUrl, date, empId, 'break_in');
+
       await db.prepare(`
         UPDATE time_logs 
         SET break_in = ?, break_in_lat = ?, break_in_lng = ?, break_in_photo_url = ?, break_minutes = ?, overbreak_minutes = ?
         WHERE id = ?
-      `).bind(timeStr, lat || null, lng || null, photoUrl || null, actualBreakMinutes, overBreakMinutes, existing.id).run();
+      `).bind(timeStr, lat || null, lng || null, savedPhotoUrl, actualBreakMinutes, overBreakMinutes, existing.id).run();
 
       await logSystemActivity(
         db,
@@ -406,7 +450,7 @@ export const attendanceHandlers = {
   },
 
   clockOut: async (db, params, context) => {
-    const { settings, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
+    const { settings, env, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
       const { empId, lat, lng, photoUrl, qrToken, remark } = params;
       const date = params.date || today;
       const timeStr = curTimeStr;
@@ -563,6 +607,8 @@ export const attendanceHandlers = {
         ? ' [สิทธิ์ประจำตำแหน่ง: จ่ายค่าแรงเต็มวัน ไม่หักเวลาออกก่อน]' 
         : (isEarlyDismissalFullPay ? ' [งานเสร็จเลิกงานก่อน-จ่ายเต็มวัน]' : '');
 
+      const savedPhotoUrl = await uploadPhotoToR2IfPossible(env, photoUrl, date, empId, 'out');
+
       await db.prepare(`
         UPDATE time_logs 
         SET clock_out = ?, out_lat = ?, out_lng = ?, out_photo_url = ?, work_hours = ?, ot_hours = ?,
@@ -570,7 +616,7 @@ export const attendanceHandlers = {
             status = CASE WHEN ? = 1 AND COALESCE(late_minutes, 0) = 0 THEN 'NORMAL' ELSE status END,
             remark = COALESCE(remark, '') || ?
         WHERE id = ?
-      `).bind(timeStr, lat || null, lng || null, photoUrl || null, totalWorkHours, calculatedOtHours, finalIsFullPay, finalIsFullPay, (remark ? ' ' + remark : '') + earlyDismissalRemark + autoBreakRemark, existing.id).run();
+      `).bind(timeStr, lat || null, lng || null, savedPhotoUrl, totalWorkHours, calculatedOtHours, finalIsFullPay, finalIsFullPay, (remark ? ' ' + remark : '') + earlyDismissalRemark + autoBreakRemark, existing.id).run();
 
       // If OT occurred and employee is eligible, record or update in ot_requests automatically
       if (calculatedOtHours > 0) {

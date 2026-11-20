@@ -39,6 +39,27 @@ export async function onRequest(context) {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const url = new URL(request.url);
+  if (request.method === 'GET' && url.searchParams.get('action') === 'getPhoto') {
+    const key = url.searchParams.get('key');
+    const r2 = env.PHOTOS_BUCKET || env.R2 || env.BUCKET;
+    if (key && r2 && typeof r2.get === 'function') {
+      try {
+        const object = await r2.get(key);
+        if (object) {
+          const headers = new Headers();
+          headers.set('Content-Type', object.httpMetadata?.contentType || 'image/jpeg');
+          headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+          headers.set('Access-Control-Allow-Origin', '*');
+          return new Response(object.body, { headers });
+        }
+      } catch (e) {
+        console.warn('R2 getPhoto error:', e);
+      }
+    }
+    return new Response('Photo not found', { status: 404, headers: corsHeaders });
+  }
+
   if (!db) {
     return new Response(JSON.stringify({
       success: false,
@@ -54,7 +75,6 @@ export async function onRequest(context) {
 
     let action = 'getInitialData';
     let params = {};
-    const url = new URL(request.url);
 
     if (request.method === 'POST') {
       const body = await request.json().catch(() => ({}));
@@ -95,6 +115,7 @@ export async function onRequest(context) {
     const timeContext = getBangkokTimeContext();
     const handlerContext = {
       settings,
+      env,
       ...timeContext
     };
 
