@@ -30,25 +30,41 @@ async function handleSupervisorLogin() {
     const data = await res.json();
     if (data.success) {
       supervisorSession = data.user;
+      try { localStorage.setItem('ptn_supervisor_session', JSON.stringify(supervisorSession)); } catch(e) {}
+      const badge = document.getElementById('supRoleBadge');
+      if (badge && supervisorSession) badge.textContent = `${supervisorSession.username} (${supervisorSession.role || 'Admin'})`;
       document.getElementById('supervisorGate')?.classList.add('hidden');
       document.getElementById('supervisorPanel')?.classList.remove('hidden');
       loadSupervisorDashboard();
-      populateSettingsForm();
+      if (typeof populateSettingsForm === 'function' && document.getElementById('setWorkStart')) populateSettingsForm();
     } else {
       Swal.fire('เข้าสู่ระบบไม่สำเร็จ', data.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
     }
   } catch(e) {
     if (p === '123456' || p === 'admin') {
       supervisorSession = { username: 'admin', role: 'Admin' };
+      try { localStorage.setItem('ptn_supervisor_session', JSON.stringify(supervisorSession)); } catch(e) {}
+      const badge = document.getElementById('supRoleBadge');
+      if (badge && supervisorSession) badge.textContent = `${supervisorSession.username} (${supervisorSession.role || 'Admin'})`;
       document.getElementById('supervisorGate')?.classList.add('hidden');
       document.getElementById('supervisorPanel')?.classList.remove('hidden');
       loadSupervisorDashboard();
-      populateSettingsForm();
+      if (typeof populateSettingsForm === 'function' && document.getElementById('setWorkStart')) populateSettingsForm();
     } else {
       Swal.fire('เข้าสู่ระบบไม่สำเร็จ', 'รหัสผ่านไม่ถูกต้อง', 'error');
     }
   }
 }
+
+function logoutSupervisor() {
+  try { localStorage.removeItem('ptn_supervisor_session'); } catch(e) {}
+  supervisorSession = null;
+  document.getElementById('supervisorPanel')?.classList.add('hidden');
+  document.getElementById('supervisorGate')?.classList.remove('hidden');
+  const p = document.getElementById('supPassword');
+  if (p) p.value = '';
+}
+window.logoutSupervisor = logoutSupervisor;
 
 async function loadSupervisorDashboard() {
   try {

@@ -3,7 +3,7 @@
  * Handles PWA caching, background push notifications, and local scheduled alarms
  */
 
-const CACHE_NAME = 'ptntime-cache-v12.01';
+const CACHE_NAME = 'ptntime-cache-v12.04';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
