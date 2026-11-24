@@ -401,12 +401,19 @@ export const requestHandlers = {
     const { settings, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
       const date = params.date || today;
 
-      const empTotal = await db.prepare('SELECT COUNT(*) as count FROM employees WHERE (is_confidential IS NULL OR is_confidential = 0)').first();
+      const empTotal = await db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM employees 
+        WHERE (is_confidential IS NULL OR is_confidential = 0)
+          AND (status IS NULL OR (UPPER(status) != 'RESIGNED'))
+      `).first();
       const logsToday = await db.prepare(`
         SELECT t.*, e.full_name, e.department, e.position 
         FROM time_logs t
         LEFT JOIN employees e ON t.emp_id = e.emp_id
-        WHERE t.date = ? AND (e.is_confidential IS NULL OR e.is_confidential = 0)
+        WHERE t.date = ? 
+          AND (e.is_confidential IS NULL OR e.is_confidential = 0)
+          AND (e.status IS NULL OR (UPPER(e.status) != 'RESIGNED'))
         ORDER BY t.clock_in ASC
       `).bind(date).all().catch(() => ({ results: [] }));
 
@@ -414,7 +421,9 @@ export const requestHandlers = {
         SELECT l.*, e.full_name, e.nickname, e.department 
         FROM leave_requests l
         LEFT JOIN employees e ON l.emp_id = e.emp_id
-        WHERE l.status = 'PENDING' AND (e.is_confidential IS NULL OR e.is_confidential = 0)
+        WHERE l.status = 'PENDING' 
+          AND (e.is_confidential IS NULL OR e.is_confidential = 0)
+          AND (e.status IS NULL OR (UPPER(e.status) != 'RESIGNED'))
         ORDER BY l.created_at DESC
       `).all().catch(() => ({ results: [] }));
 
@@ -422,7 +431,9 @@ export const requestHandlers = {
         SELECT o.*, e.full_name, e.nickname, e.department 
         FROM ot_requests o
         LEFT JOIN employees e ON o.emp_id = e.emp_id
-        WHERE o.status = 'PENDING' AND (e.is_confidential IS NULL OR e.is_confidential = 0)
+        WHERE o.status = 'PENDING' 
+          AND (e.is_confidential IS NULL OR e.is_confidential = 0)
+          AND (e.status IS NULL OR (UPPER(e.status) != 'RESIGNED'))
         ORDER BY o.created_at DESC
       `).all().catch(() => ({ results: [] }));
 
@@ -430,7 +441,9 @@ export const requestHandlers = {
         SELECT a.*, e.full_name, e.nickname, e.department 
         FROM advance_requests a
         LEFT JOIN employees e ON a.emp_id = e.emp_id
-        WHERE a.status = 'PENDING' AND (e.is_confidential IS NULL OR e.is_confidential = 0)
+        WHERE a.status = 'PENDING' 
+          AND (e.is_confidential IS NULL OR e.is_confidential = 0)
+          AND (e.status IS NULL OR (UPPER(e.status) != 'RESIGNED'))
         ORDER BY a.created_at DESC
       `).all().catch(() => ({ results: [] }));
 
