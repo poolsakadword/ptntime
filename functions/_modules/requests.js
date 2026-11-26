@@ -487,9 +487,14 @@ export const requestHandlers = {
       // Fetch request details before update to get target employee
       let targetEmpId = null;
       let reqDesc = '';
+      let leaveRowForRecalc = null;
       if (type === 'leave') {
-        const row = await db.prepare('SELECT emp_id, leave_type, days_count FROM leave_requests WHERE id = ?').bind(id).first().catch(() => null);
-        if (row) { targetEmpId = row.emp_id; reqDesc = `ขอลางาน (${row.leave_type || ''}) ${row.days_count || 1} วัน`; }
+        const row = await db.prepare('SELECT emp_id, leave_type, days_count, start_date, end_date, time_slot FROM leave_requests WHERE id = ?').bind(id).first().catch(() => null);
+        if (row) {
+          targetEmpId = row.emp_id;
+          reqDesc = `ขอลางาน (${row.leave_type || ''}) ${row.days_count || 1} วัน`;
+          leaveRowForRecalc = row;
+        }
       } else if (type === 'ot') {
         const row = await db.prepare('SELECT emp_id, planned_hours, date FROM ot_requests WHERE id = ?').bind(id).first().catch(() => null);
         if (row) { targetEmpId = row.emp_id; reqDesc = `ขอทำ OT ${row.planned_hours || ''} ชม. (${row.date || ''})`; }
@@ -507,6 +512,46 @@ export const requestHandlers = {
           SET status = ?, approver_id = ?, approved_at = ?, rejection_reason = ?
           WHERE id = ?
         `).bind(status, approverId || 'Supervisor', now, rejectionReason || '', id).run();
+
+        // Retroactively recalculate late_minutes on existing time_logs if approved leave covers morning
+        if (status === 'APPROVED' && leaveRowForRecalc) {
+          const lvDays = Number(leaveRowForRecalc.days_count) || 1;
+          const lvSlot = String(leaveRowForRecalc.time_slot || 'FULL').toUpperCase();
+          if ((lvSlot === 'FULL' && lvDays >= 1.0) || lvSlot === 'MORNING' || (lvDays > 0 && lvDays < 1.0 && lvSlot !== 'AFTERNOON')) {
+            const sD = String(leaveRowForRecalc.start_date || '').substring(0, 10);
+            const eD = String(leaveRowForRecalc.end_date || '').substring(0, 10);
+            if (sD && eD) {
+              const logsRes = await db.prepare('SELECT * FROM time_logs WHERE emp_id = ? AND date >= ? AND date <= ?')
+                .bind(leaveRowForRecalc.emp_id, sD, eD).all().catch(() => ({ results: [] }));
+              const empRow = await db.prepare('SELECT branch_id FROM employees WHERE emp_id = ?')
+                .bind(leaveRowForRecalc.emp_id).first().catch(() => null);
+              const branchRows = await db.prepare('SELECT * FROM branches').all().catch(() => ({ results: [] }));
+              const branchMap = {};
+              for (const b of (branchRows.results || [])) branchMap[b.branch_id] = b;
+
+              for (const log of (logsRes.results || [])) {
+                const branch = branchMap[log.branch_id || (empRow && empRow.branch_id)] || null;
+                const lStart = timeStringToMinutes(branch && branch.lunch_start_time) || (13 * 60);
+                const lEnd = timeStringToMinutes(branch && branch.lunch_end_time) || (14 * 60);
+                const graceMin = branch ? (Number(branch.grace_minutes) || 0) : 0;
+                const inMin = timeStringToMinutes(log.clock_in);
+                const coversMorning = (lvSlot === 'FULL' && lvDays >= 1.0) || lvSlot === 'MORNING' || (inMin !== null && inMin >= lStart);
+                if (coversMorning) {
+                  const newLate = (inMin !== null && inMin >= lStart)
+                    ? ((lEnd && inMin > (lEnd + graceMin)) ? (inMin - lEnd) : 0)
+                    : 0;
+                  if (newLate !== (Number(log.late_minutes) || 0)) {
+                    const newStatus = (newLate === 0 && (Number(log.overbreak_minutes) || 0) === 0 && log.status === 'LATE')
+                      ? 'NORMAL'
+                      : log.status;
+                    await db.prepare('UPDATE time_logs SET late_minutes = ?, status = ? WHERE id = ?')
+                      .bind(newLate, newStatus, log.id).run().catch(() => {});
+                  }
+                }
+              }
+            }
+          }
+        }
       } else if (type === 'ot') {
         await db.prepare(`
           UPDATE ot_requests 
