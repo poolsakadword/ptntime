@@ -137,6 +137,121 @@ function refreshGpsLocation() {
   getCurrentLocation(false, true);
 }
 
+function showPreciseLocationWarning(accMeters) {
+  const isIos = isIosDevice();
+  const accStr = Math.round(accMeters || 0).toLocaleString();
+  Swal.fire({
+    icon: 'warning',
+    title: isIos ? 'iPhone กำลังใช้พิกัดแบบเบลอ' : 'สัญญาณพิกัด GPS ไม่แม่นยำ',
+    html: `
+      <div class="text-left text-xs sm:text-sm space-y-2.5 text-slate-700">
+        <div class="font-medium text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 leading-relaxed">
+          ความแม่นยำปัจจุบันคลาดเคลื่อนถึง <b>±${accStr} เมตร</b>${isIos ? ' (มักเกิดจากปิดโหมด <b>ตำแหน่งที่ตั้งที่แน่นอน / Precise Location</b> บน iPhone)' : ' (อาจเกิดจากอยู่ในอาคารอับสัญญาณหรือปิด Wi-Fi)'}
+        </div>
+        ${isIos ? `
+          <p class="font-semibold text-slate-900 pt-1">วิธีเปิดตำแหน่งที่ตั้งที่แน่นอน (Precise Location) บน iPhone:</p>
+          <ol class="list-decimal pl-5 space-y-1.5 text-slate-600 text-xs sm:text-sm">
+            <li>เปิดแอป <b>การตั้งค่า (Settings)</b></li>
+            <li>ไปที่ <b>ความเป็นส่วนตัวและความปลอดภัย (Privacy &amp; Security)</b></li>
+            <li>แตะ <b>บริการหาตำแหน่งที่ตั้ง (Location Services)</b> ➜ เลือก <b>เว็บไซต์ Safari (Safari Websites)</b></li>
+            <li>เปิดสวิตช์ <b>ตำแหน่งที่ตั้งที่แน่นอน (Precise Location)</b> ให้เป็นสีเขียว</li>
+            <li>กลับมาที่หน้านี้แล้วแตะปุ่ม <b>ตรวจพิกัดใหม่</b></li>
+          </ol>
+        ` : `
+          <p class="font-semibold text-slate-900 pt-1">คำแนะนำ:</p>
+          <ul class="list-disc pl-5 space-y-1.5 text-slate-600 text-xs sm:text-sm">
+            <li>เปิด <b>Wi-Fi</b> บนมือถือไว้ (ไม่ต้องเชื่อมต่อก็ได้) เพื่อช่วยให้จับพิกัดในอาคารแม่นยำขึ้น</li>
+            <li>ขยับไปใกล้ประตู/หน้าต่าง แล้วแตะตรวจพิกัดใหม่อีกครั้ง</li>
+          </ul>
+        `}
+      </div>
+    `,
+    confirmButtonText: 'เข้าใจแล้ว',
+    confirmButtonColor: '#2563eb'
+  });
+}
+
+function acquireBestGpsPosition(maxWaitMs = 4500) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      return reject({ code: 0, message: 'Geolocation not supported' });
+    }
+    let watchId = null;
+    let settled = false;
+    let bestPos = null;
+
+    const cleanup = () => {
+      if (watchId !== null) {
+        try { navigator.geolocation.clearWatch(watchId); } catch(e) {}
+        watchId = null;
+      }
+    };
+
+    const finish = (pos, err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      cleanup();
+      if (pos) resolve(pos);
+      else reject(err || { code: 3, message: 'Timeout' });
+    };
+
+    const timer = setTimeout(() => {
+      if (bestPos) {
+        finish(bestPos, null);
+      } else {
+        // Fallback once to network/Wi-Fi positioning without stale cache
+        navigator.geolocation.getCurrentPosition(
+          (pos) => finish(pos, null),
+          (err) => finish(null, err),
+          { enableHighAccuracy: false, timeout: 4000, maximumAge: 0 }
+        );
+      }
+    }, maxWaitMs);
+
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (!bestPos || (pos.coords && pos.coords.accuracy < bestPos.coords.accuracy)) {
+          bestPos = pos;
+        }
+        const acc = pos.coords ? Number(pos.coords.accuracy || 9999) : 9999;
+        let isInsideFast = false;
+        try {
+          const targetBranch = getCurrentEmployeeTargetBranch();
+          const targetLat = targetBranch.lat || appSettings.office_lat;
+          const targetLng = targetBranch.lng || appSettings.office_lng;
+          const targetRadius = targetBranch.radius_meters || appSettings.geofence_radius_meters || 200;
+          const dist = calculateHaversineMeters(pos.coords.latitude, pos.coords.longitude, targetLat, targetLng);
+          if (dist <= targetRadius && acc <= 30) {
+            isInsideFast = true;
+          }
+        } catch(e) {}
+
+        // Stop early if already locked with high accuracy inside geofence, or ultra-sharp <= 15m
+        if (isInsideFast || acc <= 15) {
+          finish(bestPos, null);
+        }
+      },
+      (err) => {
+        if (err && err.code === 1) {
+          finish(null, err);
+        } else if (bestPos) {
+          finish(bestPos, null);
+        } else if (err && (err.code === 2 || err.code === 3)) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => finish(pos, null),
+            (err2) => finish(null, err2),
+            { enableHighAccuracy: false, timeout: 4000, maximumAge: 0 }
+          );
+        } else {
+          finish(null, err);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+}
+
 function getCurrentLocation(silent = false, isManual = false) {
   const statusText = document.getElementById('gpsStatusText');
   const distText = document.getElementById('gpsDistanceText');
@@ -157,8 +272,8 @@ function getCurrentLocation(silent = false, isManual = false) {
     return;
   }
 
-  if (statusText) statusText.textContent = 'กำลังค้นหาพิกัด GPS...';
-  if (distText && isManual) distText.textContent = 'กำลังคำนวณระยะห่างล่าสุด...';
+  if (statusText) statusText.textContent = 'กำลังจับพิกัด GPS ที่แม่นยำที่สุด...';
+  if (distText && isManual) distText.textContent = 'กำลังรอสัญญาณดาวเทียมให้นิ่งสักครู่...';
   if (badge && isManual) {
     badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 cursor-pointer';
     badge.textContent = 'กำลังตรวจพิกัด...';
@@ -169,7 +284,7 @@ function getCurrentLocation(silent = false, isManual = false) {
     lastGeolocationError = null;
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
-    const acc = pos.coords.accuracy;
+    const acc = Math.round(pos.coords.accuracy || 0);
     currentLocation = { lat, lng, accuracy: acc };
     
     // Fetch location name dynamically
@@ -189,9 +304,10 @@ function getCurrentLocation(silent = false, isManual = false) {
     currentDistanceMeters = dist;
 
     const isInside = dist <= targetRadius;
+    const isBlurred = acc > 300;
 
     if (statusText) statusText.textContent = targetBranchName;
-    if (distText) distText.textContent = `ระยะห่าง ${dist} ม. (รัศมีอนุญาต ${targetRadius} ม.)`;
+    if (distText) distText.textContent = `ระยะห่าง ${dist} ม. (รัศมี ${targetRadius} ม. | ±${acc} ม.)`;
 
     if (badge) {
       badge.title = 'แตะเพื่อจับพิกัด GPS ใหม่';
@@ -199,6 +315,10 @@ function getCurrentLocation(silent = false, isManual = false) {
         badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 cursor-pointer';
         badge.textContent = 'ในพิกัด ✅';
         if (pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
+      } else if (isBlurred) {
+        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 cursor-pointer';
+        badge.textContent = `⚠️ พิกัดเบลอ (±${acc}ม.)`;
+        if (pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
       } else {
         badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 cursor-pointer';
         badge.textContent = 'นอกพื้นที่ ⚠️';
@@ -206,7 +326,9 @@ function getCurrentLocation(silent = false, isManual = false) {
       }
     }
 
-    if (isManual) {
+    if (isBlurred && !isInside && isManual) {
+      showPreciseLocationWarning(acc);
+    } else if (isManual) {
       const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
@@ -216,40 +338,27 @@ function getCurrentLocation(silent = false, isManual = false) {
       });
       Toast.fire({
         icon: isInside ? 'success' : 'warning',
-        title: isInside ? `อยู่ในพื้นที่ ${targetBranchName}` : `อยู่นอกพื้นที่ ${targetBranchName} (${dist} ม.)`
+        title: isInside ? `อยู่ในพื้นที่ ${targetBranchName} (±${acc} ม.)` : `อยู่นอกพื้นที่ ${targetBranchName} (${dist} ม.)`
       });
     }
   };
 
-  const handleFailure = (err, isFallback = false) => {
+  const handleFailure = (err) => {
     lastGeolocationError = err;
-
-    // If high-accuracy failed with timeout or unavailable, retry once with network/low accuracy positioning
-    if (!isFallback && (err.code === 2 || err.code === 3)) {
-      console.log('High accuracy GPS timed out or unavailable, attempting network/low-accuracy fallback...');
-      if (statusText) statusText.textContent = 'สัญญาณ GPS อ่อน กำลังค้นหาผ่าน Wi-Fi/เครือข่าย...';
-      navigator.geolocation.getCurrentPosition(
-        handleSuccess,
-        (err2) => handleFailure(err2, true),
-        { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
-      );
-      return;
-    }
-
     if (icon) icon.classList.remove('animate-spin');
-    console.warn('Geolocation notice:', err.message, 'code:', err.code);
+    console.warn('Geolocation notice:', err && err.message, 'code:', err && err.code);
 
     if (badge) {
       badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 cursor-pointer';
       badge.title = 'แตะเพื่อดูคำแนะนำการเปิดใช้งาน';
     }
 
-    if (err.code === 1) { // PERMISSION_DENIED
+    if (err && err.code === 1) { // PERMISSION_DENIED
       if (statusText) statusText.textContent = 'เบราว์เซอร์ยังไม่ได้รับอนุญาตสิทธิ์ตำแหน่ง';
       if (badge) {
         badge.textContent = isIosDevice() ? '⚠️ สิทธิ์ Safari ปิด' : '⚠️ รออนุญาตสิทธิ์';
       }
-    } else if (err.code === 2 || err.code === 3) { // POSITION_UNAVAILABLE or TIMEOUT
+    } else if (err && (err.code === 2 || err.code === 3)) { // POSITION_UNAVAILABLE or TIMEOUT
       if (statusText) statusText.textContent = 'สัญญาณ GPS อ่อน (ลองเปิด Wi-Fi ช่วยจับพิกัด)';
       if (badge) {
         badge.textContent = '⚠️ สัญญาณ GPS อ่อน';
@@ -266,12 +375,7 @@ function getCurrentLocation(silent = false, isManual = false) {
     }
   };
 
-  // Attempt high accuracy first
-  navigator.geolocation.getCurrentPosition(
-    handleSuccess,
-    (err) => handleFailure(err, false),
-    { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
-  );
+  acquireBestGpsPosition(4500).then(handleSuccess).catch(handleFailure);
 }
 
 
@@ -764,60 +868,23 @@ function startCameraIdleTimeout() {
   }, 10000);
 }
 
-function fetchCurrentLocationPromise(timeoutMs = 7000) {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    let resolved = false;
-    const timer = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        resolve(currentLocation);
-      }
-    }, timeoutMs);
-
-    const onPos = (pos) => {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timer);
-        lastGeolocationError = null;
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        currentLocation = { lat, lng, accuracy: pos.coords.accuracy };
-        try {
-          const targetBranch = getCurrentEmployeeTargetBranch();
-          currentDistanceMeters = calculateHaversineMeters(lat, lng, targetBranch.lat || appSettings.office_lat, targetBranch.lng || appSettings.office_lng);
-        } catch(e) {}
-        resolve(currentLocation);
-      }
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      onPos,
-      (err) => {
-        lastGeolocationError = err;
-        // If high accuracy timed out or unavailable, try low accuracy / Wi-Fi fallback immediately
-        if (!resolved && (err.code === 2 || err.code === 3)) {
-          navigator.geolocation.getCurrentPosition(
-            onPos,
-            (err2) => {
-              lastGeolocationError = err2;
-              if (!resolved) {
-                resolved = true;
-                clearTimeout(timer);
-                resolve(currentLocation);
-              }
-            },
-            { enableHighAccuracy: false, timeout: 3500, maximumAge: 60000 }
-          );
-        } else if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          resolve(currentLocation);
-        }
-      },
-      { enableHighAccuracy: true, timeout: 4000, maximumAge: 20000 }
-    );
-  });
+function fetchCurrentLocationPromise(timeoutMs = 5000) {
+  return acquireBestGpsPosition(Math.min(timeoutMs, 4500))
+    .then((pos) => {
+      lastGeolocationError = null;
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      currentLocation = { lat, lng, accuracy: Math.round(pos.coords.accuracy || 0) };
+      try {
+        const targetBranch = getCurrentEmployeeTargetBranch();
+        currentDistanceMeters = calculateHaversineMeters(lat, lng, targetBranch.lat || appSettings.office_lat, targetBranch.lng || appSettings.office_lng);
+      } catch(e) {}
+      return currentLocation;
+    })
+    .catch((err) => {
+      lastGeolocationError = err;
+      return currentLocation;
+    });
 }
 
 async function compressImageFile(file, maxDimension = 1024, quality = 0.75) {
