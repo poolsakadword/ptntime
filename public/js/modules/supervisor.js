@@ -131,7 +131,7 @@ function renderSupervisorPendingApprovals(leaves, ots, advances) {
         <div class="text-xs text-slate-700">
           ประเภท: <b class="text-sky-800 font-bold">${lv.leave_type}</b> (${lv.days_count} วัน)<br>
           ช่วงวัน: ${formatDateThaiBE(lv.start_date)} ถึง ${formatDateThaiBE(lv.end_date)}<br>
-          ${lv.ytdSickInfo ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-lg text-[11px] font-bold ${lv.ytdSickInfo.total >= lv.ytdSickInfo.quota ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-teal-50 text-teal-700 border border-teal-200'}">🩺 ปีนี้ใช้ลาป่วยแล้ว ${lv.ytdSickInfo.total}/${lv.ytdSickInfo.quota} วัน (คงเหลือ ${lv.ytdSickInfo.remaining} วัน)</span><br>` : ''}
+          ${lv.ytdSickInfo ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-lg text-[11px] font-bold ${lv.ytdSickInfo.withCert >= lv.ytdSickInfo.quota ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-teal-50 text-teal-700 border border-teal-200'}">🩺 โควตาลาป่วย (มีใบฯ) ปีนี้: ${lv.ytdSickInfo.withCert}/${lv.ytdSickInfo.quota} วัน (เหลือ ${lv.ytdSickInfo.remaining} วัน${lv.ytdSickInfo.noCert > 0 ? ` | ไม่มีใบ ${lv.ytdSickInfo.noCert} วัน` : ''})</span><br>` : ''}
           ${lv.reason ? `<span class="text-slate-600 mt-1 block">เหตุผล: <i>${lv.reason}</i></span>` : ''}
         </div>
         ${lv.medical_cert_url ? `

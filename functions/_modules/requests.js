@@ -461,24 +461,35 @@ export const requestHandlers = {
         const quotaRow = await db.prepare("SELECT value FROM settings WHERE key = 'SickLeaveQuota'").first().catch(() => null);
         const sickQuota = (quotaRow && !isNaN(Number(quotaRow.value))) ? Number(quotaRow.value) : 10;
         const appSickRows = await db.prepare(`
-          SELECT emp_id, SUM(COALESCE(days_count, 1)) as total_days
+          SELECT emp_id, leave_type, days_count, medical_cert_url
           FROM leave_requests
           WHERE UPPER(TRIM(status)) = 'APPROVED'
             AND substr(start_date, 1, 4) = ?
             AND UPPER(leave_type) LIKE '%SICK%'
-          GROUP BY emp_id
         `).bind(curYr).all().catch(() => ({ results: [] }));
         const sickUsedMap = {};
         for (const r of (appSickRows.results || [])) {
-          sickUsedMap[String(r.emp_id || '').trim()] = Math.round((Number(r.total_days) || 0) * 100) / 100;
+          const eid = String(r.emp_id || '').trim();
+          if (!sickUsedMap[eid]) sickUsedMap[eid] = { withCert: 0, noCert: 0 };
+          const d = Number(r.days_count) || 1;
+          const lt = String(r.leave_type || '').toUpperCase();
+          if (lt === 'SICK_NO_CERT' || (lt !== 'SICK_WITH_CERT' && !r.medical_cert_url)) {
+            sickUsedMap[eid].noCert += d;
+          } else {
+            sickUsedMap[eid].withCert += d;
+          }
         }
         for (const lv of pendingLeavesList) {
           if (String(lv.leave_type || '').toUpperCase().includes('SICK')) {
-            const used = sickUsedMap[String(lv.emp_id || '').trim()] || 0;
+            const u = sickUsedMap[String(lv.emp_id || '').trim()] || { withCert: 0, noCert: 0 };
+            const withCert = Math.round(u.withCert * 100) / 100;
+            const noCert = Math.round(u.noCert * 100) / 100;
             lv.ytdSickInfo = {
-              total: used,
+              withCert,
+              noCert,
+              total: Math.round((withCert + noCert) * 100) / 100,
               quota: sickQuota,
-              remaining: Math.max(0, Math.round((sickQuota - used) * 100) / 100)
+              remaining: Math.max(0, Math.round((sickQuota - withCert) * 100) / 100)
             };
           }
         }
