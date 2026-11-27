@@ -446,7 +446,7 @@ export const requestHandlers = {
         ORDER BY t.clock_in ASC
       `).bind(date).all().catch(() => ({ results: [] }));
 
-      const pendingLeaves = await db.prepare(`
+      const pendingLeavesRes = await db.prepare(`
         SELECT l.*, e.full_name, e.nickname, e.department 
         FROM leave_requests l
         LEFT JOIN employees e ON l.emp_id = e.emp_id
@@ -455,6 +455,35 @@ export const requestHandlers = {
           AND (e.status IS NULL OR (UPPER(e.status) != 'RESIGNED'))
         ORDER BY l.created_at DESC
       `).all().catch(() => ({ results: [] }));
+      const pendingLeavesList = pendingLeavesRes.results || [];
+      if (pendingLeavesList.length > 0) {
+        const curYr = String(bangkokTime.getFullYear());
+        const quotaRow = await db.prepare("SELECT value FROM settings WHERE key = 'SickLeaveQuota'").first().catch(() => null);
+        const sickQuota = (quotaRow && !isNaN(Number(quotaRow.value))) ? Number(quotaRow.value) : 10;
+        const appSickRows = await db.prepare(`
+          SELECT emp_id, SUM(COALESCE(days_count, 1)) as total_days
+          FROM leave_requests
+          WHERE UPPER(TRIM(status)) = 'APPROVED'
+            AND substr(start_date, 1, 4) = ?
+            AND UPPER(leave_type) LIKE '%SICK%'
+          GROUP BY emp_id
+        `).bind(curYr).all().catch(() => ({ results: [] }));
+        const sickUsedMap = {};
+        for (const r of (appSickRows.results || [])) {
+          sickUsedMap[String(r.emp_id || '').trim()] = Math.round((Number(r.total_days) || 0) * 100) / 100;
+        }
+        for (const lv of pendingLeavesList) {
+          if (String(lv.leave_type || '').toUpperCase().includes('SICK')) {
+            const used = sickUsedMap[String(lv.emp_id || '').trim()] || 0;
+            lv.ytdSickInfo = {
+              total: used,
+              quota: sickQuota,
+              remaining: Math.max(0, Math.round((sickQuota - used) * 100) / 100)
+            };
+          }
+        }
+      }
+      const pendingLeaves = { results: pendingLeavesList };
 
       const pendingOts = await db.prepare(`
         SELECT o.*, e.full_name, e.nickname, e.department 
