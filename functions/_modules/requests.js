@@ -479,6 +479,15 @@ export const requestHandlers = {
             sickUsedMap[eid].withCert += d;
           }
         }
+        const priorEmpRows = await db.prepare(
+          "SELECT emp_id, COALESCE(prior_sick_days, 0) as prior_sick_days FROM employees WHERE COALESCE(prior_sick_days, 0) > 0 AND COALESCE(prior_sick_year, 0) = ?"
+        ).bind(Number(curYr)).all().catch(() => ({ results: [] }));
+        for (const pr of (priorEmpRows.results || [])) {
+          const eid = String(pr.emp_id || '').trim();
+          if (!eid) continue;
+          if (!sickUsedMap[eid]) sickUsedMap[eid] = { withCert: 0, noCert: 0 };
+          sickUsedMap[eid].withCert += (Number(pr.prior_sick_days) || 0);
+        }
         for (const lv of pendingLeavesList) {
           if (String(lv.leave_type || '').toUpperCase().includes('SICK')) {
             const u = sickUsedMap[String(lv.emp_id || '').trim()] || { withCert: 0, noCert: 0 };
