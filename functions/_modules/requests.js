@@ -4,29 +4,64 @@
 import { normalizeDateToIso, timeStringToMinutes, logSystemActivity } from './db.js';
 import { sendPushToAdmins, sendPushToEmployee } from './notifications.js';
 
+function getAdvanceWeekWindow(bangkokTime, cutoffDayRaw) {
+  const d = new Date(bangkokTime);
+  const day = d.getDay();
+  const diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
+  const mondayDate = new Date(d.setDate(diffToMonday));
+  const mondayStr = mondayDate.toISOString().substring(0, 10);
+
+  const saturdayDate = new Date(mondayDate);
+  saturdayDate.setDate(mondayDate.getDate() + 5);
+  const saturdayStr = saturdayDate.toISOString().substring(0, 10);
+
+  const cutoffDay = Number(cutoffDayRaw) || 25;
+  const curY = bangkokTime.getFullYear();
+  const curM = bangkokTime.getMonth() + 1;
+  const curD = bangkokTime.getDate();
+
+  let periodStartStr = '';
+  if (cutoffDay >= 30) {
+    periodStartStr = `${curY}-${String(curM).padStart(2, '0')}-01`;
+  } else if (curD > cutoffDay) {
+    const startDay = cutoffDay + 1;
+    const maxDays = new Date(curY, curM, 0).getDate();
+    const safeDay = startDay > maxDays ? 1 : startDay;
+    periodStartStr = `${curY}-${String(curM).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+  } else {
+    let prevM = curM - 1;
+    let prevY = curY;
+    if (prevM < 1) { prevM = 12; prevY -= 1; }
+    const startDay = cutoffDay + 1;
+    const maxDays = new Date(prevY, prevM, 0).getDate();
+    const safeDay = startDay > maxDays ? 1 : startDay;
+    periodStartStr = `${prevY}-${String(prevM).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+  }
+
+  const isCutoffSplitWeek = Boolean(periodStartStr && periodStartStr > mondayStr && periodStartStr <= saturdayStr);
+  const effectiveStartStr = isCutoffSplitWeek ? periodStartStr : mondayStr;
+
+  return {
+    mondayStr,
+    saturdayStr,
+    effectiveStartStr,
+    isCutoffSplitWeek
+  };
+}
+
 export const requestHandlers = {
   getAdvanceEligibility: async (db, params, context) => {
     const { settings, today, curTimeStr, dayOfWeekNumber, bangkokTime, nowUtc } = context;
       const empId = params.empId;
       if (!empId) return { success: false, message: 'ระบุ empId' };
 
-      // Determine Monday of current week
-      const d = new Date(bangkokTime);
-      const day = d.getDay();
-      const diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
-      const mondayDate = new Date(d.setDate(diffToMonday));
-      const mondayStr = mondayDate.toISOString().substring(0, 10);
+      const { mondayStr, saturdayStr, effectiveStartStr, isCutoffSplitWeek } = getAdvanceWeekWindow(bangkokTime, settings.cutoff_day);
 
-      // Saturday of current week
-      const saturdayDate = new Date(mondayDate);
-      saturdayDate.setDate(mondayDate.getDate() + 5);
-      const saturdayStr = saturdayDate.toISOString().substring(0, 10);
-
-      // Count actual work days logged in this week (Mon - Sat)
+      // Count actual work days logged in the eligible window (respecting payroll cutoff boundary)
       const logsThisWeek = await db.prepare(`
         SELECT date, clock_in FROM time_logs 
         WHERE emp_id = ? AND date >= ? AND date <= ? AND clock_in IS NOT NULL
-      `).bind(empId, mondayStr, saturdayStr).all().catch(() => ({ results: [] }));
+      `).bind(empId, effectiveStartStr, saturdayStr).all().catch(() => ({ results: [] }));
 
       const daysWorked = (logsThisWeek.results || []).length;
       const dailyRate = Number(settings.advance_daily_rate || 250);
@@ -66,7 +101,8 @@ export const requestHandlers = {
         advanceEndTime: endTime,
         advanceDayOfWeek: settings.advance_day_of_week || 'SATURDAY',
         currentTime: curTime,
-        weekRange: `${mondayStr} ถึง ${saturdayStr}`,
+        weekRange: `${effectiveStartStr} ถึง ${saturdayStr}`,
+        isCutoffSplitWeek,
         existingRequest: existingReq || null,
         enabled: (settings.enable_advance_requests === 'true')
       };
@@ -108,20 +144,13 @@ export const requestHandlers = {
         return { success: false, message: 'กรุณาระบุจำนวนเงินที่ต้องการขอเบิก' };
       }
 
-      // Check eligibility
-      const d = new Date(bangkokTime);
-      const day = d.getDay();
-      const diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
-      const mondayDate = new Date(d.setDate(diffToMonday));
-      const mondayStr = mondayDate.toISOString().substring(0, 10);
-      const saturdayDate = new Date(mondayDate);
-      saturdayDate.setDate(mondayDate.getDate() + 5);
-      const saturdayStr = saturdayDate.toISOString().substring(0, 10);
+      // Check eligibility (respecting payroll cutoff boundary)
+      const { saturdayStr, effectiveStartStr } = getAdvanceWeekWindow(bangkokTime, settings.cutoff_day);
 
       const logsThisWeek = await db.prepare(`
         SELECT COUNT(*) as count FROM time_logs 
         WHERE emp_id = ? AND date >= ? AND date <= ? AND clock_in IS NOT NULL
-      `).bind(empId, mondayStr, saturdayStr).first();
+      `).bind(empId, effectiveStartStr, saturdayStr).first();
 
       const daysWorked = logsThisWeek ? logsThisWeek.count : 0;
       const dailyRate = Number(settings.advance_daily_rate || 250);
